@@ -75,7 +75,6 @@
     .file-tree-close { margin-left: auto; color: #888; cursor: pointer; font-size: 16px; }
     .file-tree-close:hover { color: #fff; }
     .file-tree { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 0; }
-    .file-tree-folder { }
     .file-tree-folder-header { display: flex; align-items: center; gap: 6px; padding: 4px 8px; cursor: pointer; user-select: none; }
     .file-tree-folder-header:hover { background: rgba(255,255,255,0.05); }
     .file-tree-folder-icon { color: #888; font-size: 14px; transition: transform 0.15s; }
@@ -121,6 +120,103 @@
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; text-align: center; padding: 20px; }
     .empty-state .codicon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
     .empty-state p { font-size: 14px; max-width: 280px; }
+    
+    /* Task List Styling - Match Kiro IDE */
+    [class*="task"], [class*="Task"] {
+      font-family: "Segoe WPC", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, "Droid Sans", sans-serif !important;
+    }
+    
+    /* Task section headers (CURRENT TASKS, TASKS IN QUEUE) */
+    [class*="task"] h2, [class*="Task"] h2,
+    [class*="task"] h3, [class*="Task"] h3,
+    [class*="task-header"], [class*="TaskHeader"],
+    [class*="section-title"], [class*="SectionTitle"] {
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.5px !important;
+      text-transform: uppercase !important;
+      color: #ffffff !important;
+      margin: 0 0 12px 0 !important;
+      padding: 0 !important;
+      line-height: 1.4 !important;
+    }
+    
+    /* Task list containers */
+    [class*="task-list"], [class*="TaskList"],
+    [class*="task-section"], [class*="TaskSection"] {
+      margin-bottom: 24px !important;
+      padding: 0 !important;
+    }
+    
+    /* Empty state messages (No active tasks, No tasks in queue) */
+    [class*="task"] p:empty, [class*="Task"] p:empty,
+    [class*="no-task"], [class*="NoTask"],
+    [class*="empty-task"], [class*="EmptyTask"],
+    [class*="task-empty"], [class*="TaskEmpty"] {
+      font-size: 13px !important;
+      font-style: italic !important;
+      color: #888888 !important;
+      margin: 0 0 16px 0 !important;
+      padding: 0 !important;
+      line-height: 1.6 !important;
+    }
+    
+    /* Catch all paragraphs under task sections that look like empty states */
+    [class*="task"] p, [class*="Task"] p {
+      font-size: 13px !important;
+      line-height: 1.6 !important;
+    }
+    
+    /* Specific targeting for common patterns */
+    div[class*="current"] h2, div[class*="Current"] h2,
+    div[class*="queue"] h2, div[class*="Queue"] h2 {
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.5px !important;
+      text-transform: uppercase !important;
+      color: #ffffff !important;
+    }
+    
+    /* Horizontal divider between sections */
+    [class*="task-divider"], [class*="TaskDivider"],
+    [class*="task"] hr, [class*="Task"] hr {
+      border: none !important;
+      border-top: 1px solid #3c3c3c !important;
+      margin: 20px 0 !important;
+    }
+    
+    /* Individual task items (when they exist) */
+    [class*="task-item"], [class*="TaskItem"] {
+      padding: 8px 12px !important;
+      margin: 4px 0 !important;
+      background: rgba(255, 255, 255, 0.03) !important;
+      border-radius: 4px !important;
+      border-left: 2px solid #7138cc !important;
+      font-size: 13px !important;
+      color: #cccccc !important;
+      line-height: 1.5 !important;
+    }
+    
+    [class*="task-item"]:hover, [class*="TaskItem"]:hover {
+      background: rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    /* Task item with close button */
+    [class*="task-item"] button, [class*="TaskItem"] button {
+      margin-left: 8px !important;
+      padding: 2px 6px !important;
+      font-size: 11px !important;
+      background: rgba(255, 255, 255, 0.1) !important;
+      border: 1px solid #4a464f !important;
+      border-radius: 3px !important;
+      color: #888 !important;
+      cursor: pointer !important;
+    }
+    
+    [class*="task-item"] button:hover, [class*="TaskItem"] button:hover {
+      background: rgba(255, 255, 255, 0.15) !important;
+      color: #fff !important;
+    }
   </style>
 </head>
 <body>
@@ -203,6 +299,8 @@
     let workspaceFiles = []; // Cached file list
     let fileTreeOpen = false;
     let expandedFolders = new Set(); // Track expanded folders
+    let updateDebounceTimer = null; // Debounce rapid snapshot updates
+    let isRendering = false; // Prevent concurrent renders
     
     // DOM Elements
     const statusDot = document.getElementById('statusDot');
@@ -322,9 +420,14 @@
         }
       } else if (data.type === 'snapshot_update' && data.cascadeId === selectedCascadeId) {
         // Only fetch if user is not typing AND the updated panel is the active one
+        // AND we're not currently rendering (prevent flickering from rapid updates)
         const panel = data.panel || 'chat';
-        if (!isTypingInKiroInput && panel === activePanel) {
-          fetchPanelContent(panel, data.cascadeId, true); // true = isUpdate (don't scroll)
+        if (!isTypingInKiroInput && panel === activePanel && !isRendering) {
+          // Debounce rapid updates - wait 500ms before fetching
+          if (updateDebounceTimer) clearTimeout(updateDebounceTimer);
+          updateDebounceTimer = setTimeout(() => {
+            fetchPanelContent(panel, data.cascadeId, true); // true = isUpdate (don't scroll)
+          }, 500);
         }
       }
     }
@@ -408,6 +511,10 @@
     }
 
     function renderChatSnapshot(snapshot, isUpdate = false) {
+      // Prevent concurrent renders
+      if (isRendering) return;
+      isRendering = true;
+      
       // Save scroll position of inner scrollable element before update
       let innerScrollable = panels.chat.content.querySelector('.overflow-y-auto, [class*="scroll"]');
       const hadContent = innerScrollable && innerScrollable.scrollHeight > 100;
@@ -422,8 +529,12 @@
       
       panels.chat.content.innerHTML = html;
       
+      // Set background color - use solid dark background instead of transparent
       if (snapshot.bodyBg) {
         panels.chat.container.style.background = snapshot.bodyBg;
+      } else {
+        // Fallback to solid dark background matching Kiro IDE
+        panels.chat.container.style.background = '#1e1e1e';
       }
       
       hideLoading('chat');
@@ -447,6 +558,9 @@
           if (!isUpdate || wasAtBottom) {
             panels.chat.content.scrollTop = panels.chat.content.scrollHeight;
           }
+          
+          // Release rendering lock
+          isRendering = false;
         });
       });
       
@@ -637,11 +751,126 @@
           --vscode-agentInProgressIcon-foreground: #7138cc;
           --vscode-agentAcceptedIcon-foreground: rgba(128, 255, 181, 0.75);
         }
+        
+        /* Force solid background for all content */
+        body, #root, .app, [class*="chat"], [class*="Chat"], [class*="cascade"], [class*="Cascade"] {
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+        }
+        
+        /* CRITICAL: Hide tooltips, popovers, and overlay elements - but NOT dropdown buttons */
+        [role="tooltip"],
+        [data-tooltip],
+        [class*="tooltip"]:not(button):not([role="button"]),
+        [class*="Tooltip"]:not(button):not([role="button"]),
+        [class*="popover"]:not(button):not([role="button"]),
+        [class*="Popover"]:not(button):not([role="button"]),
+        [class*="overlay"]:not(button):not([role="button"]):not([class*="dropdown"]),
+        [class*="Overlay"]:not(button):not([role="button"]):not([class*="dropdown"]),
+        [class*="modal"],
+        [class*="Modal"] {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
+        
+        /* ========== MODEL SELECTOR DROPDOWN ========== */
+        /* Dropdown menu panel - needs solid background and proper z-index */
+        [class*="dropdown-menu"], [class*="dropdownMenu"], [class*="DropdownMenu"],
+        [class*="dropdown-content"], [class*="dropdownContent"], [class*="DropdownContent"],
+        [class*="model-list"], [class*="modelList"], [class*="ModelList"],
+        [role="listbox"], [role="menu"] {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          background: #2d2d30 !important;
+          background-color: #2d2d30 !important;
+          border: 1px solid #4a464f !important;
+          border-radius: 6px !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+          z-index: 9999 !important;
+          position: absolute !important;
+        }
+        
+        /* Dropdown menu items */
+        [class*="dropdown-item"], [class*="dropdownItem"], [class*="DropdownItem"],
+        [class*="model-option"], [class*="modelOption"], [class*="ModelOption"],
+        [role="option"], [role="menuitem"] {
+          display: flex !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          padding: 8px 12px !important;
+          cursor: pointer !important;
+          background: transparent !important;
+          color: #cccccc !important;
+        }
+        
+        [class*="dropdown-item"]:hover, [class*="dropdownItem"]:hover,
+        [role="option"]:hover, [role="menuitem"]:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        /* Model selector button - NO border, match Kiro style */
+        [class*="model-selector"], [class*="modelSelector"], [class*="ModelSelector"],
+        [class*="model-dropdown"], [class*="modelDropdown"], [class*="ModelDropdown"],
+        button[class*="dropdown"], [role="button"][class*="dropdown"],
+        [class*="select-model"], [class*="selectModel"] {
+          display: inline-flex !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          align-items: center !important;
+          gap: 4px !important;
+          padding: 4px 8px !important;
+          background: transparent !important;
+          border: none !important;
+          border-radius: 4px !important;
+          color: var(--vscode-foreground, #c1bec6) !important;
+          font-size: 12px !important;
+          cursor: pointer !important;
+        }
+        
+        [class*="model-selector"]:hover, [class*="modelSelector"]:hover,
+        button[class*="dropdown"]:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        /* Model selector chevron/arrow icon */
+        [class*="model-selector"] svg, [class*="modelSelector"] svg,
+        [class*="model-dropdown"] svg, button[class*="dropdown"] svg {
+          width: 12px !important;
+          height: 12px !important;
+          flex-shrink: 0 !important;
+        }
+        
+        /* Model name text inside selector */
+        [class*="model-selector"] span, [class*="modelSelector"] span,
+        [class*="model-name"], [class*="modelName"] {
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+        }
+        
+        /* Reset positioning for captured content to prevent layout issues */
+        #root, .app, [class*="cascade"], [class*="Cascade"] {
+          position: relative !important;
+        }
+        
+        /* Ensure proper stacking and no fixed positioning breaks layout */
+        [style*="position: fixed"],
+        [style*="position:fixed"] {
+          position: absolute !important;
+        }
+        
         * { font-family: inherit; }
         code, pre, .monaco-editor { font-family: Menlo, Monaco, "Courier New", monospace !important; }
-        svg[viewBox="0 0 24 24"] { width: 24px !important; height: 24px !important; }
-        svg[viewBox="0 0 16 16"] { width: 16px !important; height: 16px !important; }
-        svg { color: inherit; }
+        /* Icon sizes - keep them small like in IDE */
+        svg[viewBox="0 0 24 24"] { width: 16px !important; height: 16px !important; }
+        svg[viewBox="0 0 16 16"] { width: 14px !important; height: 14px !important; }
+        svg { color: inherit; max-width: 20px !important; max-height: 20px !important; }
         svg path, svg rect { fill: currentColor; }
         svg[fill="none"] path { fill: none; }
         /* Preserve stroke-based SVG circles (like context window progress ring) */
@@ -656,36 +885,294 @@
           stroke-linecap: round !important;
         }
         /* Context window indicator - circular progress ring */
-        [class*="context-window"], [class*="contextWindow"], [class*="ContextWindow"] {
-          display: flex !important;
+        [class*="context-window"], [class*="contextWindow"], [class*="ContextWindow"],
+        [class*="context-indicator"], [class*="contextIndicator"], [class*="ContextIndicator"],
+        [class*="token-usage"], [class*="tokenUsage"], [class*="TokenUsage"] {
+          display: inline-flex !important;
+          visibility: visible !important;
+          opacity: 1 !important;
           align-items: center !important;
           justify-content: center !important;
-        }
-        [class*="context-window"] svg, [class*="contextWindow"] svg, [class*="ContextWindow"] svg {
           width: 20px !important;
           height: 20px !important;
-          transform: rotate(-90deg) !important;
+          position: relative !important;
+          flex-shrink: 0 !important;
         }
-        [class*="context-window"] svg circle, [class*="contextWindow"] svg circle, [class*="ContextWindow"] svg circle {
+        /* Create gray background circle using box-shadow on the container */
+        [class*="context-window"]::before, [class*="contextWindow"]::before, [class*="ContextWindow"]::before,
+        [class*="context-indicator"]::before, [class*="contextIndicator"]::before {
+          content: '' !important;
+          position: absolute !important;
+          top: 2px !important;
+          left: 2px !important;
+          width: 16px !important;
+          height: 16px !important;
+          border-radius: 50% !important;
+          border: 2px solid #4a464f !important;
+          box-sizing: border-box !important;
+          z-index: 0 !important;
+        }
+        [class*="context-window"] svg, [class*="contextWindow"] svg, [class*="ContextWindow"] svg,
+        [class*="context-indicator"] svg, [class*="contextIndicator"] svg {
+          width: 16px !important;
+          height: 16px !important;
+          transform: rotate(-90deg) !important;
+          position: relative !important;
+          z-index: 1 !important;
+        }
+        [class*="context-window"] svg circle, [class*="contextWindow"] svg circle, [class*="ContextWindow"] svg circle,
+        [class*="context-indicator"] svg circle, [class*="contextIndicator"] svg circle {
           fill: none !important;
           stroke-width: 2 !important;
           stroke-linecap: round !important;
-        }
-        /* Background circle (gray track) */
-        [class*="context"] svg circle:first-child,
-        [class*="Context"] svg circle:first-child {
-          stroke: #4a464f !important;
-        }
-        /* Progress circle (green fill) */
-        [class*="context"] svg circle:last-child,
-        [class*="Context"] svg circle:last-child {
           stroke: #4ade80 !important;
+        }
+        /* Ensure circles are visible */
+        [class*="context"] svg circle,
+        [class*="Context"] svg circle {
+          display: block !important;
+          visibility: visible !important;
+        }
+        
+        /* ========== CHAT INPUT TOOLBAR AREA ========== */
+        /* The toolbar/footer area containing model selector, context, autopilot, input */
+        [class*="chat-input"], [class*="chatInput"], [class*="ChatInput"],
+        [class*="input-area"], [class*="inputArea"], [class*="InputArea"],
+        [class*="message-input"], [class*="messageInput"], [class*="MessageInput"],
+        [class*="composer"], [class*="Composer"] {
+          display: flex !important;
+          visibility: visible !important;
+          flex-direction: column !important;
+          gap: 8px !important;
+          padding: 8px 12px !important;
+          background: var(--vscode-editor-background, #1e1e1e) !important;
+          border-top: 1px solid var(--color-border-primary, #4a464f) !important;
+        }
+        
+        /* Input toolbar row (contains # button, model selector, context, autopilot) */
+        [class*="input-toolbar"], [class*="inputToolbar"], [class*="InputToolbar"],
+        [class*="chat-toolbar"], [class*="chatToolbar"], [class*="ChatToolbar"],
+        [class*="composer-toolbar"], [class*="composerToolbar"] {
+          display: flex !important;
+          visibility: visible !important;
+          align-items: center !important;
+          gap: 8px !important;
+          flex-wrap: wrap !important;
+        }
+        
+        /* Context button (# symbol) - NO border, match Kiro style */
+        [class*="context-button"], [class*="contextButton"], [class*="ContextButton"],
+        button[aria-label*="context"], button[aria-label*="Context"],
+        [class*="hash-button"], [class*="hashButton"] {
+          display: inline-flex !important;
+          visibility: visible !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 28px !important;
+          height: 28px !important;
+          padding: 4px !important;
+          background: transparent !important;
+          border: none !important;
+          border-radius: 4px !important;
+          color: var(--vscode-foreground, #c1bec6) !important;
+          font-size: 16px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+        }
+        
+        [class*="context-button"]:hover, [class*="contextButton"]:hover,
+        button[aria-label*="context"]:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        /* ========== MESSAGE TEXT FLOW - INLINE ELEMENTS ========== */
+        /* Fix text flow so file links and code stay inline with text */
+        [class*="message"] p,
+        [class*="Message"] p,
+        [class*="chat"] p,
+        [class*="Chat"] p {
+          display: block !important;
+        }
+        
+        /* Make file links, code, and inline elements stay inline */
+        [class*="message"] a,
+        [class*="Message"] a,
+        [class*="message"] code,
+        [class*="Message"] code,
+        [class*="message"] span,
+        [class*="Message"] span,
+        [class*="chat"] a,
+        [class*="Chat"] a,
+        [class*="chat"] code,
+        [class*="Chat"] code,
+        [class*="file-link"],
+        [class*="FileLink"],
+        [class*="inline"],
+        code:not(pre code) {
+          display: inline !important;
+          vertical-align: baseline !important;
+        }
+        
+        /* Inline code styling */
+        code:not(pre code) {
+          background: rgba(255, 255, 255, 0.1) !important;
+          padding: 2px 6px !important;
+          border-radius: 3px !important;
+          font-family: Menlo, Monaco, "Courier New", monospace !important;
+          font-size: 12px !important;
+        }
+        
+        /* File badges/chips should be inline */
+        [class*="file-badge"],
+        [class*="FileBadge"],
+        [class*="file-chip"],
+        [class*="FileChip"],
+        [class*="deleted"],
+        [class*="Deleted"],
+        [class*="created"],
+        [class*="Created"],
+        [class*="modified"],
+        [class*="Modified"] {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 4px !important;
+          padding: 2px 8px !important;
+          border-radius: 4px !important;
+          background: rgba(255, 255, 255, 0.08) !important;
+          margin: 2px 4px !important;
+          font-size: 12px !important;
+          vertical-align: middle !important;
+        }
+        
+        /* Bullet lists should have proper inline content */
+        ul li, ol li {
+          display: list-item !important;
+        }
+        
+        ul li > *, ol li > * {
+          display: inline !important;
+        }
+        
+        ul li > p, ol li > p {
+          display: inline !important;
+          margin: 0 !important;
         }
         
         [role="switch"], [class*="toggle"] {
           overflow: visible !important;
           min-width: 36px !important;
           flex-shrink: 0 !important;
+        }
+        
+        /* ========== TASK LIST STYLING - EXACT KIRO IDE MATCH ========== */
+        
+        /* Force solid background for task containers */
+        [class*="task"], [class*="Task"],
+        div:has(> h1:contains("CURRENT TASKS")),
+        div:has(> h2:contains("CURRENT TASKS")),
+        div:has(> h3:contains("CURRENT TASKS")),
+        div:has(> h1:contains("TASKS IN QUEUE")),
+        div:has(> h2:contains("TASKS IN QUEUE")),
+        div:has(> h3:contains("TASKS IN QUEUE")) {
+          font-family: "Segoe WPC", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, "Droid Sans", sans-serif !important;
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+        }
+        
+        /* Task section headers - BOLD WHITE UPPERCASE */
+        h1:contains("CURRENT TASKS"),
+        h2:contains("CURRENT TASKS"),
+        h3:contains("CURRENT TASKS"),
+        h1:contains("TASKS IN QUEUE"),
+        h2:contains("TASKS IN QUEUE"),
+        h3:contains("TASKS IN QUEUE"),
+        [class*="task"] h1, [class*="Task"] h1,
+        [class*="task"] h2, [class*="Task"] h2,
+        [class*="task"] h3, [class*="Task"] h3,
+        [class*="task-header"], [class*="TaskHeader"],
+        [class*="section-title"], [class*="SectionTitle"],
+        div[class*="current"] h1, div[class*="Current"] h1,
+        div[class*="current"] h2, div[class*="Current"] h2,
+        div[class*="current"] h3, div[class*="Current"] h3,
+        div[class*="queue"] h1, div[class*="Queue"] h1,
+        div[class*="queue"] h2, div[class*="Queue"] h2,
+        div[class*="queue"] h3, div[class*="Queue"] h3 {
+          font-size: 13px !important;
+          font-weight: 700 !important;
+          letter-spacing: 0.5px !important;
+          text-transform: uppercase !important;
+          color: #ffffff !important;
+          margin: 0 0 12px 0 !important;
+          padding: 0 !important;
+          line-height: 1.4 !important;
+          background: transparent !important;
+        }
+        
+        /* Empty state messages - ITALIC GRAY */
+        p:contains("No active tasks"),
+        p:contains("No tasks in queue"),
+        [class*="task"] p:not([class*="task-item"]), 
+        [class*="Task"] p:not([class*="TaskItem"]),
+        [class*="no-task"], [class*="NoTask"],
+        [class*="empty-task"], [class*="EmptyTask"],
+        [class*="task-empty"], [class*="TaskEmpty"] {
+          font-size: 13px !important;
+          font-style: italic !important;
+          color: #888888 !important;
+          margin: 0 0 16px 0 !important;
+          padding: 0 !important;
+          line-height: 1.6 !important;
+          background: transparent !important;
+        }
+        
+        /* Task list containers */
+        [class*="task-list"], [class*="TaskList"],
+        [class*="task-section"], [class*="TaskSection"] {
+          margin-bottom: 24px !important;
+          padding: 0 !important;
+          background: #1e1e1e !important;
+        }
+        
+        /* Horizontal divider between sections */
+        [class*="task-divider"], [class*="TaskDivider"],
+        [class*="task"] hr, [class*="Task"] hr {
+          border: none !important;
+          border-top: 1px solid #3c3c3c !important;
+          margin: 20px 0 !important;
+          background: transparent !important;
+        }
+        
+        /* Individual task items (when they exist) */
+        [class*="task-item"], [class*="TaskItem"] {
+          padding: 8px 12px !important;
+          margin: 4px 0 !important;
+          background: rgba(255, 255, 255, 0.03) !important;
+          border-radius: 4px !important;
+          border-left: 2px solid #7138cc !important;
+          font-size: 13px !important;
+          color: #cccccc !important;
+          line-height: 1.5 !important;
+        }
+        
+        [class*="task-item"]:hover, [class*="TaskItem"]:hover {
+          background: rgba(255, 255, 255, 0.05) !important;
+        }
+        
+        /* Task item with close button */
+        [class*="task-item"] button, [class*="TaskItem"] button {
+          margin-left: 8px !important;
+          padding: 2px 6px !important;
+          font-size: 11px !important;
+          background: rgba(255, 255, 255, 0.1) !important;
+          border: 1px solid #4a464f !important;
+          border-radius: 3px !important;
+          color: #888 !important;
+          cursor: pointer !important;
+        }
+        
+        [class*="task-item"] button:hover, [class*="TaskItem"] button:hover {
+          background: rgba(255, 255, 255, 0.15) !important;
+          color: #fff !important;
         }
         
         .kiro-toggle-switch {
@@ -841,10 +1328,15 @@
       });
       
       // Buttons and clickable elements
-      const clickableSelectors = ['button', '[role="button"]', '[role="menuitem"]', '[role="checkbox"]', 'a[href]', '[tabindex="0"]'];
+      const clickableSelectors = ['button', '[role="button"]', '[role="menuitem"]', '[role="option"]', '[role="checkbox"]', 'a[href]', '[tabindex="0"]'];
       const allClickables = new Set();
       clickableSelectors.forEach(sel => {
         try { content.querySelectorAll(sel).forEach(el => allClickables.add(el)); } catch(e) {}
+      });
+      
+      // Also add dropdown menu items
+      content.querySelectorAll('[class*="dropdown-item"], [class*="dropdownItem"], [class*="model-option"], [class*="modelOption"]').forEach(el => {
+        allClickables.add(el);
       });
       
       allClickables.forEach(el => {
@@ -858,6 +1350,14 @@
           e.preventDefault();
           e.stopPropagation();
           const clickInfo = getElementClickInfo(el);
+          
+          // Check if this is a model selection item
+          if (el.matches('[role="option"], [role="menuitem"], [class*="model"], [class*="Model"]') || 
+              el.closest('[role="listbox"], [role="menu"], [class*="dropdown-menu"], [class*="dropdownMenu"]')) {
+            clickInfo.isModelSelection = true;
+            clickInfo.modelName = el.textContent?.trim().split('\n')[0] || '';
+          }
+          
           await sendClickToKiro(clickInfo);
           return false;
         };
@@ -909,6 +1409,11 @@
         clickInfo.text?.toLowerCase().includes('back') ||
         clickInfo.role === 'tab';
       
+      const isModelSelection = clickInfo.isModelSelection || 
+        clickInfo.role === 'option' || 
+        clickInfo.role === 'menuitem' ||
+        clickInfo.className?.includes('model');
+      
       if (isNavigation) navigationPending = true;
       
       try {
@@ -918,7 +1423,8 @@
           body: JSON.stringify(clickInfo)
         });
         
-        if (isNavigation) {
+        if (isNavigation || isModelSelection) {
+          // Refresh snapshot after navigation or model selection
           setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
         }
       } catch (e) {

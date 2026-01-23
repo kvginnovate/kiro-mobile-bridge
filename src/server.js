@@ -434,23 +434,37 @@ async function captureCSS(cdp) {
  */
 async function captureSnapshot(cdp) {
   if (!cdp.rootContextId) {
+    console.log('[Snapshot] No rootContextId available');
     return null;
   }
   
   const script = `
     (function() {
+      const debug = {
+        hasActiveFrame: false,
+        activeFrameAccessible: false,
+        bodyExists: false,
+        selectorsChecked: [],
+        foundElement: null,
+        htmlLength: 0
+      };
+      
       // VS Code webviews use nested iframes - look for #active-frame
       let targetDoc = document;
       let targetBody = document.body;
       
+      debug.bodyExists = !!targetBody;
+      
       const activeFrame = document.getElementById('active-frame');
+      debug.hasActiveFrame = !!activeFrame;
       if (activeFrame && activeFrame.contentDocument) {
+        debug.activeFrameAccessible = true;
         targetDoc = activeFrame.contentDocument;
         targetBody = targetDoc.body;
       }
       
       if (!targetBody) {
-        return { html: '<div style="padding:20px;color:#888;">No content found</div>', bodyBg: '', bodyColor: '' };
+        return { html: '<div style="padding:20px;color:#888;">No content found</div>', bodyBg: '', bodyColor: '', debug };
       }
       
       // Get body styles
@@ -472,15 +486,21 @@ async function captureSnapshot(cdp) {
       let chatElement = null;
       for (const selector of chatSelectors) {
         const el = targetDoc.querySelector(selector);
-        if (el && el.innerHTML.length > 50) {
+        const len = el ? el.innerHTML.length : 0;
+        debug.selectorsChecked.push({ selector, found: !!el, htmlLength: len });
+        if (el && len > 50) {
           chatElement = el;
+          debug.foundElement = selector;
           break;
         }
       }
       
       if (!chatElement) {
         chatElement = targetBody;
+        debug.foundElement = 'body (fallback)';
       }
+      
+      debug.htmlLength = chatElement.innerHTML.length;
       
       // Scroll chat container to bottom to show latest messages
       const scrollContainers = targetDoc.querySelectorAll('[class*="scroll"], [style*="overflow"]');
@@ -489,6 +509,44 @@ async function captureSnapshot(cdp) {
           container.scrollTop = container.scrollHeight;
         }
       }
+      
+      // Remove tooltips, popovers, and other overlay elements before capture
+      // IMPORTANT: Don't remove dropdown buttons (model selector), only dropdown menus/panels
+      const elementsToRemove = [
+        '[role="tooltip"]',
+        '[data-tooltip]',
+        '[class*="tooltip"]:not(button):not([role="button"])',
+        '[class*="Tooltip"]:not(button):not([role="button"])',
+        '[class*="popover"]:not(button):not([role="button"])',
+        '[class*="Popover"]:not(button):not([role="button"])',
+        '[class*="dropdown-menu"]',
+        '[class*="dropdownMenu"]',
+        '[class*="DropdownMenu"]',
+        '[class*="dropdown-content"]',
+        '[class*="dropdownContent"]',
+        '[class*="menu"]:not([role="menubar"]):not([class*="menubar"]):not(button):not([role="button"])',
+        '[class*="overlay"]:not(button):not([role="button"])',
+        '[class*="Overlay"]:not(button):not([role="button"])',
+        '[class*="modal"]',
+        '[class*="Modal"]',
+        '[style*="position: fixed"]:not(button):not([role="button"]):not([class*="input"]):not([class*="chat"])',
+        '[style*="position:fixed"]:not(button):not([role="button"]):not([class*="input"]):not([class*="chat"])'
+      ];
+      
+      elementsToRemove.forEach(selector => {
+        try {
+          chatElement.querySelectorAll(selector).forEach(el => {
+            // Don't remove if it's a main content element or important UI component
+            const isMainContent = el.closest('#root > div:first-child');
+            const isTooltip = el.matches('[role="tooltip"], [class*="tooltip"], [class*="Tooltip"]');
+            const isImportantUI = el.matches('[class*="model"], [class*="Model"], [class*="context"], [class*="Context"], [class*="input"], [class*="Input"], [class*="selector"], [class*="Selector"], button, [role="button"]');
+            
+            if (isTooltip || (!isMainContent && !isImportantUI)) {
+              el.remove();
+            }
+          });
+        } catch(e) {}
+      });
       
       // Before cloning, inline computed styles for SVGs (currentColor fix)
       const originalSvgs = chatElement.querySelectorAll('svg');
@@ -511,7 +569,8 @@ async function captureSnapshot(cdp) {
       return {
         html: clone.outerHTML,
         bodyBg,
-        bodyColor
+        bodyColor,
+        debug
       };
     })()
   `;
@@ -1086,13 +1145,20 @@ async function pollSnapshots() {
       const snapshot = await captureSnapshot(cdp);
       
       if (snapshot) {
+        // Log debug info for troubleshooting
+        if (snapshot.debug) {
+          console.log(`[Snapshot] Debug for ${cascadeId}:`, JSON.stringify(snapshot.debug, null, 2));
+        }
+        
         const newHash = computeHash(snapshot.html);
         if (newHash !== cascade.snapshotHash) {
-          console.log(`[Snapshot] Chat content changed for cascade ${cascadeId}`);
+          console.log(`[Snapshot] Chat content changed for cascade ${cascadeId} (${snapshot.html.length} chars)`);
           cascade.snapshot = snapshot;
           cascade.snapshotHash = newHash;
           broadcastSnapshotUpdate(cascadeId, 'chat');
         }
+      } else {
+        console.log(`[Snapshot] captureSnapshot returned null for cascade ${cascadeId}`);
       }
       
       // Use main window CDP for terminal/sidebar/editor

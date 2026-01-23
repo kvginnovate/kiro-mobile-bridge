@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "A simple mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN",
   "type": "module",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node src/server.js"
   },
   "keywords": [
     "kiro",

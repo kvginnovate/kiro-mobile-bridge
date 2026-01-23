@@ -4,18 +4,35 @@
   "description": "A simple mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN",
   "type": "module",
   "main": "src/server.js",
+  "bin": {
+    "kiro-mobile-bridge": "src/server.js"
+  },
   "scripts": {
     "start": "node src/server.js"
   },
+  "files": [
+    "src/**/*",
+    "README.md"
+  ],
   "keywords": [
     "kiro",
     "mobile",
     "bridge",
     "cdp",
-    "monitoring"
+    "monitoring",
+    "ide",
+    "remote",
+    "agent"
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "express": "^4.18.2",
     "ws": "^8.18.0"

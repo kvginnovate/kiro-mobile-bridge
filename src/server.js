@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Kiro Mobile Bridge Server
  * 

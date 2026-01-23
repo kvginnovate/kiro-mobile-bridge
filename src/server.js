@@ -473,33 +473,23 @@ async function captureSnapshot(cdp) {
       const bodyBg = bodyStyles.backgroundColor || '';
       const bodyColor = bodyStyles.color || '';
       
-      // Look for the main content container
-      const chatSelectors = [
-        '#root',
-        '#app',
-        '.app',
-        'main',
-        '[class*="chat"]',
-        '[class*="message"]',
-        'body > div'
-      ];
+      // FIXED: Capture the ENTIRE body to include React Portals (like History panel)
+      // React Portals render outside #root as siblings, so we must capture body
+      // to get overlays, drawers, modals, and other portal-based UI elements
+      let chatElement = targetBody;
+      debug.foundElement = 'body (captures all portals)';
       
-      let chatElement = null;
-      for (const selector of chatSelectors) {
-        const el = targetDoc.querySelector(selector);
-        const len = el ? el.innerHTML.length : 0;
-        debug.selectorsChecked.push({ selector, found: !!el, htmlLength: len });
-        if (el && len > 50) {
-          chatElement = el;
-          debug.foundElement = selector;
-          break;
-        }
-      }
-      
-      if (!chatElement) {
-        chatElement = targetBody;
-        debug.foundElement = 'body (fallback)';
-      }
+      // Log what we're capturing for debugging
+      const rootEl = targetDoc.querySelector('#root');
+      const bodyChildren = targetBody.children.length;
+      debug.selectorsChecked.push({ 
+        selector: 'body', 
+        found: true, 
+        htmlLength: targetBody.innerHTML.length,
+        bodyChildren: bodyChildren,
+        hasRoot: !!rootEl,
+        rootLength: rootEl ? rootEl.innerHTML.length : 0
+      });
       
       debug.htmlLength = chatElement.innerHTML.length;
       
@@ -2461,7 +2451,8 @@ async function clickElement(cdp, clickInfo) {
       // 3. Try by text content - search all clickable elements
       if (info.text && info.text.trim() && !element) {
         const searchText = info.text.trim();
-        const allElements = targetDoc.querySelectorAll('button, [role="button"], [role="tab"], [role="menuitem"], [role="switch"], a, [tabindex="0"], [class*="button"], [class*="btn"]');
+        // Include divs and spans that might be clickable (like history items)
+        const allElements = targetDoc.querySelectorAll('button, [role="button"], [role="tab"], [role="menuitem"], [role="switch"], [role="listitem"], [role="option"], a, [tabindex="0"], [class*="button"], [class*="btn"], [style*="cursor: pointer"], [style*="cursor:pointer"], div[class*="cursor-pointer"], div[class*="hover"], [onclick]');
         
         // DEBUG: Log what we're searching for
         console.log('[Click Debug] Searching for text:', searchText.substring(0, 50));
@@ -2518,6 +2509,41 @@ async function clickElement(cdp, clickInfo) {
             if ((c.textContent || '').includes(info.text.substring(0, 15))) {
               element = c;
               matchMethod = 'role+text';
+              break;
+            }
+          }
+        }
+      }
+      
+      // 6. FALLBACK: Search ALL elements by text content (for history items, etc.)
+      if (info.text && info.text.trim() && !element) {
+        const searchText = info.text.trim();
+        // Search all elements that might be clickable based on their content
+        const allElements = targetDoc.querySelectorAll('*');
+        
+        for (const el of allElements) {
+          // Skip script, style, and other non-visible elements
+          if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'META', 'LINK', 'HEAD'].includes(el.tagName)) continue;
+          
+          const elText = (el.textContent || '').trim();
+          
+          // Look for elements where the text matches closely
+          if (elText === searchText || (elText.includes(searchText) && elText.length < searchText.length * 2)) {
+            // Check if this element or its parent is clickable
+            const style = window.getComputedStyle(el);
+            const parentStyle = el.parentElement ? window.getComputedStyle(el.parentElement) : null;
+            const isClickable = style.cursor === 'pointer' || 
+                               (parentStyle && parentStyle.cursor === 'pointer') ||
+                               el.onclick || 
+                               el.parentElement?.onclick ||
+                               el.closest('[role="button"]') ||
+                               el.closest('[tabindex]');
+            
+            if (isClickable) {
+              // Click the clickable parent if the element itself isn't clickable
+              element = style.cursor === 'pointer' ? el : (el.closest('[style*="cursor: pointer"], [style*="cursor:pointer"]') || el.parentElement || el);
+              matchMethod = 'fallback-text-search';
+              console.log('[Click Debug] Fallback found:', el.tagName, 'text:', elText.substring(0, 30));
               break;
             }
           }

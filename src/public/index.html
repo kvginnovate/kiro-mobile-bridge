@@ -1339,6 +1339,26 @@
         allClickables.add(el);
       });
       
+      // ADDED: Support for History panel items and other cursor-pointer elements
+      // History items are divs with cursor-pointer class containing session info
+      content.querySelectorAll('[class*="cursor-pointer"], [class*="hover\\:"], [class*="group"]').forEach(el => {
+        // Check if this looks like a history/session item (contains date pattern)
+        const text = el.textContent || '';
+        const hasDate = /\d{1,2}\/\d{1,2}\/\d{4}/.test(text);
+        const hasTime = /\d{1,2}:\d{2}/.test(text);
+        if (hasDate || hasTime || el.classList.contains('cursor-pointer')) {
+          allClickables.add(el);
+        }
+      });
+      
+      // Also look for any div that has inline cursor:pointer style
+      content.querySelectorAll('div, span').forEach(el => {
+        const style = el.getAttribute('style') || '';
+        if (style.includes('cursor') && style.includes('pointer')) {
+          allClickables.add(el);
+        }
+      });
+      
       allClickables.forEach(el => {
         if (el.matches && el.matches('[contenteditable], textarea, input:not([type="checkbox"])')) return;
         if (el.closest('[role="tab"]')) return;

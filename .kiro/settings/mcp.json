@@ -24,10 +24,7 @@
         "execute",
         "reset"
       ],
-      "disabledTools": [
-        "execute",
-        "reset"
-      ],
+      "disabledTools": [],
       "disabled": false
     },
     "sequential-thinking": {

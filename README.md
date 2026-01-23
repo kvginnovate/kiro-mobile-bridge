@@ -79,16 +79,6 @@ Open the Network URL on your phone to monitor Kiro.
 2. Open the **Network URL** (e.g., `http://192.168.1.100:3000`) in your phone's browser
 3. The interface will automatically connect and show your Kiro chat
 
-## Configuration
-
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `PORT` | `3000` | Server port |
-
-Example:
-```bash
-PORT=8080 npx kiro-mobile-bridge
-```
 
 ## How It Works
 

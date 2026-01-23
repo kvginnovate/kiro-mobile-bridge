@@ -1279,11 +1279,7 @@ async function discoverTargets() {
     try {
       const targets = await fetchCDPTargets(port);
       
-      // Debug: log all targets found on this port
-      console.log(`[Discovery] Port ${port}: Found ${targets.length} target(s)`);
-      targets.forEach((t, i) => {
-        console.log(`  [${i}] type="${t.type}" title="${t.title?.substring(0, 40)}" url="${t.url?.substring(0, 50)}..."`);
-      });
+
       
       // Find the main VS Code window (type: page, url starts with vscode-file://)
       const mainWindowTarget = targets.find(target => {
@@ -2272,8 +2268,7 @@ async function clickElement(cdp, clickInfo) {
         // Include divs and spans that might be clickable (like history items)
         const allElements = targetDoc.querySelectorAll('button, [role="button"], [role="tab"], [role="menuitem"], [role="switch"], [role="listitem"], [role="option"], a, [tabindex="0"], [class*="button"], [class*="btn"], [style*="cursor: pointer"], [style*="cursor:pointer"], div[class*="cursor-pointer"], div[class*="hover"], [onclick]');
         
-        // DEBUG: Log what we're searching for
-        console.log('[Click Debug] Searching for text:', searchText.substring(0, 50));
+
         
         for (const el of allElements) {
           // Skip close buttons unless explicitly looking for one
@@ -2294,8 +2289,7 @@ async function clickElement(cdp, clickInfo) {
           const searchContainsElement = elText.length >= 10 && searchText.includes(elText); // Require minimum length
           
           if (isExactMatch || elementContainsSearch || searchContainsElement) {
-            // DEBUG: Log what matched
-            console.log('[Click Debug] Matched element:', el.tagName, 'text:', elText.substring(0, 30), 'method:', isExactMatch ? 'exact' : elementContainsSearch ? 'el-contains-search' : 'search-contains-el');
+
             element = el;
             matchMethod = 'text-content';
             break;
@@ -2361,7 +2355,7 @@ async function clickElement(cdp, clickInfo) {
               // Click the clickable parent if the element itself isn't clickable
               element = style.cursor === 'pointer' ? el : (el.closest('[style*="cursor: pointer"], [style*="cursor:pointer"]') || el.parentElement || el);
               matchMethod = 'fallback-text-search';
-              console.log('[Click Debug] Fallback found:', el.tagName, 'text:', elText.substring(0, 30));
+
               break;
             }
           }

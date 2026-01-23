@@ -8,7 +8,6 @@ description: Debug CDP connection and DOM capture issues
 This project uses Chrome DevTools Protocol (CDP) to capture DOM snapshots from Kiro IDE webviews. Common issues include:
 - Execution context ID mismatches
 - Nested iframe access (VS Code webview pattern)
-- xterm.js canvas rendering (terminal capture)
 - Element selectors not finding content
 
 ## Diagnostic Steps

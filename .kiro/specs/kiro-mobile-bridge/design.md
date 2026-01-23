@@ -2,7 +2,7 @@
 
 ## Overview
 
-Simple server that connects to Kiro via CDP, captures chat snapshots, and serves them to a mobile web client. Same approach as Antigravity-Shit-Chat.
+Simple server that connects to Kiro via CDP, captures chat snapshots, and serves them to a mobile web client.
 
 ## Architecture
 
@@ -119,4 +119,4 @@ Single HTML page with:
 }
 ```
 
-That's it. No auth, no HTTPS, no mDNS - just works over LAN like Antigravity-Shit-Chat.
+That's it. No auth, no HTTPS, no mDNS - just works over LAN.

@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 3000;
 const CDP_PORTS = [9000, 9001, 9002, 9003, 9222, 9229];
 
 // State management
-const cascades = new Map(); // cascadeId -> { id, cdp, metadata, snapshot, css, snapshotHash, terminal, sidebar, editor }
+const cascades = new Map(); // cascadeId -> { id, cdp, metadata, snapshot, css, snapshotHash, sidebar, editor }
 const mainWindowCDP = { connection: null, id: null }; // Separate CDP connection for main VS Code window
 
 // =============================================================================
@@ -586,160 +586,6 @@ async function captureSnapshot(cdp) {
 }
 
 /**
- * Capture Terminal panel HTML snapshot
- * @param {CDPConnection} cdp - CDP connection
- * @returns {Promise<{html: string, hasContent: boolean} | null>}
- */
-async function captureTerminal(cdp) {
-  if (!cdp.rootContextId) return null;
-  
-  // VS Code terminal uses xterm.js which renders to canvas
-  // We need to access the accessibility buffer or use xterm's serialize addon
-  const script = `
-    (function() {
-      let targetDoc = document;
-      let textContent = '';
-      let terminalTabs = [];
-      
-      // Find the terminal panel area
-      const terminalPanel = targetDoc.querySelector('.terminal-outer-container, .integrated-terminal, [class*="terminal-wrapper"]');
-      
-      // Try to get terminal tabs/instances
-      const tabElements = targetDoc.querySelectorAll('.terminal-tab, .single-terminal-tab, [class*="terminal-tabs"] .tab');
-      tabElements.forEach((tab, i) => {
-        const label = tab.textContent?.trim() || tab.getAttribute('aria-label') || '';
-        const isActive = tab.classList.contains('active') || tab.getAttribute('aria-selected') === 'true';
-        if (label) {
-          terminalTabs.push({ label, isActive, index: i });
-        }
-      });
-      
-      // Method 1: xterm accessibility tree (most reliable)
-      const xtermAccessibility = targetDoc.querySelector('.xterm-accessibility-tree, .xterm-accessibility');
-      if (xtermAccessibility) {
-        // Get all rows from accessibility tree
-        const rows = xtermAccessibility.querySelectorAll('[role="listitem"], div[style*="position"]');
-        const lines = [];
-        rows.forEach(row => {
-          const rowText = row.textContent || '';
-          // Filter out screen reader toggle text
-          if (rowText && !rowText.includes('Toggle Screen Reader') && rowText.trim()) {
-            lines.push(rowText);
-          }
-        });
-        if (lines.length > 0) {
-          textContent = lines.join('\\n');
-        }
-      }
-      
-      // Method 2: xterm screen buffer via textarea (fallback)
-      if (!textContent.trim()) {
-        const xtermTextarea = targetDoc.querySelector('.xterm-helper-textarea');
-        if (xtermTextarea && xtermTextarea.value) {
-          textContent = xtermTextarea.value;
-        }
-      }
-      
-      // Method 3: Look for terminal rows with actual content
-      if (!textContent.trim()) {
-        const xtermRows = targetDoc.querySelectorAll('.xterm-rows > div, .xterm-screen .xterm-rows span');
-        const lines = [];
-        xtermRows.forEach(row => {
-          const spans = row.querySelectorAll('span');
-          let lineText = '';
-          spans.forEach(span => {
-            lineText += span.textContent || '';
-          });
-          if (!lineText) lineText = row.textContent || '';
-          if (lineText.trim()) {
-            lines.push(lineText);
-          }
-        });
-        if (lines.length > 0) {
-          textContent = lines.join('\\n');
-        }
-      }
-      
-      // Method 4: Try OUTPUT panel (HTML-based, not canvas)
-      if (!textContent.trim()) {
-        const outputPanel = targetDoc.querySelector('.output-view, .repl-input-wrapper, [class*="output"]');
-        if (outputPanel) {
-          const outputText = outputPanel.textContent || '';
-          if (outputText.trim()) {
-            textContent = outputText;
-          }
-        }
-      }
-      
-      // Method 5: Problems panel
-      if (!textContent.trim()) {
-        const problemsPanel = targetDoc.querySelector('.markers-panel, [class*="problems"]');
-        if (problemsPanel) {
-          textContent = problemsPanel.textContent || '';
-        }
-      }
-      
-      // Method 6: Debug Console
-      if (!textContent.trim()) {
-        const debugConsole = targetDoc.querySelector('.debug-console, .repl, [class*="debug-console"]');
-        if (debugConsole) {
-          textContent = debugConsole.textContent || '';
-        }
-      }
-      
-      // Method 7: Any panel content in bottom area
-      if (!textContent.trim()) {
-        const panelContent = targetDoc.querySelector('.panel .content, .panel-body, .pane-body');
-        if (panelContent) {
-          const panelText = panelContent.textContent || '';
-          if (panelText.trim() && panelText.length > 20) {
-            textContent = panelText;
-          }
-        }
-      }
-      
-      // Clean up the text
-      textContent = textContent.trim();
-      
-      // Build HTML representation
-      let html = '';
-      if (terminalTabs.length > 0) {
-        html += '<div class="terminal-tabs">';
-        terminalTabs.forEach(tab => {
-          html += '<span class="terminal-tab-item' + (tab.isActive ? ' active' : '') + '">' + tab.label + '</span>';
-        });
-        html += '</div>';
-      }
-      
-      if (textContent) {
-        html += '<pre class="terminal-output">' + textContent.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
-      }
-      
-      return {
-        html: html,
-        textContent: textContent,
-        hasContent: textContent.length > 0,
-        tabs: terminalTabs
-      };
-    })()
-  `;
-  
-  try {
-    const result = await cdp.call('Runtime.evaluate', {
-      expression: script,
-      contextId: cdp.rootContextId,
-      returnByValue: true
-    });
-    if (result.result && result.result.value) {
-      return result.result.value;
-    }
-  } catch (err) {
-    console.error('[Terminal] Failed to capture:', err.message);
-  }
-  return null;
-}
-
-/**
  * Capture Sidebar panel HTML snapshot (File Explorer + Kiro panels)
  * @param {CDPConnection} cdp - CDP connection
  * @returns {Promise<{html: string, files: Array, kiroPanels: Array} | null>}
@@ -1140,20 +986,9 @@ async function pollSnapshots() {
         }
       }
       
-      // Use main window CDP for terminal/sidebar/editor
+      // Use main window CDP for sidebar/editor
       const mainCDP = mainWindowCDP.connection;
       if (mainCDP && mainCDP.rootContextId) {
-        // Capture Terminal snapshot from main window
-        const terminal = await captureTerminal(mainCDP);
-        if (terminal && terminal.hasContent) {
-          const termHash = computeHash(terminal.html || terminal.textContent || '');
-          if (termHash !== cascade.terminalHash) {
-            cascade.terminal = terminal;
-            cascade.terminalHash = termHash;
-            broadcastSnapshotUpdate(cascadeId, 'terminal');
-          }
-        }
-        
         // Capture Sidebar snapshot from main window
         const sidebar = await captureSidebar(mainCDP);
         if (sidebar && sidebar.hasContent) {
@@ -1192,7 +1027,7 @@ async function pollSnapshots() {
 /**
  * Broadcast a snapshot update notification to all connected WebSocket clients
  * @param {string} cascadeId - ID of the cascade that was updated
- * @param {string} panel - Panel type that was updated (chat, terminal, sidebar, editor)
+ * @param {string} panel - Panel type that was updated (chat, sidebar, editor)
  */
 function broadcastSnapshotUpdate(cascadeId, panel = 'chat') {
   const message = JSON.stringify({
@@ -1430,7 +1265,7 @@ async function injectMessage(cdp, message) {
  * Discover CDP targets across all configured ports
  * Scans ports 9000-9003, connects to:
  * 1. Kiro Agent webview (for chat)
- * 2. Main VS Code window (for terminal, sidebar, editor)
+ * 2. Main VS Code window (for sidebar, editor)
  */
 async function discoverTargets() {
   console.log('[Discovery] Scanning for CDP targets...');
@@ -1458,7 +1293,7 @@ async function discoverTargets() {
                target.webSocketDebuggerUrl;
       });
       
-      // Connect to main window for terminal/sidebar/editor
+      // Connect to main window for sidebar/editor
       if (mainWindowTarget && !mainWindowCDP.connection) {
         console.log(`[Discovery] Found main VS Code window: ${mainWindowTarget.title}`);
         try {
@@ -1514,8 +1349,6 @@ async function discoverTargets() {
               css: null,
               snapshotHash: null,
               // Panel snapshots (populated from main window)
-              terminal: null,
-              terminalHash: null,
               sidebar: null,
               sidebarHash: null,
               editor: null,
@@ -1756,21 +1589,6 @@ app.get('/styles/:id', (req, res) => {
     return res.status(404).json({ error: 'No styles available' });
   }
   res.type('text/css').send(cascade.css);
-});
-
-/**
- * GET /terminal/:id - Get Terminal snapshot for a specific cascade
- * Returns terminal object { html, textContent, hasContent } or 404
- */
-app.get('/terminal/:id', (req, res) => {
-  const cascade = cascades.get(req.params.id);
-  if (!cascade) {
-    return res.status(404).json({ error: 'Cascade not found' });
-  }
-  if (!cascade.terminal || !cascade.terminal.hasContent) {
-    return res.status(404).json({ error: 'No terminal content available' });
-  }
-  res.json(cascade.terminal);
 });
 
 /**

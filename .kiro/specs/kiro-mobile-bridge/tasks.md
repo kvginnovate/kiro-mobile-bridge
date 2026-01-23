@@ -2,7 +2,7 @@
 
 ## Overview
 
-Build a simple mobile monitor for Kiro, following the Antigravity-Shit-Chat pattern.
+Build a simple mobile monitor for Kiro IDE.
 
 ## Tasks
 

@@ -1,5 +1,5 @@
 ---
-description: Add new panel capture (terminal, sidebar, editor patterns)
+description: Add new panel capture (sidebar, editor patterns)
 ---
 
 # Add Panel Capture
@@ -7,7 +7,6 @@ description: Add new panel capture (terminal, sidebar, editor patterns)
 ## Context
 Kiro Mobile Bridge captures multiple panels from Kiro IDE via CDP:
 - **Chat**: Kiro Agent webview (works well)
-- **Terminal**: xterm.js canvas (challenging - uses accessibility tree)
 - **Sidebar**: File explorer (partial)
 - **Editor**: Monaco editor (uses view-lines, limited by virtual scrolling)
 
@@ -89,11 +88,6 @@ In `public/index.html`:
 
 ## Known Challenges
 
-**xterm.js (Terminal):**
-- Renders to canvas, not DOM
-- Use `.xterm-accessibility-tree` for text content
-- Or serialize via xterm's serialize addon (requires injection)
-
 **Monaco (Editor):**
 - Virtual scrolling - only visible lines in DOM
 - Use `/readFile` endpoint to read directly from filesystem
@@ -101,5 +95,5 @@ In `public/index.html`:
 
 **VS Code Panels:**
 - Main window vs webview have different CDP targets
-- Use `mainWindowCDP` for terminal/sidebar/editor
+- Use `mainWindowCDP` for sidebar/editor
 - Use cascade's `cdp` for chat (Kiro Agent webview)

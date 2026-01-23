@@ -6,7 +6,7 @@
 
 ## Overview
 
-Building a mobile web interface to monitor and interact with Kiro IDE agent sessions from a phone over LAN. Uses Chrome DevTools Protocol (CDP) to capture snapshots of chat, terminal, file explorer, and editor panels in real-time.
+Building a mobile web interface to monitor and interact with Kiro IDE agent sessions from a phone over LAN. Uses Chrome DevTools Protocol (CDP) to capture snapshots of chat, file explorer, and editor panels in real-time.
 
 ---
 
@@ -34,7 +34,7 @@ Building a mobile web interface to monitor and interact with Kiro IDE agent sess
 ## Day 2 (Jan 22) - Core Features & Mobile UI [20h]
 
 ### Morning: Snapshot Capture [6h]
-- **Implemented**: Chat, terminal, sidebar, editor capture functions
+- **Implemented**: Chat, sidebar, editor capture functions
 - **Pattern**: IIFE wrapper for all CDP expressions (null safety)
 - **Optimization**: Parallel capture with Promise.all
 

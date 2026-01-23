@@ -2,7 +2,7 @@
 
 ## Introduction
 
-A simple mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN. Inspired by Antigravity-Shit-Chat - captures snapshots of the chat interface via CDP and lets you send messages remotely.
+A simple mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN. Captures snapshots of the chat interface via CDP and lets you send messages remotely.
 
 ## Glossary
 

@@ -1,7 +1,7 @@
 # Product Overview
 
 ## Product Purpose
-Kiro Mobile Bridge is a mobile web interface that lets developers monitor and interact with Kiro IDE agent sessions from their phone over LAN. It captures real-time snapshots of the chat interface, terminal, file explorer, and editor via Chrome DevTools Protocol (CDP), enabling remote monitoring and control without being at your desk.
+Kiro Mobile Bridge is a mobile web interface that lets developers monitor and interact with Kiro IDE agent sessions from their phone over LAN. It captures real-time snapshots of the chat interface, file explorer, and editor via Chrome DevTools Protocol (CDP), enabling remote monitoring and control without being at your desk.
 
 ## Target Users
 - **Developers using Kiro IDE** who want to monitor long-running agent tasks from their phone
@@ -11,7 +11,6 @@ Kiro Mobile Bridge is a mobile web interface that lets developers monitor and in
 ## Key Features
 - 📱 Mobile-optimized web interface with tab navigation
 - 💬 Chat Panel - View and send messages to Kiro's agent
-- 🖥️ Terminal Panel - View terminal output in real-time
 - 📁 Files Panel - Browse file explorer and Kiro panels (specs, hooks, steering)
 - 📝 Editor Panel - View currently open file with syntax highlighting
 - 🔄 Real-time updates via WebSocket
@@ -27,7 +26,7 @@ Kiro Mobile Bridge is a mobile web interface that lets developers monitor and in
 1. Start Kiro IDE with CDP enabled (`--remote-debugging-port=9000`)
 2. Run the bridge server (`npm start`)
 3. Open the network URL on phone (same WiFi network)
-4. Monitor chat, terminal, files, and editor in real-time
+4. Monitor chat, files, and editor in real-time
 5. Send messages to Kiro agent directly from phone
 
 ## Success Criteria

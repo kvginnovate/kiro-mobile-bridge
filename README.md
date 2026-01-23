@@ -1,22 +1,18 @@
 # Kiro Mobile Bridge
 
-A mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN. Captures snapshots of the chat interface, terminal, file explorer, and editor via Chrome DevTools Protocol (CDP) and lets you interact remotely.
+A mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN. Captures snapshots of the chat interface, file explorer, and editor via Chrome DevTools Protocol (CDP) and lets you interact remotely.
 
 ## Features
 
 - 📱 Mobile-optimized web interface with tab navigation
 - 💬 **Chat Panel** - View and send messages to Kiro's agent
-- 🖥️ **Terminal Panel** - View terminal output in real-time
-- 📁 **Files Panel** - Browse file explorer and Kiro panels (specs, hooks, steering)
-- 📝 **Editor Panel** - View currently open file with syntax highlighting
+- 📝 **Editor Panel** - Browse file explorer and open file 
 - 🔄 Real-time updates via WebSocket
-- 🔍 Auto-discovers Kiro instances on ports 9000-9003
-- 🎨 Preserves original Kiro styling
 
 ## Prerequisites
 
 - **Node.js** 18+ (uses ES modules)
-- **Kiro IDE** with Chrome DevTools Protocol enabled
+- **Kiro IDE** 
 
 ## Quick Start
 
@@ -94,32 +90,6 @@ Example:
 PORT=8080 npx kiro-mobile-bridge
 ```
 
-## API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/cascades` | List active chat sessions |
-| `GET` | `/snapshot/:id` | Get chat HTML snapshot for a cascade |
-| `GET` | `/snapshot` | Get snapshot of first cascade |
-| `GET` | `/terminal/:id` | Get terminal output snapshot |
-| `GET` | `/sidebar/:id` | Get sidebar/file explorer snapshot |
-| `GET` | `/editor/:id` | Get editor content snapshot |
-| `GET` | `/styles/:id` | Get CSS for a cascade |
-| `POST` | `/send/:id` | Send message to a cascade |
-| `POST` | `/click/:id` | Click an element in Kiro UI |
-
-### WebSocket Messages
-
-The server pushes updates via WebSocket:
-
-```javascript
-// Cascade list update
-{ type: 'cascade_list', cascades: [{ id, title, window, active }] }
-
-// Snapshot changed (panel: 'chat' | 'terminal' | 'sidebar' | 'editor')
-{ type: 'snapshot_update', cascadeId: string, panel: string }
-```
-
 ## How It Works
 
 ```
@@ -147,34 +117,13 @@ The server pushes updates via WebSocket:
 
 - Make sure Kiro is running with `--remote-debugging-port=9000`
 - Check that Kiro has a chat/agent session open
-- Wait a few seconds for discovery (runs every 10s)
+- Wait a few seconds for discovery 
 
 ### Can't connect from phone
 
 - Ensure phone and computer are on the **same network**
 - Check your firewall allows connections on port 3000
 - Try the IP address shown in the server output (not `localhost`)
-
-### Finding your local IP
-
-The server displays your local IP on startup. You can also find it:
-
-```bash
-# Windows
-ipconfig
-
-# macOS
-ifconfig | grep "inet "
-
-# Linux
-ip addr show | grep "inet "
-```
-
-### Message not sending
-
-- The chat input must be visible in Kiro
-- Try clicking in the chat input in Kiro first
-- Check the server console for error messages
 
 ## Security Notes
 

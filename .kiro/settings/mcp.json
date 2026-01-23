@@ -1,0 +1,45 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "disabled": true,
+      "autoApprove": [
+        "resolve-library-id",
+        "resolve-library-id",
+        "query-docs",
+        "query-docs"
+      ]
+    },
+    "playwriter": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "playwriter@latest"
+      ],
+      "autoApprove": [
+        "execute",
+        "reset"
+      ],
+      "disabledTools": [
+        "execute",
+        "reset"
+      ],
+      "disabled": false
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "sequentialthinking"
+      ]
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "name": "Strict Code Review",
+  "description": "Automatically reviews code changes for unused code, best practices, bugs, performance, readability, and security vulnerabilities. Outputs findings in a structured table format.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Please review the edited file strictly. Evaluate the code based on:\n- Unused code\n- Code quality and adherence to language best practices\n- Potential bugs or unhandled edge cases\n- Performance optimizations\n- Readability and maintainability\n- Any security vulnerabilities\n\nIn your output:\n1. Begin with a brief summary of the overall code quality\n2. Line numbers start at 1, based on the code as presented\n3. If no issues are found, briefly state that the code meets best practices\n4. Present identified issues in a table with columns: Line Number, Code Snippet, Issue, and Recommended Solution"
+  },
+  "workspaceFolderName": "gab",
+  "shortName": "strict-code-review"
+}

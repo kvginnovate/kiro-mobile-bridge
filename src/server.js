@@ -100,7 +100,7 @@ function connectToCDP(wsUrl) {
             rootContextId = ctx.id;
           }
           
-          console.log(`[CDP] Context created: id=${ctx.id}, name="${ctx.name}", origin="${ctx.origin}"`);
+
         }
         
         if (msg.method === 'Runtime.executionContextDestroyed') {
@@ -108,7 +108,7 @@ function connectToCDP(wsUrl) {
           const idx = contexts.findIndex(c => c.id === ctxId);
           if (idx !== -1) {
             contexts.splice(idx, 1);
-            console.log(`[CDP] Context destroyed: id=${ctxId}`);
+
           }
           if (rootContextId === ctxId) {
             rootContextId = contexts.length > 0 ? contexts[0].id : null;
@@ -118,7 +118,7 @@ function connectToCDP(wsUrl) {
         if (msg.method === 'Runtime.executionContextsCleared') {
           contexts.length = 0;
           rootContextId = null;
-          console.log('[CDP] All contexts cleared');
+
         }
         
         // Handle responses to our calls

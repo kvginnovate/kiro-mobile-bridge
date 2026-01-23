@@ -28,7 +28,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/4regab/kiro-mobile-bridge"
   },
   "engines": {
     "node": ">=18.0.0"

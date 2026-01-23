@@ -2230,6 +2230,11 @@ app.post('/click/:id', async (req, res) => {
   const clickInfo = req.body;
   console.log(`[Click] Attempting click:`, clickInfo.text?.substring(0, 30) || clickInfo.ariaLabel || clickInfo.tag);
   
+  // Log tab close operations for debugging
+  if (clickInfo.isCloseButton && clickInfo.parentTabLabel) {
+    console.log(`[Click] Closing tab: "${clickInfo.parentTabLabel}"`);
+  }
+  
   try {
     const result = await clickElement(cascade.cdp, clickInfo);
     res.json(result);
@@ -2340,16 +2345,38 @@ async function clickElement(cdp, clickInfo) {
       // Handle close button clicks explicitly
       if (isCloseButton) {
         const closeButtons = targetDoc.querySelectorAll('[aria-label="close"], .kiro-tabs-item-close, [class*="close"]');
-        for (const btn of closeButtons) {
-          // Find the close button in the currently selected tab or matching context
-          const parentTab = btn.closest('[role="tab"]');
-          if (parentTab && parentTab.getAttribute('aria-selected') === 'true') {
-            element = btn;
-            matchMethod = 'close-button-selected-tab';
-            break;
+        
+        // FIXED: If parentTabLabel is provided, find the close button in that specific tab
+        if (info.parentTabLabel) {
+          const searchLabel = info.parentTabLabel.trim().toLowerCase();
+          
+          for (const btn of closeButtons) {
+            const parentTab = btn.closest('[role="tab"]');
+            if (parentTab) {
+              const labelEl = parentTab.querySelector('.kiro-tabs-item-label, [class*="label"]');
+              const tabLabel = labelEl ? labelEl.textContent.trim().toLowerCase() : parentTab.textContent.trim().toLowerCase();
+              
+              // Match the tab by its label
+              if (tabLabel.includes(searchLabel) || searchLabel.includes(tabLabel)) {
+                element = btn;
+                matchMethod = 'close-button-by-tab-label';
+                break;
+              }
+            }
+          }
+        } else {
+          // Fallback: Original logic - find close button in selected tab
+          for (const btn of closeButtons) {
+            const parentTab = btn.closest('[role="tab"]');
+            if (parentTab && parentTab.getAttribute('aria-selected') === 'true') {
+              element = btn;
+              matchMethod = 'close-button-selected-tab';
+              break;
+            }
           }
         }
-        // If no selected tab close button, find any close button
+        
+        // If still not found, use first close button as last resort
         if (!element && closeButtons.length > 0) {
           element = closeButtons[0];
           matchMethod = 'close-button-first';

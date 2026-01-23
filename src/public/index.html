@@ -59,10 +59,10 @@
     .editor-search-close { color: #888; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
     .editor-search-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
     .editor-content { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: #1e1e1e; }
-    .editor-code { margin: 0; padding: 8px 0; font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', Menlo, Monaco, 'Courier New', monospace; font-size: 14px; line-height: 1.6; color: #d4d4d4; background: #1e1e1e; }
-    .editor-line { display: flex; min-height: 1.6em; }
+    .editor-code { margin: 0; padding: 8px 0; font-family: Consolas, 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #d4d4d4; background: #1e1e1e; }
+    .editor-line { display: flex; min-height: 18px; }
     .editor-line:hover { background: rgba(255,255,255,0.04); }
-    .editor-line-num { width: 50px; min-width: 50px; text-align: right; padding-right: 16px; color: #858585; user-select: none; flex-shrink: 0; font-size: 14px; font-family: inherit; }
+    .editor-line-num { width: 50px; min-width: 50px; text-align: right; padding-right: 16px; color: #858585; user-select: none; flex-shrink: 0; font-size: 12px; font-family: inherit; }
     .editor-line-code { flex: 1; padding-right: 12px; white-space: pre; overflow-x: auto; tab-size: 2; font-family: inherit; }
     .search-highlight { background: #ffd500; color: #000; border-radius: 2px; padding: 0 1px; }
     .search-highlight.current { background: #ff6b00; color: #fff; outline: 2px solid #ff6b00; }
@@ -1056,6 +1056,22 @@
           background: rgba(255, 255, 255, 0.1) !important;
         }
         
+        /* Hide notification bars and change acceptance UI */
+        [class*="notification"], [class*="Notification"],
+        [class*="toast"], [class*="Toast"],
+        [class*="banner"], [class*="Banner"],
+        [class*="change-accepted"], [class*="changeAccepted"],
+        [class*="revert"], [class*="Revert"],
+        [class*="view-all"], [class*="viewAll"],
+        [class*="status-bar-notification"],
+        div[role="status"], div[role="alert"] {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          height: 0 !important;
+          overflow: hidden !important;
+        }
+        
         /* Model selector chevron/arrow icon */
         [class*="model-selector"] svg, [class*="modelSelector"] svg,
         [class*="model-dropdown"] svg, button[class*="dropdown"] svg {
@@ -1617,7 +1633,21 @@
           closeBtn.onclick = async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            await sendClickToKiro({ tag: 'button', text: 'close', ariaLabel: 'close', role: 'button', isCloseButton: true });
+            
+            // FIXED: Include tab label to identify which tab's close button to click
+            const labelEl = tab.querySelector('.kiro-tabs-item-label, [class*="label"]');
+            const tabLabel = labelEl ? labelEl.textContent.trim() : tab.textContent.trim();
+            
+            console.log('[Tab Close] Closing tab:', tabLabel);
+            
+            await sendClickToKiro({ 
+              tag: 'button', 
+              text: 'close', 
+              ariaLabel: 'close', 
+              role: 'button', 
+              isCloseButton: true,
+              parentTabLabel: tabLabel  // NEW: Identify which tab this close button belongs to
+            });
             return false;
           };
         }

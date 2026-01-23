@@ -90,11 +90,16 @@ jobs:
           echo "All notable changes to this project will be documented in this file." >> $TEMP_FILE
           echo "" >> $TEMP_FILE
           echo "## v$VERSION ($DATE)" >> $TEMP_FILE
-          echo '${{ steps.commit_info.outputs.message }}' | while IFS= read -r line; do
+          
+          # Use heredoc to safely handle commit messages with special characters (apostrophes, quotes, etc.)
+          while IFS= read -r line; do
             if [ -n "$line" ]; then
               echo "- $line" >> $TEMP_FILE
             fi
-          done
+          done << 'COMMIT_MSG'
+          ${{ steps.commit_info.outputs.message }}
+          COMMIT_MSG
+          
           echo "" >> $TEMP_FILE
           
           # Append existing changelog (skip header) if it exists

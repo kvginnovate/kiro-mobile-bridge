@@ -59,11 +59,11 @@
     .editor-search-close { color: #888; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
     .editor-search-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
     .editor-content { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: #1e1e1e; }
-    .editor-code { margin: 0; padding: 8px 0; font-family: 'Cascadia Code', 'Fira Code', Menlo, Monaco, "Courier New", monospace; font-size: 12px; line-height: 1.6; color: #d4d4d4; white-space: pre; overflow-x: auto; background: #1e1e1e; }
+    .editor-code { margin: 0; padding: 8px 0; font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', Menlo, Monaco, 'Courier New', monospace; font-size: 14px; line-height: 1.6; color: #d4d4d4; background: #1e1e1e; }
     .editor-line { display: flex; min-height: 1.6em; }
     .editor-line:hover { background: rgba(255,255,255,0.04); }
-    .editor-line-num { width: 45px; min-width: 45px; text-align: right; padding-right: 12px; color: #6e7681; user-select: none; flex-shrink: 0; font-size: 12px; }
-    .editor-line-code { flex: 1; padding-right: 12px; white-space: pre; tab-size: 2; }
+    .editor-line-num { width: 50px; min-width: 50px; text-align: right; padding-right: 16px; color: #858585; user-select: none; flex-shrink: 0; font-size: 14px; font-family: inherit; }
+    .editor-line-code { flex: 1; padding-right: 12px; white-space: pre; overflow-x: auto; tab-size: 2; font-family: inherit; }
     .search-highlight { background: #ffd500; color: #000; border-radius: 2px; padding: 0 1px; }
     .search-highlight.current { background: #ff6b00; color: #fff; outline: 2px solid #ff6b00; }
     
@@ -90,14 +90,29 @@
     .file-tree-empty { padding: 20px; text-align: center; color: #666; font-size: 13px; }
     .file-tree-loading { padding: 20px; text-align: center; color: #888; display: flex; flex-direction: column; align-items: center; gap: 8px; }
     
-    /* Syntax Highlighting */
-    .tok-kw { color: #569cd6; }
-    .tok-str { color: #ce9178; }
-    .tok-num { color: #b5cea8; }
-    .tok-cmt { color: #6a9955; }
-    .tok-fn { color: #dcdcaa; }
-    .tok-type { color: #4ec9b0; }
-    
+    /* Syntax Highlighting - Kiro Dark Theme */
+    .token-keyword { color: #c586c0; font-weight: normal; }
+    .token-string { color: #ce9178; }
+    .token-number { color: #b5cea8; }
+    .token-comment { color: #6a9955; font-style: italic; }
+    .token-function { color: #dcdcaa; }
+    .token-type { color: #4ec9b0; }
+    .token-operator { color: #d4d4d4; }
+    .token-property { color: #9cdcfe; }
+    .token-variable { color: #9cdcfe; }
+    .token-constant { color: #4fc1ff; }
+    .token-class { color: #4ec9b0; }
+    .token-punctuation { color: #d4d4d4; }
+    .token-tag { color: #569cd6; }
+    .token-attr-name { color: #9cdcfe; }
+    .token-attr-value { color: #ce9178; }
+    /* Kiro theme token classes */
+    .tok-kw { color: #c586c0; } /* Keywords - purple/pink */
+    .tok-str { color: #ce9178; } /* Strings - orange */
+    .tok-num { color: #b5cea8; } /* Numbers - light green */
+    .tok-cmt { color: #6a9955; font-style: italic; } /* Comments - green italic */
+    .tok-fn { color: #dcdcaa; } /* Functions - yellow */
+    .tok-type { color: #4ec9b0; } /* Types - teal */
     /* Syntax Highlighting */
     .token-keyword { color: #569cd6; font-weight: 500; }
     .token-string { color: #ce9178; }
@@ -540,6 +555,9 @@
       
       hideLoading('chat');
       
+      // Remove placeholder text that overlaps with input
+      removePlaceholderText();
+      
       // Find the new inner scrollable element and scroll it
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -625,12 +643,10 @@
         const displayLines = lines.slice(startIdx);
         displayLines.forEach((line, idx) => {
           const lineNum = startLineNum + startIdx + idx;
-          const highlighted = highlightSyntax(line, data.language);
-          // Preserve whitespace - convert tabs and spaces
-          let preservedLine = highlighted
-            .replace(/\t/g, '    ')
-            .replace(/^ +/, match => '&nbsp;'.repeat(match.length));
-          html += `<div class="editor-line"><span class="editor-line-num">${lineNum}</span><span class="editor-line-code">${preservedLine || '&nbsp;'}</span></div>`;
+          // Convert tabs to spaces first, then highlight
+          const lineWithSpaces = line.replace(/\t/g, '  ');
+          const highlighted = highlightSyntax(lineWithSpaces, data.language);
+          html += `<div class="editor-line"><span class="editor-line-num">${lineNum}</span><span class="editor-line-code">${highlighted || ' '}</span></div>`;
         });
         html += '</pre>';
         
@@ -663,46 +679,147 @@
       }
     }
 
-    // Syntax highlighting (basic)
+    // Syntax highlighting - simple and safe approach
     function highlightSyntax(line, language) {
-      let escaped = escapeHtml(line);
+      // First escape HTML to prevent XSS
+      const escaped = escapeHtml(line);
       
-      // Skip syntax highlighting for CSS (too complex with # colors)
-      if (language === 'css' || language === 'html') {
+      // Skip highlighting for very long lines or if no language
+      if (escaped.length > 1000 || !language) {
         return escaped;
       }
       
-      // Comments - be careful not to match CSS color codes
-      // Only match // comments and # comments that start at beginning or after whitespace
-      escaped = escaped.replace(/(\/\/.*$)/gm, '<span class="token-comment">$1</span>');
-      escaped = escaped.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="token-comment">$1</span>');
-      // Python/shell comments - only if # is at start of line or after whitespace, not in middle of word
-      if (language === 'python' || language === 'bash' || language === 'sh') {
-        escaped = escaped.replace(/(^|\s)(#.*)$/gm, '$1<span class="token-comment">$2</span>');
+      // Language detection
+      const isJS = ['javascript', 'typescript', 'jsx', 'tsx', 'js', 'ts'].includes(language);
+      const isPython = language === 'python' || language === 'py';
+      const isJSON = language === 'json';
+      const isYAML = language === 'yaml' || language === 'yml';
+      const isShell = ['bash', 'sh', 'shell', 'zsh'].includes(language);
+      const isHTML = language === 'html' || language === 'xml';
+      const isCSS = language === 'css' || language === 'scss' || language === 'sass' || language === 'less';
+      const isMarkdown = language === 'markdown' || language === 'md';
+      
+      // For HTML files, use a simpler approach - just colorize without spans that could break
+      if (isHTML) {
+        let result = escaped;
+        // Comments
+        result = result.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="tok-cmt">$1</span>');
+        // Strings in attributes
+        result = result.replace(/=(&quot;[^&]*?&quot;)/g, '=<span class="tok-str">$1</span>');
+        result = result.replace(/=(&#39;[^&]*?&#39;)/g, '=<span class="tok-str">$1</span>');
+        return result;
       }
       
-      // Strings - match quoted strings
-      escaped = escaped.replace(/(&quot;[^&]*?&quot;)/g, '<span class="token-string">$1</span>');
-      escaped = escaped.replace(/(&#39;[^&]*?&#39;)/g, '<span class="token-string">$1</span>');
+      // For CSS files
+      if (isCSS) {
+        let result = escaped;
+        // Comments
+        result = result.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="tok-cmt">$1</span>');
+        // Strings
+        result = result.replace(/(&quot;[^&]*?&quot;)/g, '<span class="tok-str">$1</span>');
+        result = result.replace(/(&#39;[^&]*?&#39;)/g, '<span class="tok-str">$1</span>');
+        // Numbers with units
+        result = result.replace(/:\s*([0-9]+(?:\.[0-9]+)?(?:px|em|rem|%|vh|vw|s|ms)?)/g, ': <span class="tok-num">$1</span>');
+        // Hex colors
+        result = result.replace(/(#[0-9a-fA-F]{3,8})\b/g, '<span class="tok-num">$1</span>');
+        return result;
+      }
       
-      // Keywords
-      const keywords = ['const', 'let', 'var', 'function', 'class', 'return', 'if', 'else', 'for', 'while', 'import', 'export', 'from', 'async', 'await', 'try', 'catch', 'throw', 'new', 'this', 'super', 'extends', 'implements', 'interface', 'type', 'enum', 'public', 'private', 'protected', 'static', 'readonly', 'def', 'self', 'None', 'True', 'False'];
-      keywords.forEach(kw => {
-        const regex = new RegExp(`\\b(${kw})\\b`, 'g');
-        escaped = escaped.replace(regex, '<span class="token-keyword">$1</span>');
-      });
+      // Build result by processing character by character for other languages
+      let result = '';
+      let i = 0;
       
-      // Numbers - but not inside other tokens
-      escaped = escaped.replace(/\b(\d+\.?\d*)\b/g, '<span class="token-number">$1</span>');
+      while (i < escaped.length) {
+        // Check for comments
+        if (isJS && escaped.slice(i, i + 2) === '//') {
+          result += '<span class="tok-cmt">' + escaped.slice(i) + '</span>';
+          break;
+        }
+        if ((isPython || isShell || isYAML) && escaped[i] === '#') {
+          result += '<span class="tok-cmt">' + escaped.slice(i) + '</span>';
+          break;
+        }
+        
+        // Check for strings (escaped quotes: &quot; or &#39;)
+        if (escaped.slice(i, i + 6) === '&quot;') {
+          const endIdx = escaped.indexOf('&quot;', i + 6);
+          if (endIdx !== -1) {
+            const str = escaped.slice(i, endIdx + 6);
+            result += '<span class="tok-str">' + str + '</span>';
+            i = endIdx + 6;
+            continue;
+          }
+        }
+        if (escaped.slice(i, i + 5) === '&#39;') {
+          const endIdx = escaped.indexOf('&#39;', i + 5);
+          if (endIdx !== -1) {
+            const str = escaped.slice(i, endIdx + 5);
+            result += '<span class="tok-str">' + str + '</span>';
+            i = endIdx + 5;
+            continue;
+          }
+        }
+        
+        // Check for numbers
+        if (/[0-9]/.test(escaped[i]) && (i === 0 || /[^a-zA-Z_]/.test(escaped[i - 1]))) {
+          let numEnd = i;
+          while (numEnd < escaped.length && /[0-9.]/.test(escaped[numEnd])) {
+            numEnd++;
+          }
+          if (numEnd > i) {
+            result += '<span class="tok-num">' + escaped.slice(i, numEnd) + '</span>';
+            i = numEnd;
+            continue;
+          }
+        }
+        
+        // Check for keywords (word boundary)
+        if (/[a-zA-Z_]/.test(escaped[i]) && (i === 0 || /[^a-zA-Z0-9_]/.test(escaped[i - 1]))) {
+          let wordEnd = i;
+          while (wordEnd < escaped.length && /[a-zA-Z0-9_]/.test(escaped[wordEnd])) {
+            wordEnd++;
+          }
+          const word = escaped.slice(i, wordEnd);
+          
+          // Define keywords per language
+          let keywords = [];
+          if (isJS) {
+            keywords = ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'import', 'export', 'from', 'async', 'await', 'try', 'catch', 'throw', 'new', 'this', 'class', 'extends', 'true', 'false', 'null', 'undefined', 'typeof', 'instanceof', 'switch', 'case', 'break', 'continue', 'default', 'static', 'get', 'set'];
+          } else if (isPython) {
+            keywords = ['def', 'class', 'return', 'if', 'elif', 'else', 'for', 'while', 'import', 'from', 'as', 'try', 'except', 'raise', 'with', 'async', 'await', 'None', 'True', 'False', 'self', 'and', 'or', 'not', 'in', 'is', 'lambda', 'pass', 'break', 'continue'];
+          } else if (isJSON) {
+            keywords = ['true', 'false', 'null'];
+          } else if (isYAML) {
+            keywords = ['true', 'false', 'null', 'yes', 'no'];
+          } else if (!isMarkdown) {
+            keywords = ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'import', 'export', 'true', 'false', 'null', 'class', 'public', 'private', 'static', 'void', 'int', 'string', 'bool'];
+          }
+          
+          if (keywords.includes(word)) {
+            result += '<span class="tok-kw">' + word + '</span>';
+          } else {
+            result += word;
+          }
+          i = wordEnd;
+          continue;
+        }
+        
+        // Default: just add the character
+        result += escaped[i];
+        i++;
+      }
       
-      return escaped;
+      return result;
     }
 
     // Helper functions
     function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     function showEmptyState(panelName, icon, message) {
@@ -720,6 +837,74 @@
       header.classList.toggle('collapsed');
       const content = header.nextElementSibling;
       if (content) content.classList.toggle('collapsed');
+    }
+
+    // Remove placeholder text that overlaps with input field
+    function removePlaceholderText() {
+      const content = panels.chat.content;
+      
+      // Method 1: Find elements by class name containing "placeholder"
+      content.querySelectorAll('[class*="placeholder"], [class*="Placeholder"]').forEach(el => {
+        // Don't remove actual input elements
+        if (el.matches('[contenteditable], textarea, input, [data-lexical-editor]')) return;
+        if (el.querySelector('[contenteditable], textarea, input, [data-lexical-editor]')) return;
+        
+        // Hide it
+        el.style.display = 'none';
+        el.style.visibility = 'hidden';
+        el.style.opacity = '0';
+      });
+      
+      // Method 2: Find elements with data-placeholder attribute
+      content.querySelectorAll('[data-placeholder]').forEach(el => {
+        // Remove the data-placeholder attribute to prevent CSS ::before content
+        if (!el.matches('[contenteditable], [data-lexical-editor]')) {
+          el.style.display = 'none';
+        }
+      });
+      
+      // Method 3: Find any element containing placeholder-like text and hide it
+      const placeholderTexts = ['ask a question', 'describe a task', 'type a message', 'enter a message'];
+      
+      const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null, false);
+      const nodesToHide = [];
+      
+      while (walker.nextNode()) {
+        const text = (walker.currentNode.textContent || '').toLowerCase();
+        for (const placeholder of placeholderTexts) {
+          if (text.includes(placeholder)) {
+            const parent = walker.currentNode.parentElement;
+            if (parent && !parent.matches('[contenteditable], textarea, input, [data-lexical-editor]')) {
+              nodesToHide.push(parent);
+            }
+            break;
+          }
+        }
+      }
+      
+      nodesToHide.forEach(el => {
+        el.style.display = 'none';
+        el.style.visibility = 'hidden';
+      });
+      
+      // Method 4: Find absolutely positioned elements inside input containers and hide them
+      // These are often placeholder overlays
+      const inputContainers = content.querySelectorAll('[class*="input"], [class*="composer"], [class*="editor"]');
+      inputContainers.forEach(container => {
+        container.querySelectorAll('*').forEach(el => {
+          const style = window.getComputedStyle(el);
+          // If it's absolutely positioned and not the input itself, it might be a placeholder
+          if (style.position === 'absolute' && 
+              !el.matches('[contenteditable], textarea, input, [data-lexical-editor], button, svg')) {
+            const text = (el.textContent || '').toLowerCase();
+            if (text.includes('ask') || text.includes('task') || text.includes('question') || 
+                text.includes('describe') || text.includes('message') || text.includes('type')) {
+              el.style.display = 'none';
+              el.style.visibility = 'hidden';
+            }
+          }
+        });
+      });
     }
 
     // Base styles for chat panel
@@ -757,6 +942,19 @@
         body, #root, .app, [class*="chat"], [class*="Chat"], [class*="cascade"], [class*="Cascade"] {
           background: #1e1e1e !important;
           background-color: #1e1e1e !important;
+        }
+        
+        /* ========== HIDE PLACEHOLDER TEXT IN INPUT AREA ========== */
+        /* Placeholder removal is handled via JavaScript in removePlaceholderText() */
+        /* Keep input elements visible and interactive */
+        [contenteditable="true"],
+        [data-lexical-editor="true"],
+        .ProseMirror,
+        textarea {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
         }
         
         /* CRITICAL: Hide tooltips, popovers, and overlay elements - but NOT dropdown buttons */
@@ -807,6 +1005,25 @@
           cursor: pointer !important;
           background: transparent !important;
           color: #cccccc !important;
+        }
+        
+        /* Hide model descriptions in dropdown - only show model name */
+        [class*="model-description"], [class*="modelDescription"], [class*="ModelDescription"],
+        [class*="model-info"], [class*="modelInfo"], [class*="ModelInfo"],
+        [class*="dropdown-item"] > span:not(:first-child),
+        [class*="model-option"] > span:not(:first-child),
+        [role="option"] > div:last-child,
+        [role="option"] > span:last-child:not(:first-child),
+        [role="menuitem"] > div:last-child,
+        [class*="credit"], [class*="Credit"] {
+          display: none !important;
+        }
+        
+        /* Simplify model dropdown items - just show the name */
+        [role="option"], [role="menuitem"] {
+          flex-direction: row !important;
+          align-items: center !important;
+          gap: 8px !important;
         }
         
         [class*="dropdown-item"]:hover, [class*="dropdownItem"]:hover,
@@ -1219,8 +1436,8 @@
     function makeInteractive() {
       const content = panels.chat.content;
       
-      // Input fields
-      const inputSelectors = ['[data-lexical-editor="true"]', '[contenteditable="true"][role="textbox"]', '[contenteditable="true"]', 'textarea', '.ProseMirror'];
+      // Input fields - support both Lexical and ProseMirror/TipTap editors
+      const inputSelectors = ['[data-lexical-editor="true"]', '[contenteditable="true"][role="textbox"]', '[contenteditable="true"]', 'textarea', '.ProseMirror', '.tiptap'];
       for (const selector of inputSelectors) {
         content.querySelectorAll(selector).forEach(el => {
           el.style.cursor = 'text';
@@ -1263,6 +1480,132 @@
           await sendClickToKiro(clickInfo);
           return false;
         };
+      });
+      
+      // Send button - find and make it work
+      // CONFIRMED via Playwriter: The send button is <button data-variant="submit"> with codicon-arrow-up icon
+      
+      // Helper function to attach send handler to a button
+      const attachSendHandler = (btn) => {
+        if (!btn || btn.dataset.sendHandlerAttached) return;
+        btn.dataset.sendHandlerAttached = 'true';
+        
+        // Remove disabled so button is always clickable and highlighted
+        btn.removeAttribute('disabled');
+        btn.style.cursor = 'pointer';
+        
+        btn.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Find the input field and get its text
+          const inputSelectors = ['.tiptap', '.ProseMirror', '[data-lexical-editor="true"]', '[contenteditable="true"]', 'textarea'];
+          let inputText = '';
+          let inputEl = null;
+          
+          for (const inputSel of inputSelectors) {
+            const input = content.querySelector(inputSel);
+            if (input) {
+              inputEl = input;
+              inputText = input.textContent || input.innerText || input.value || '';
+              if (inputText.trim()) break;
+            }
+          }
+          
+          if (inputText.trim()) {
+            await sendToKiro(inputText.trim());
+            // Clear the input after sending
+            if (inputEl) {
+              if (inputEl.textContent !== undefined) {
+                inputEl.textContent = '';
+                inputEl.innerHTML = '';
+              } else if (inputEl.value !== undefined) {
+                inputEl.value = '';
+              }
+            }
+            showToast('Sent!', 1500, true);
+          } else {
+            showToast('Type a message first', 1500);
+          }
+          return false;
+        };
+      };
+      
+      // PRIMARY METHOD: Find the submit button by data-variant="submit" (CONFIRMED via Playwriter)
+      const submitBtn = content.querySelector('button[data-variant="submit"]');
+      if (submitBtn) {
+        attachSendHandler(submitBtn);
+      }
+      
+      // FALLBACK Method 1: Find buttons with codicon-arrow-up (Kiro's send icon)
+      content.querySelectorAll('button').forEach(btn => {
+        if (btn.dataset.sendHandlerAttached) return;
+        const hasArrowUp = btn.querySelector('.codicon-arrow-up, .codicon-send, [class*="arrow-up"]');
+        if (hasArrowUp) {
+          attachSendHandler(btn);
+        }
+      });
+      
+      // FALLBACK Method 2: Find SVGs that look like arrows
+      content.querySelectorAll('svg').forEach(svg => {
+        const svgClass = (svg.getAttribute('class') || '').toLowerCase();
+        const svgParent = svg.closest('button');
+        
+        if (svgClass.includes('arrow') || svgClass.includes('send') || svgClass.includes('lucide')) {
+          if (svgParent) {
+            attachSendHandler(svgParent);
+          }
+        }
+      });
+      
+      // FALLBACK Method 3: Find buttons by various selectors
+      const sendButtonSelectors = [
+        'button[type="submit"]',
+        'button[aria-label*="send" i]',
+        'button[aria-label*="submit" i]',
+        '[class*="send-button"]',
+        '[class*="sendButton"]',
+        '[class*="submit-button"]',
+        '[class*="submitButton"]'
+      ];
+      
+      for (const selector of sendButtonSelectors) {
+        try {
+          content.querySelectorAll(selector).forEach(el => {
+            const btn = el.closest('button') || el;
+            if (btn.tagName === 'BUTTON') {
+              attachSendHandler(btn);
+            }
+          });
+        } catch(e) {}
+      }
+      
+      // Method 3: Find ALL buttons and attach handler to ones that look like send buttons
+      // This is more reliable than using getBoundingClientRect which doesn't work before layout
+      content.querySelectorAll('button').forEach(btn => {
+        if (btn.dataset.sendHandlerAttached) return;
+        
+        const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+        const className = (btn.className || '').toLowerCase();
+        const innerHTML = btn.innerHTML.toLowerCase();
+        
+        // Skip buttons that are clearly NOT send buttons
+        if (ariaLabel.includes('context') || ariaLabel.includes('model') || 
+            ariaLabel.includes('close') || ariaLabel.includes('menu') ||
+            className.includes('context') || className.includes('model') ||
+            className.includes('dropdown') || className.includes('toggle') ||
+            className.includes('close') || className.includes('menu')) {
+          return;
+        }
+        
+        // Check if button contains an arrow SVG (common for send buttons)
+        const hasSvg = btn.querySelector('svg');
+        const hasArrowPath = btn.querySelector('path, line, polyline');
+        
+        // If button has an SVG with arrow-like elements, it's likely a send button
+        if (hasSvg && hasArrowPath) {
+          attachSendHandler(btn);
+        }
       });
       
       // Tabs

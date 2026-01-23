@@ -559,6 +559,58 @@ async function captureSnapshot(cdp) {
         } catch(e) {}
       }
       
+      // REMOVE PLACEHOLDER TEXT from Lexical editor
+      // The placeholder is a sibling div to the contenteditable that overlays it
+      // We need to find and remove it to prevent text overlap on mobile
+      try {
+        // Method 1: Find placeholder by checking siblings of contenteditable
+        const editables = clone.querySelectorAll('[contenteditable="true"], [data-lexical-editor="true"]');
+        editables.forEach(editable => {
+          const parent = editable.parentElement;
+          if (parent) {
+            // Check all siblings
+            Array.from(parent.children).forEach(sibling => {
+              if (sibling === editable) return;
+              // Check if this sibling looks like a placeholder
+              const text = (sibling.textContent || '').toLowerCase();
+              if (text.includes('ask') || text.includes('question') || text.includes('task') || 
+                  text.includes('describe') || text.includes('type') || text.includes('message')) {
+                sibling.remove();
+              }
+            });
+          }
+        });
+        
+        // Method 2: Find by common placeholder class patterns
+        const placeholderSelectors = [
+          '[class*="placeholder"]',
+          '[class*="Placeholder"]',
+          '[data-placeholder]'
+        ];
+        placeholderSelectors.forEach(sel => {
+          clone.querySelectorAll(sel).forEach(el => {
+            // Don't remove the actual input
+            if (el.matches('[contenteditable], [data-lexical-editor], textarea, input')) return;
+            // Don't remove if it contains an input
+            if (el.querySelector('[contenteditable], [data-lexical-editor], textarea, input')) return;
+            el.remove();
+          });
+        });
+        
+        // Method 3: Find any element with placeholder-like text that's positioned absolutely
+        clone.querySelectorAll('*').forEach(el => {
+          if (el.matches('[contenteditable], [data-lexical-editor], textarea, input, button, svg')) return;
+          const text = (el.textContent || '').toLowerCase().trim();
+          const style = el.getAttribute('style') || '';
+          // If it has placeholder text and is positioned (likely overlay)
+          if ((text.includes('ask a question') || text.includes('describe a task') || 
+               text === 'ask a question or describe a task...' || text === 'ask a question or describe a task') &&
+              (style.includes('position') || el.children.length === 0)) {
+            el.remove();
+          }
+        });
+      } catch(e) {}
+      
       return {
         html: clone.outerHTML,
         bodyBg,
@@ -1077,10 +1129,20 @@ function createInjectMessageScript(messageText) {
     }
     
     // 6.1 Find input element (contenteditable or textarea)
-    // Try Kiro's Lexical editor first (contenteditable div)
-    let editors = [...targetDoc.querySelectorAll('[data-lexical-editor="true"][contenteditable="true"][role="textbox"]')]
+    // UPDATED: Support both Lexical and ProseMirror/TipTap editors
+    let editor = null;
+    
+    // Try ProseMirror/TipTap editor first (confirmed via Playwriter debugging)
+    let editors = [...targetDoc.querySelectorAll('.tiptap.ProseMirror[contenteditable="true"]')]
       .filter(el => el.offsetParent !== null);
-    let editor = editors.at(-1);
+    editor = editors.at(-1);
+    
+    // Fallback: Try Kiro's Lexical editor
+    if (!editor) {
+      editors = [...targetDoc.querySelectorAll('[data-lexical-editor="true"][contenteditable="true"][role="textbox"]')]
+        .filter(el => el.offsetParent !== null);
+      editor = editors.at(-1);
+    }
     
     // Fallback: try any contenteditable in the cascade area
     if (!editor) {
@@ -1108,6 +1170,7 @@ function createInjectMessageScript(messageText) {
     }
     
     const isTextarea = editor.tagName.toLowerCase() === 'textarea';
+    const isProseMirror = editor.classList.contains('ProseMirror') || editor.classList.contains('tiptap');
     
     // 6.2 Insert text into input element
     editor.focus();
@@ -1117,6 +1180,22 @@ function createInjectMessageScript(messageText) {
       editor.value = text;
       editor.dispatchEvent(new Event('input', { bubbles: true }));
       editor.dispatchEvent(new Event('change', { bubbles: true }));
+    } else if (isProseMirror) {
+      // For ProseMirror/TipTap, we need to use their specific API or simulate typing
+      // First clear existing content
+      editor.innerHTML = '';
+      
+      // Create a paragraph with the text (ProseMirror structure)
+      const p = targetDoc.createElement('p');
+      p.textContent = text;
+      editor.appendChild(p);
+      
+      // Dispatch input event to trigger ProseMirror's update
+      editor.dispatchEvent(new InputEvent('input', { 
+        bubbles: true, 
+        inputType: 'insertText', 
+        data: text 
+      }));
     } else {
       // For contenteditable, use execCommand or fallback to direct manipulation
       // First, select all and delete existing content
@@ -2180,6 +2259,37 @@ async function clickElement(cdp, clickInfo) {
       let isCloseButton = info.isCloseButton || (info.ariaLabel && info.ariaLabel.toLowerCase() === 'close');
       let isToggle = info.isToggle || info.role === 'switch';
       let isDropdown = info.isDropdown || info.ariaHaspopup;
+      let isSendButton = info.isSendButton || (info.ariaLabel && info.ariaLabel.toLowerCase().includes('send'));
+      
+      // Handle send button clicks
+      if (isSendButton && !element) {
+        // Try to find the send button (arrow-right icon button)
+        const sendSelectors = [
+          'svg.lucide-arrow-right',
+          'svg[class*="arrow-right"]',
+          '[data-tooltip-id*="send"]',
+          'button[type="submit"]',
+          'button[aria-label*="send" i]',
+          'button[aria-label*="submit" i]',
+          '[class*="send-button"]',
+          '[class*="sendButton"]',
+          '[class*="submit-button"]',
+          '[class*="submitButton"]'
+        ];
+        
+        for (const sel of sendSelectors) {
+          try {
+            const el = targetDoc.querySelector(sel);
+            if (el) {
+              element = el.closest('button') || el;
+              if (element && !element.disabled) {
+                matchMethod = 'send-button-' + sel.split('[')[0];
+                break;
+              }
+            }
+          } catch(e) {}
+        }
+      }
       
       // Handle toggle/switch clicks
       if (isToggle && !element) {

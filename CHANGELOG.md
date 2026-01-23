@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.0.6 (2026-01-24)
+- fix(ui): Fix send button not clickable on mobile interface
+- fix(ui): Remove placeholder text overlap in chat input
+- fix(ui): Hide model descriptions in dropdown menu for cleaner UI
+- feat(ui): Add support for ProseMirror/TipTap editor (in addition to Lexical)
+- fix(server): Remove placeholder elements from captured HTML snapshots
+- fix(client): Detect send button by data-variant="submit" attribute
+- fix(client): Support codicon icon fonts (not just SVG icons)
+
 ## v1.0.5 (2026-01-23)
 - chore: bump version to 1.0.4 [skip ci]
 

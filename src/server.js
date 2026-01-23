@@ -511,8 +511,10 @@ async function captureSnapshot(cdp) {
         }
       }
       
-      // Remove tooltips, popovers, and other overlay elements before capture
-      // IMPORTANT: Don't remove dropdown buttons (model selector), only dropdown menus/panels
+      // CRITICAL: Clone FIRST to avoid modifying the original DOM (which crashes Kiro)
+      const clone = chatElement.cloneNode(true);
+      
+      // Now safely remove tooltips, popovers, and overlays from the CLONE only
       const elementsToRemove = [
         '[role="tooltip"]',
         '[data-tooltip]',
@@ -536,8 +538,7 @@ async function captureSnapshot(cdp) {
       
       elementsToRemove.forEach(selector => {
         try {
-          chatElement.querySelectorAll(selector).forEach(el => {
-            // Don't remove if it's a main content element or important UI component
+          clone.querySelectorAll(selector).forEach(el => {
             const isMainContent = el.closest('#root > div:first-child');
             const isTooltip = el.matches('[role="tooltip"], [class*="tooltip"], [class*="Tooltip"]');
             const isImportantUI = el.matches('[class*="model"], [class*="Model"], [class*="context"], [class*="Context"], [class*="input"], [class*="Input"], [class*="selector"], [class*="Selector"], button, [role="button"]');
@@ -549,11 +550,15 @@ async function captureSnapshot(cdp) {
         } catch(e) {}
       });
       
-      // Before cloning, inline computed styles for SVGs (currentColor fix)
-      const originalSvgs = chatElement.querySelectorAll('svg');
-      for (const svg of originalSvgs) {
+      // Fix SVG currentColor in the CLONE only (not original DOM)
+      const cloneSvgs = clone.querySelectorAll('svg');
+      for (const svg of cloneSvgs) {
         try {
-          const computedColor = window.getComputedStyle(svg).color || window.getComputedStyle(svg.parentElement).color;
+          // Get computed color from the ORIGINAL element for accurate color
+          const originalSvg = chatElement.querySelector('svg[class="' + (svg.getAttribute('class') || '') + '"]');
+          const computedColor = originalSvg 
+            ? (window.getComputedStyle(originalSvg).color || window.getComputedStyle(originalSvg.parentElement).color)
+            : '#cccccc';
           if (computedColor && computedColor !== 'rgba(0, 0, 0, 0)') {
             svg.querySelectorAll('[fill="currentColor"]').forEach(el => el.setAttribute('fill', computedColor));
             svg.querySelectorAll('[stroke="currentColor"]').forEach(el => el.setAttribute('stroke', computedColor));
@@ -563,9 +568,6 @@ async function captureSnapshot(cdp) {
           }
         } catch(e) {}
       }
-      
-      // Clone and return
-      const clone = chatElement.cloneNode(true);
       
       return {
         html: clone.outerHTML,
@@ -739,11 +741,7 @@ async function captureTerminal(cdp) {
       returnByValue: true
     });
     if (result.result && result.result.value) {
-      const data = result.result.value;
-      if (data.hasContent) {
-        console.log(`[Terminal] Captured ${data.textContent.length} chars of output`);
-      }
-      return data;
+      return result.result.value;
     }
   } catch (err) {
     console.error('[Terminal] Failed to capture:', err.message);
@@ -1132,9 +1130,7 @@ async function pollSnapshots() {
       
       // Capture CSS once if not already captured
       if (cascade.css === null) {
-        console.log(`[Snapshot] Capturing CSS for cascade ${cascadeId}...`);
         cascade.css = await captureCSS(cdp);
-        console.log(`[Snapshot] CSS captured: ${cascade.css.length} chars`);
       }
       
       // Capture metadata
@@ -1146,20 +1142,12 @@ async function pollSnapshots() {
       const snapshot = await captureSnapshot(cdp);
       
       if (snapshot) {
-        // Log debug info for troubleshooting
-        if (snapshot.debug) {
-          console.log(`[Snapshot] Debug for ${cascadeId}:`, JSON.stringify(snapshot.debug, null, 2));
-        }
-        
         const newHash = computeHash(snapshot.html);
         if (newHash !== cascade.snapshotHash) {
-          console.log(`[Snapshot] Chat content changed for cascade ${cascadeId} (${snapshot.html.length} chars)`);
           cascade.snapshot = snapshot;
           cascade.snapshotHash = newHash;
           broadcastSnapshotUpdate(cascadeId, 'chat');
         }
-      } else {
-        console.log(`[Snapshot] captureSnapshot returned null for cascade ${cascadeId}`);
       }
       
       // Use main window CDP for terminal/sidebar/editor
@@ -1170,7 +1158,6 @@ async function pollSnapshots() {
         if (terminal && terminal.hasContent) {
           const termHash = computeHash(terminal.html || terminal.textContent || '');
           if (termHash !== cascade.terminalHash) {
-            console.log(`[Snapshot] Terminal content changed for cascade ${cascadeId}`);
             cascade.terminal = terminal;
             cascade.terminalHash = termHash;
             broadcastSnapshotUpdate(cascadeId, 'terminal');
@@ -1182,7 +1169,6 @@ async function pollSnapshots() {
         if (sidebar && sidebar.hasContent) {
           const sideHash = computeHash(JSON.stringify(sidebar.files) + sidebar.html);
           if (sideHash !== cascade.sidebarHash) {
-            console.log(`[Snapshot] Sidebar content changed for cascade ${cascadeId}`);
             cascade.sidebar = sidebar;
             cascade.sidebarHash = sideHash;
             broadcastSnapshotUpdate(cascadeId, 'sidebar');
@@ -1194,14 +1180,12 @@ async function pollSnapshots() {
         if (editor && editor.hasContent) {
           const editorHash = computeHash(editor.content + editor.fileName);
           if (editorHash !== cascade.editorHash) {
-            console.log(`[Snapshot] Editor content changed for cascade ${cascadeId}`);
             cascade.editor = editor;
             cascade.editorHash = editorHash;
             broadcastSnapshotUpdate(cascadeId, 'editor');
           }
         } else if (cascade.editor && cascade.editor.hasContent) {
           // Clear stale editor data when no file is open
-          console.log(`[Snapshot] Editor closed/no file open for cascade ${cascadeId}`);
           cascade.editor = { hasContent: false, fileName: '', content: '' };
           cascade.editorHash = '';
           broadcastSnapshotUpdate(cascadeId, 'editor');
@@ -1571,8 +1555,7 @@ async function discoverTargets() {
         }
       }
     } catch (err) {
-      // Port not available or no CDP server
-      console.log(`[Discovery] Port ${port}: ${err.message}`);
+      // Port not available or no CDP server - silent unless debugging
     }
   }
   
@@ -1588,7 +1571,7 @@ async function discoverTargets() {
     }
   }
   
-  console.log(`[Discovery] Active cascades: ${cascades.size}`);
+  console.log(`[Discovery] Active cascades: ${cascades.size}${foundMainWindow ? ' (main window connected)' : ''}`);
 }
 
 /**
@@ -1867,10 +1850,10 @@ app.post('/readFile/:id', async (req, res) => {
           }
         }
         
-        // Then search subdirectories (skip node_modules, .git, etc.)
+        // Then search subdirectories (skip node_modules, .git, etc. but allow .kiro)
         for (const entry of entries) {
           if (entry.isDirectory() && 
-              !entry.name.startsWith('.') && 
+              (!entry.name.startsWith('.') || entry.name === '.kiro') && 
               entry.name !== 'node_modules' &&
               entry.name !== 'dist' &&
               entry.name !== 'build' &&
@@ -2110,8 +2093,8 @@ app.get('/files/:id', async (req, res) => {
         const entries = await fs.readdir(dir, { withFileTypes: true });
         
         for (const entry of entries) {
-          // Skip hidden files/folders and common non-code directories
-          if (entry.name.startsWith('.') ||
+          // Skip hidden files/folders EXCEPT .kiro, and common non-code directories
+          if ((entry.name.startsWith('.') && entry.name !== '.kiro') ||
               entry.name === 'node_modules' ||
               entry.name === 'dist' ||
               entry.name === 'build' ||
@@ -2479,6 +2462,10 @@ async function clickElement(cdp, clickInfo) {
       if (info.text && info.text.trim() && !element) {
         const searchText = info.text.trim();
         const allElements = targetDoc.querySelectorAll('button, [role="button"], [role="tab"], [role="menuitem"], [role="switch"], a, [tabindex="0"], [class*="button"], [class*="btn"]');
+        
+        // DEBUG: Log what we're searching for
+        console.log('[Click Debug] Searching for text:', searchText.substring(0, 50));
+        
         for (const el of allElements) {
           // Skip close buttons unless explicitly looking for one
           if (!isCloseButton) {
@@ -2488,7 +2475,18 @@ async function clickElement(cdp, clickInfo) {
           }
           
           const elText = (el.textContent || '').trim();
-          if (elText === searchText || (elText.length > 0 && searchText.includes(elText)) || (searchText.length > 0 && elText.includes(searchText))) {
+          
+          // FIXED: More strict matching to prevent false positives
+          // - Exact match: always OK
+          // - searchText.includes(elText): ONLY if elText is meaningful (>= 10 chars)
+          // - elText.includes(searchText): always OK (element contains what we're looking for)
+          const isExactMatch = elText === searchText;
+          const elementContainsSearch = searchText.length > 0 && elText.includes(searchText);
+          const searchContainsElement = elText.length >= 10 && searchText.includes(elText); // Require minimum length
+          
+          if (isExactMatch || elementContainsSearch || searchContainsElement) {
+            // DEBUG: Log what matched
+            console.log('[Click Debug] Matched element:', el.tagName, 'text:', elText.substring(0, 30), 'method:', isExactMatch ? 'exact' : elementContainsSearch ? 'el-contains-search' : 'search-contains-el');
             element = el;
             matchMethod = 'text-content';
             break;
@@ -2530,78 +2528,58 @@ async function clickElement(cdp, clickInfo) {
         return { found: false, error: 'Element not found' };
       }
       
-      // Scroll element into view first
-      element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
-      
-      // Get element's bounding rect for coordinate-based clicking
-      const rect = element.getBoundingClientRect();
-      
-      // For tabs, click on the LEFT side (on the label area) to avoid close button
-      let x, y;
-      if (isTabClick && !isCloseButton) {
-        // Find the label element and click on it
-        const labelEl = element.querySelector('.kiro-tabs-item-label, [class*="label"]');
-        if (labelEl) {
-          const labelRect = labelEl.getBoundingClientRect();
-          x = labelRect.left + labelRect.width / 2;
-          y = labelRect.top + labelRect.height / 2;
-        } else {
-          // Fallback: click 30% from left edge
-          x = rect.left + rect.width * 0.3;
-          y = rect.top + rect.height / 2;
+      // FIXED: Use direct click instead of coordinate-based clicking
+      // This avoids scrolling the UI and clicking wrong elements
+      try {
+        element.click();
+        return { 
+          found: true, 
+          clicked: true,
+          matchMethod,
+          tag: element.tagName,
+          isTab: isTabClick,
+          isCloseButton: isCloseButton
+        };
+      } catch (clickError) {
+        // Fallback: try dispatching click event
+        try {
+          element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+          return { 
+            found: true, 
+            clicked: true,
+            matchMethod: matchMethod + '-dispatch',
+            tag: element.tagName,
+            isTab: isTabClick,
+            isCloseButton: isCloseButton
+          };
+        } catch (e) {
+          return { found: true, clicked: false, error: 'Click failed: ' + e.message, matchMethod };
         }
-      } else {
-        x = rect.left + rect.width / 2;
-        y = rect.top + rect.height / 2;
       }
-      
-      return { 
-        found: true, 
-        matchMethod,
-        x: Math.round(x),
-        y: Math.round(y),
-        tag: element.tagName,
-        isTab: isTabClick,
-        isCloseButton: isCloseButton
-      };
     })()
   `;
   
   try {
-    // Step 1: Find element and get coordinates
-    const findResult = await cdp.call('Runtime.evaluate', {
+    // Execute the find-and-click script
+    const result = await cdp.call('Runtime.evaluate', {
       expression: findScript,
       contextId: cdp.rootContextId,
       returnByValue: true
     });
     
-    const elementInfo = findResult.result?.value;
+    const elementInfo = result.result?.value;
     if (!elementInfo || !elementInfo.found) {
       console.log('[Click] Element not found:', clickInfo.ariaLabel || clickInfo.text);
       return { success: false, error: 'Element not found' };
     }
     
-    console.log('[Click] Found element at', elementInfo.x, elementInfo.y, 'via', elementInfo.matchMethod);
-    
-    // Step 2: Use CDP Input.dispatchMouseEvent for native click
-    // This works better with React/VS Code components
-    await cdp.call('Input.dispatchMouseEvent', {
-      type: 'mousePressed',
-      x: elementInfo.x,
-      y: elementInfo.y,
-      button: 'left',
-      clickCount: 1
-    });
-    
-    await cdp.call('Input.dispatchMouseEvent', {
-      type: 'mouseReleased',
-      x: elementInfo.x,
-      y: elementInfo.y,
-      button: 'left',
-      clickCount: 1
-    });
-    
-    return { success: true, matchMethod: elementInfo.matchMethod, x: elementInfo.x, y: elementInfo.y };
+    if (elementInfo.clicked) {
+      console.log('[Click] Clicked element via', elementInfo.matchMethod);
+      return { success: true, matchMethod: elementInfo.matchMethod };
+    } else {
+      console.log('[Click] Found but click failed:', elementInfo.error);
+      return { success: false, error: elementInfo.error || 'Click failed' };
+    }
     
   } catch (err) {
     console.error('[Click] CDP error:', err.message);

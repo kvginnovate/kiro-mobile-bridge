@@ -6,7 +6,7 @@
         "-y",
         "@upstash/context7-mcp"
       ],
-      "disabled": true,
+      "disabled": false,
       "autoApprove": [
         "resolve-library-id",
         "resolve-library-id",

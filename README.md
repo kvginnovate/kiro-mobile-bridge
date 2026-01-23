@@ -23,7 +23,7 @@ A mobile web interface for monitoring Kiro IDE agent sessions from your phone ov
 ### 1. Enable CDP in Kiro
 
 Start Kiro with the remote debugging port enabled:
-
+Option 1: **Run Kiro with debugging port:**
 ```bash
 # Windows (from default install location)
 "%LOCALAPPDATA%\Programs\Kiro\Kiro.exe" --remote-debugging-port=9000
@@ -31,40 +31,23 @@ Start Kiro with the remote debugging port enabled:
 # macOS
 /Applications/Kiro.app/Contents/MacOS/Kiro --remote-debugging-port=9000
 
-# Linux (AppImage)
-~/Applications/Kiro.AppImage --remote-debugging-port=9000
-
 # Linux (installed)
 /opt/Kiro/kiro --remote-debugging-port=9000
 ```
 
-**Finding Kiro's location:**
+Option 2: **Finding Kiro's location:**
 
 ```bash
-# Windows (CMD)
-where kiro
-
-# Windows (PowerShell)
-Get-Command kiro | Select-Object Source
-
-# macOS/Linux
-which kiro
+where kiro # Windows (CMD)
+which kiro # macOS/Linux
 ```
 
 Then use the path in your command:
 
 ```bash
-# Example: If 'where kiro' returns C:\Users\YourName\AppData\Local\Programs\Kiro\Kiro.exe
+# Example
 "C:\Users\YourName\AppData\Local\Programs\Kiro\Kiro.exe" --remote-debugging-port=9000
 ```
-
-| OS | Default Location |
-|----|------------------|
-| Windows | `%LOCALAPPDATA%\Programs\Kiro\Kiro.exe` |
-| macOS | `/Applications/Kiro.app/Contents/MacOS/Kiro` |
-| Linux (AppImage) | `~/Applications/Kiro.AppImage` or where you downloaded it |
-| Linux (deb/rpm) | `/opt/Kiro/kiro` or `/usr/bin/kiro` |
-
 
 ### 2. Run with npx (Recommended)
 
@@ -74,23 +57,10 @@ No installation needed! Just run:
 npx kiro-mobile-bridge
 ```
 
-Or with a custom port:
-
-```bash
-PORT=8080 npx kiro-mobile-bridge
-```
-
-### Alternative: Install Globally
-
-```bash
-npm install -g kiro-mobile-bridge
-kiro-mobile-bridge
-```
-
 ### Alternative: Clone and Run
 
 ```bash
-git clone <repo-url>
+git clone 
 cd kiro-mobile-bridge
 npm install
 npm start

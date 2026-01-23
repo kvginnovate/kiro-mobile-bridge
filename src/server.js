@@ -1848,8 +1848,6 @@ app.get('/files/:id', async (req, res) => {
     return res.status(404).json({ error: 'Cascade not found' });
   }
   
-  console.log(`[Files] Listing workspace files`);
-  
   try {
     const fs = await import('fs/promises');
     const path = await import('path');
@@ -1885,9 +1883,72 @@ app.get('/files/:id', async (req, res) => {
       '.cob': 'cobol', '.cbl': 'cobol'
     };
     
+    // Try to get workspace root from Kiro/VS Code window title
+    let workspaceRoot = null;
+    
+    // Method 1: Try to extract from main window CDP (VS Code window title contains workspace path)
+    if (mainWindowCDP.connection && mainWindowCDP.connection.rootContextId) {
+      try {
+        const titleScript = `document.title`;
+        const titleResult = await mainWindowCDP.connection.call('Runtime.evaluate', {
+          expression: titleScript,
+          contextId: mainWindowCDP.connection.rootContextId,
+          returnByValue: true
+        });
+        
+        const windowTitle = titleResult.result?.value || '';
+        // VS Code/Kiro title format: "filename - foldername - Kiro" or "foldername - Kiro"
+        // Extract the workspace folder name from title
+        const titleParts = windowTitle.split(' - ');
+        if (titleParts.length >= 2) {
+          // The folder name is usually the second-to-last part before "Kiro"
+          const folderName = titleParts[titleParts.length - 2].trim();
+          
+          // Try to find this folder in common locations
+          const possibleRoots = [
+            process.cwd(),
+            path.join(process.env.HOME || process.env.USERPROFILE || '', folderName),
+            path.join(process.env.HOME || process.env.USERPROFILE || '', 'projects', folderName),
+            path.join(process.env.HOME || process.env.USERPROFILE || '', 'dev', folderName),
+            path.join(process.env.HOME || process.env.USERPROFILE || '', 'code', folderName),
+            path.join(process.env.HOME || process.env.USERPROFILE || '', 'workspace', folderName),
+            // Windows common paths
+            path.join('C:', 'Users', process.env.USERNAME || '', folderName),
+            path.join('C:', 'gab', folderName),
+            path.join('C:', 'dev', folderName),
+            path.join('C:', 'projects', folderName),
+          ];
+          
+          for (const root of possibleRoots) {
+            try {
+              const stat = await fs.stat(root);
+              if (stat.isDirectory()) {
+                // Verify it looks like a project (has package.json, .git, or src folder)
+                const hasPackageJson = await fs.access(path.join(root, 'package.json')).then(() => true).catch(() => false);
+                const hasGit = await fs.access(path.join(root, '.git')).then(() => true).catch(() => false);
+                const hasSrc = await fs.access(path.join(root, 'src')).then(() => true).catch(() => false);
+                
+                if (hasPackageJson || hasGit || hasSrc) {
+                  workspaceRoot = root;
+                  break;
+                }
+              }
+            } catch (e) {
+              // Path doesn't exist, try next
+            }
+          }
+        }
+      } catch (e) {
+        // CDP call failed, continue with fallback
+      }
+    }
+    
+    // Method 2: Fallback to current working directory
+    if (!workspaceRoot) {
+      workspaceRoot = process.cwd();
+    }
+    
     const files = [];
-    // Use parent directory as workspace root (kiro-mobile-bridge is inside the workspace)
-    const workspaceRoot = path.dirname(__dirname);
     
     // Recursive function to collect files
     async function collectFiles(dir, relativePath = '', depth = 0) {
@@ -1897,8 +1958,8 @@ app.get('/files/:id', async (req, res) => {
         const entries = await fs.readdir(dir, { withFileTypes: true });
         
         for (const entry of entries) {
-          // Skip hidden files/folders EXCEPT .kiro, and common non-code directories
-          if ((entry.name.startsWith('.') && entry.name !== '.kiro') ||
+          // Skip hidden files/folders EXCEPT .kiro and .github, and common non-code directories
+          if ((entry.name.startsWith('.') && entry.name !== '.kiro' && entry.name !== '.github') ||
               entry.name === 'node_modules' ||
               entry.name === 'dist' ||
               entry.name === 'build' ||
@@ -1935,7 +1996,7 @@ app.get('/files/:id', async (req, res) => {
     // Sort files: by path for easier browsing
     files.sort((a, b) => a.path.localeCompare(b.path));
     
-    console.log(`[Files] Found ${files.length} code files`);
+    console.log(`[Files] Found ${files.length} files in ${workspaceRoot}`);
     res.json({ files, workspaceRoot });
     
   } catch (err) {

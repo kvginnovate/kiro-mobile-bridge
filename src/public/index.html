@@ -435,6 +435,7 @@
     function selectCascade(cascadeId) {
       selectedCascadeId = cascadeId;
       currentStyles = null;
+      workspaceFiles = []; // Clear file cache when switching cascades
       
       if (cascadeId) {
         fetchStyles(cascadeId).then(() => {

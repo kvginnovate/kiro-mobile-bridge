@@ -1,18 +1,17 @@
 # Kiro Mobile Bridge
 
-A mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN. Captures snapshots of the chat interface, file explorer, and editor via Chrome DevTools Protocol (CDP) and lets you interact remotely.
+A lightweight mobile interface that lets you monitor and control Kiro IDE agent sessions from your phone over LAN, with a live preview of chat, tasks, and code via Chrome DevTools Protocol.
 
-<img width="1829" height="1065" alt="Untitled design (1)" src="https://github.com/user-attachments/assets/0590c332-80e1-4874-b27d-e7babe6202c8" />
+<img width="1829" height="1065" alt="Untitled design (2)" src="https://github.com/user-attachments/assets/6f55e527-7e66-46b6-b0fe-c2a5a527dec4" />
+
 
 ## Features
 
 - 📱 Mobile-optimized web interface with tab navigation
-- 💬 **Chat Panel** - View and send messages to Kiro's agent
-- 📝 **Code Panel** - Browse file explorer and view files with syntax highlighting
-- 📋 **Tasks Panel** - View and navigate Kiro spec task files
+- 💬 **Chat** - View and send messages to Kiro's agent
+- 📝 **Code** - Browse file explorer and view files with syntax highlighting
+- 📋 **Tasks** - View and navigate Kiro spec task files
 - 🔄 Real-time updates via WebSocket with adaptive polling
-- 🔍 Auto-discovers Kiro instances on ports 9000-9003, 9222, 9229
-- 🎨 Preserves original Kiro styling
 
 ## Prerequisites
 
@@ -24,21 +23,20 @@ A mobile web interface for monitoring Kiro IDE agent sessions from your phone ov
 ### 1. Enable CDP in Kiro
 
 Start Kiro with the remote debugging port enabled:
-Option 1: **Run Kiro with debugging port:**
+
+**Run Kiro with debugging port:**
 ```bash
 # Windows (from default install location)
 "%LOCALAPPDATA%\Programs\Kiro\Kiro.exe" --remote-debugging-port=9000
-
 # macOS
 /Applications/Kiro.app/Contents/MacOS/Kiro --remote-debugging-port=9000
-
 # Linux (installed)
 /opt/Kiro/kiro --remote-debugging-port=9000
 ```
 
 ### 2. Run with npx (Recommended)
 
-No installation needed! Just run:
+Start Server
 
 ```bash
 npx kiro-mobile-bridge
@@ -56,11 +54,10 @@ npm start
 You'll see output like:
 
 ```
-🌉 Kiro Mobile Bridge
+Kiro Mobile Bridge
 ─────────────────────
 Local:   http://localhost:3000
-Network: http://192.168.1.100:3000
-
+Network: http://192.168.16.106:3000
 Open the Network URL on your phone to monitor Kiro.
 ```
 
@@ -107,15 +104,27 @@ Open the Network URL on your phone to monitor Kiro.
 - Check your firewall allows connections on port 3000
 - Try the IP address shown in the server output (not `localhost`)
 
+#### Linux: Firewall blocking connections
+
+If you're on Linux and can't connect from your phone, your firewall may be blocking port 3000. Allow it with:
+
+```bash
+# UFW (Ubuntu, Arch, etc.)
+sudo ufw allow 3000/tcp
+
+# Or with iptables directly
+sudo iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
+```
+
 ## Security Notes
 
+#### Only run this on trusted networks.
 **This is designed for local network use only:**
 
 - No authentication
 - No HTTPS
 - Exposes Kiro's chat interface to anyone on your network
 
-Only run this on trusted networks.
 
 ## License
 

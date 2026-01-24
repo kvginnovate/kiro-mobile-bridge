@@ -2,7 +2,7 @@
 
 A lightweight mobile interface that lets you monitor and control Kiro IDE agent sessions from your phone over LAN, with a live preview of chat, tasks, and code via Chrome DevTools Protocol.
 
-<img width="1829" height="1065" alt="Untitled design (2)" src="https://github.com/user-attachments/assets/6f55e527-7e66-46b6-b0fe-c2a5a527dec4" />
+<img width="1829" height="1065" alt="Untitled design (4)" src="https://github.com/user-attachments/assets/d548c43b-4501-4d66-aed7-ad021a44f9cb" />
 
 
 ## Features

@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.0.14 (2026-01-24)
+- chore: bump version to 1.0.13 [skip ci]
+
+
 ## v1.0.13 (2026-01-24)
 - docs: Add Linux firewall troubleshooting guide and improve server output
 - - Add comprehensive Linux firewall troubleshooting section to README with UFW and iptables examples

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Kiro Mobile Bridge Server
+ * @version 1.0.10
  * 
  * A mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN.
  * Captures snapshots of the chat interface via CDP and lets you send messages remotely.

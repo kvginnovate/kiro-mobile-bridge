@@ -2,6 +2,8 @@
 
 A mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN. Captures snapshots of the chat interface, file explorer, and editor via Chrome DevTools Protocol (CDP) and lets you interact remotely.
 
+<img width="1829" height="1065" alt="Untitled design (1)" src="https://github.com/user-attachments/assets/0590c332-80e1-4874-b27d-e7babe6202c8" />
+
 ## Features
 
 - 📱 Mobile-optimized web interface with tab navigation
@@ -31,20 +33,6 @@ Option 1: **Run Kiro with debugging port:**
 /opt/Kiro/kiro --remote-debugging-port=9000
 ```
 
-Option 2: **Finding Kiro's location:**
-
-```bash
-where kiro # Windows (CMD)
-which kiro # macOS/Linux
-```
-
-Then use the path in your command:
-
-```bash
-# Example
-"C:\Users\YourName\AppData\Local\Programs\Kiro\Kiro.exe" --remote-debugging-port=9000
-```
-
 ### 2. Run with npx (Recommended)
 
 No installation needed! Just run:
@@ -53,7 +41,7 @@ No installation needed! Just run:
 npx kiro-mobile-bridge
 ```
 
-### Alternative: Clone and Run
+#### Alternative: Clone and Run
 
 ```bash
 git clone 
@@ -80,7 +68,7 @@ Open the Network URL on your phone to monitor Kiro.
 3. The interface will automatically connect and show your Kiro chat
 
 
-## How It Works
+#### How It Works
 
 ```
 ┌─────────────────┐     CDP      ┌─────────────────┐
@@ -103,13 +91,13 @@ Open the Network URL on your phone to monitor Kiro.
 
 ## Troubleshooting
 
-### "No sessions available"
+#### "No sessions available"
 
 - Make sure Kiro is running with `--remote-debugging-port=9000`
 - Check that Kiro has a chat/agent session open
 - Wait a few seconds for discovery 
 
-### Can't connect from phone
+#### Can't connect from phone
 
 - Ensure phone and computer are on the **same network**
 - Check your firewall allows connections on port 3000
@@ -117,7 +105,7 @@ Open the Network URL on your phone to monitor Kiro.
 
 ## Security Notes
 
-⚠️ **This is designed for local network use only:**
+**This is designed for local network use only:**
 
 - No authentication
 - No HTTPS

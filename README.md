@@ -8,8 +8,11 @@ A mobile web interface for monitoring Kiro IDE agent sessions from your phone ov
 
 - 📱 Mobile-optimized web interface with tab navigation
 - 💬 **Chat Panel** - View and send messages to Kiro's agent
-- 📝 **Editor Panel** - Browse file explorer and open file 
-- 🔄 Real-time updates via WebSocket
+- 📝 **Code Panel** - Browse file explorer and view files with syntax highlighting
+- 📋 **Tasks Panel** - View and navigate Kiro spec task files
+- 🔄 Real-time updates via WebSocket with adaptive polling
+- 🔍 Auto-discovers Kiro instances on ports 9000-9003, 9222, 9229
+- 🎨 Preserves original Kiro styling
 
 ## Prerequisites
 
@@ -65,7 +68,8 @@ Open the Network URL on your phone to monitor Kiro.
 
 1. Make sure your phone is on the **same WiFi network** as your computer
 2. Open the **Network URL** (e.g., `http://192.168.1.100:3000`) in your phone's browser
-3. The interface will automatically connect and show your Kiro chat
+3. The interface will automatically connect and show your Kiro session
+4. Use the tabs to switch between Chat, Code, and Tasks panels
 
 
 #### How It Works
@@ -84,9 +88,9 @@ Open the Network URL on your phone to monitor Kiro.
                                  └─────────────────┘
 ```
 
-1. **Discovery**: Server scans ports 9000-9003 for Kiro instances (adaptive: 10s → 30s when stable)
+1. **Discovery**: Server scans ports 9000-9003, 9222, 9229 for Kiro instances (adaptive: 10s → 30s when stable)
 2. **Connection**: Connects to Kiro via CDP WebSocket
-3. **Snapshots**: Captures chat HTML with adaptive polling (1s active → 3s idle), broadcasts changes
+3. **Snapshots**: Captures chat, editor, and tasks with adaptive polling (1s active → 3s idle)
 4. **Messages**: Injects text into Kiro's chat input via CDP
 
 ## Troubleshooting

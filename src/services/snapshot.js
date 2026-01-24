@@ -1,6 +1,7 @@
 /**
  * Snapshot capture service - captures DOM snapshots from Kiro via CDP
  */
+import { getLanguageFromExtension } from '../utils/constants.js';
 
 /**
  * Capture chat metadata (title, active state)
@@ -60,7 +61,9 @@ export async function captureCSS(cdp) {
     const allProps = [];
     for (let i = 0; i < rootStyles.length; i++) allProps.push(rootStyles[i]);
     
-    for (const sheet of targetDoc.styleSheets) {
+    // Safely iterate stylesheets with null check
+    const styleSheets = targetDoc.styleSheets || [];
+    for (const sheet of styleSheets) {
       try {
         if (sheet.cssRules) {
           for (const rule of sheet.cssRules) {
@@ -72,7 +75,9 @@ export async function captureCSS(cdp) {
             }
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        // CORS restriction on external stylesheets, skip
+      }
     }
     
     let cssVars = ':root {\\n';
@@ -85,12 +90,14 @@ export async function captureCSS(cdp) {
     cssVars += '}\\n\\n';
     css += cssVars;
     
-    for (const sheet of targetDoc.styleSheets) {
+    for (const sheet of styleSheets) {
       try {
         if (sheet.cssRules) {
           for (const rule of sheet.cssRules) css += rule.cssText + '\\n';
         }
-      } catch (e) {}
+      } catch (e) {
+        // CORS restriction, skip
+      }
     }
     
     const styleTags = targetDoc.querySelectorAll('style');
@@ -144,37 +151,58 @@ export async function captureSnapshot(cdp) {
     
     for (const container of scrollContainers) {
       if (container.scrollHeight > container.clientHeight) {
-        // Only check class names for history detection - NOT date patterns
         const isHistoryPanel = container.matches('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"]') ||
           container.closest('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"]');
         
         if (isHistoryPanel) {
-          container.scrollTop = 0; // Scroll to TOP for history panels
+          container.scrollTop = 0;
         } else {
-          container.scrollTop = container.scrollHeight; // Scroll to BOTTOM for chat messages
+          container.scrollTop = container.scrollHeight;
         }
       }
     }
     
     const clone = targetBody.cloneNode(true);
     
-    // Remove tooltips, popovers, overlays from clone
-    const elementsToRemove = [
-      '[role="tooltip"]', '[data-tooltip]', '[class*="tooltip"]:not(button)', '[class*="Tooltip"]:not(button)',
-      '[class*="popover"]:not(button)', '[class*="Popover"]:not(button)', '[class*="dropdown-menu"]',
-      '[class*="dropdownMenu"]', '[class*="modal"]', '[class*="Modal"]',
-      '[style*="position: fixed"]:not(button):not([class*="input"]):not([class*="chat"])'
+    // Capture any portal/overlay content that might be outside the body
+    // Radix UI and similar libraries render dropdowns in portals at document root
+    const portals = targetDoc.querySelectorAll('[data-radix-portal], [data-radix-popper-content-wrapper], [class*="portal"], [class*="Portal"]');
+    portals.forEach(portal => {
+      try {
+        const portalClone = portal.cloneNode(true);
+        clone.appendChild(portalClone);
+      } catch(e) {
+        // Clone failed, skip
+      }
+    });
+    
+    // Also check for any floating/overlay elements at document level
+    const floatingSelectors = [
+      'body > [role="listbox"]', 
+      'body > [role="menu"]', 
+      'body > [data-state="open"]', 
+      'body > [class*="dropdown"]',
+      'body > div[style*="position: absolute"]',
+      'body > div[style*="position: fixed"]'
     ];
     
-    elementsToRemove.forEach(selector => {
+    floatingSelectors.forEach(sel => {
       try {
-        clone.querySelectorAll(selector).forEach(el => {
-          const isTooltip = el.matches('[role="tooltip"], [class*="tooltip"], [class*="Tooltip"]');
-          const isImportantUI = el.matches('[class*="model"], [class*="context"], [class*="input"], button, [role="button"]');
-          if (isTooltip || !isImportantUI) el.remove();
+        targetDoc.querySelectorAll(sel).forEach(el => {
+          const elClone = el.cloneNode(true);
+          clone.appendChild(elClone);
         });
-      } catch(e) {}
+      } catch(e) {
+        // Selector failed, skip
+      }
     });
+    
+    // Remove ONLY tooltips from clone - preserve everything else
+    try {
+      clone.querySelectorAll('[role="tooltip"]').forEach(el => el.remove());
+    } catch(e) {
+      // Removal failed, continue
+    }
     
     // Fix SVG currentColor
     clone.querySelectorAll('svg').forEach(svg => {
@@ -182,7 +210,9 @@ export async function captureSnapshot(cdp) {
         const computedColor = '#cccccc';
         svg.querySelectorAll('[fill="currentColor"]').forEach(el => el.setAttribute('fill', computedColor));
         svg.querySelectorAll('[stroke="currentColor"]').forEach(el => el.setAttribute('stroke', computedColor));
-      } catch(e) {}
+      } catch(e) {
+        // SVG fix failed, continue
+      }
     });
     
     // Remove placeholder text
@@ -205,7 +235,9 @@ export async function captureSnapshot(cdp) {
           if (!el.querySelector('[contenteditable], [data-lexical-editor], textarea, input')) el.remove();
         }
       });
-    } catch(e) {}
+    } catch(e) {
+      // Placeholder removal failed, continue
+    }
     
     return { html: clone.outerHTML, bodyBg, bodyColor };
   })()`;
@@ -216,6 +248,7 @@ export async function captureSnapshot(cdp) {
       contextId: cdp.rootContextId,
       returnByValue: true
     });
+    
     return result.result?.value || null;
   } catch (err) {
     console.error('[Snapshot] Failed to capture HTML:', err.message);
@@ -247,7 +280,9 @@ export async function captureEditor(cdp) {
           result.fileName = tab.textContent.trim().split('\\n')[0].trim();
           if (result.fileName) break;
         }
-      } catch(e) {}
+      } catch(e) {
+        // Selector failed, continue
+      }
     }
     
     // Try Monaco API
@@ -255,7 +290,7 @@ export async function captureEditor(cdp) {
       const monacoEditors = targetDoc.querySelectorAll('.monaco-editor');
       for (const editorEl of monacoEditors) {
         const editorInstance = editorEl.__vscode_editor__ || editorEl._editor ||
-          (window.monaco && window.monaco.editor.getEditors && window.monaco.editor.getEditors()[0]);
+          (window.monaco && window.monaco.editor && window.monaco.editor.getEditors && window.monaco.editor.getEditors()[0]);
         if (editorInstance && editorInstance.getModel) {
           const model = editorInstance.getModel();
           if (model) {
@@ -267,7 +302,9 @@ export async function captureEditor(cdp) {
           }
         }
       }
-    } catch(e) {}
+    } catch(e) {
+      // Monaco API not available, continue
+    }
     
     // Fallback: Extract from view-lines
     if (!result.content) {
@@ -309,7 +346,9 @@ export async function captureEditor(cdp) {
       const extMap = {
         'ts': 'typescript', 'tsx': 'typescript', 'js': 'javascript', 'jsx': 'javascript',
         'py': 'python', 'java': 'java', 'html': 'html', 'css': 'css', 'json': 'json',
-        'md': 'markdown', 'yaml': 'yaml', 'yml': 'yaml', 'go': 'go', 'rs': 'rust'
+        'md': 'markdown', 'yaml': 'yaml', 'yml': 'yaml', 'go': 'go', 'rs': 'rust',
+        'c': 'c', 'cpp': 'cpp', 'h': 'c', 'cs': 'csharp', 'rb': 'ruby', 'php': 'php',
+        'sql': 'sql', 'sh': 'bash', 'vue': 'vue', 'svelte': 'svelte'
       };
       result.language = extMap[ext] || ext || '';
     }

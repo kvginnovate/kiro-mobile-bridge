@@ -1,6 +1,7 @@
 /**
  * Message injection service - sends messages to Kiro chat via CDP
  */
+import { escapeForJavaScript, validateMessage } from '../utils/security.js';
 
 /**
  * Create script to inject message into chat input
@@ -8,7 +9,8 @@
  * @returns {string} - JavaScript expression
  */
 function createInjectScript(messageText) {
-  const escaped = messageText.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+  // Use proper escaping to prevent XSS and injection attacks
+  const escaped = escapeForJavaScript(messageText);
   
   return `(async () => {
     const text = '${escaped}';
@@ -177,6 +179,12 @@ function createInjectScript(messageText) {
  * @returns {Promise<{success: boolean, method?: string, error?: string}>}
  */
 export async function injectMessage(cdp, message) {
+  // Validate message before processing
+  const validation = validateMessage(message);
+  if (!validation.valid) {
+    return { success: false, error: validation.error };
+  }
+  
   if (!cdp.rootContextId) {
     return { success: false, error: 'No execution context available' };
   }

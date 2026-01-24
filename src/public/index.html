@@ -172,7 +172,7 @@
     .file-tree { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 0; }
     .file-tree-folder-header { display: flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer; user-select: none; }
     .file-tree-folder-header:hover { background: rgba(255,255,255,0.08); }
-    .file-tree-folder-icon { color: #888; font-size: 14px; transition: transform 0.15s; }
+    .file-tree-folder-icon { color: #a78bfa; font-size: 14px; transition: transform 0.15s; }
     .file-tree-folder-icon.expanded { transform: rotate(90deg); }
     .file-tree-folder-name { font-size: 13px; color: #c5c5c5; }
     .file-tree-folder-contents { padding-left: 16px; display: none; }
@@ -212,6 +212,11 @@
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; text-align: center; padding: 20px; }
     .empty-state .codicon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
     .empty-state p { font-size: 14px; max-width: 280px; }
+    
+    /* =============================================================================
+       Mobile Bridge Customizations - Hide Follow and Revert buttons in snackbar
+       ============================================================================= */
+    .kiro-snackbar-actions .kiro-button[data-variant="primary"] { display: none !important; }
   </style>
 </head>
 <body>
@@ -707,14 +712,14 @@
         }
         
         /* Hide tooltips, popovers, and overlay elements */
+        /* IMPORTANT: Do NOT hide model-related elements - use negative lookahead patterns */
         [role="tooltip"], [data-tooltip],
-        [class*="tooltip"]:not(button):not([role="button"]),
-        [class*="Tooltip"]:not(button):not([role="button"]),
-        [class*="popover"]:not(button):not([role="button"]),
-        [class*="Popover"]:not(button):not([role="button"]),
-        [class*="overlay"]:not(button):not([role="button"]):not([class*="dropdown"]),
-        [class*="Overlay"]:not(button):not([role="button"]):not([class*="dropdown"]),
-        [class*="modal"], [class*="Modal"] {
+        [class*="tooltip"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]),
+        [class*="Tooltip"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]),
+        [class*="popover"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]):not([role="listbox"]):not([role="menu"]),
+        [class*="Popover"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]):not([role="listbox"]):not([role="menu"]),
+        [class*="overlay"]:not(button):not([role="button"]):not([class*="dropdown"]):not([class*="model"]):not([class*="Model"]),
+        [class*="Overlay"]:not(button):not([role="button"]):not([class*="dropdown"]):not([class*="model"]):not([class*="Model"]) {
           display: none !important;
           visibility: hidden !important;
           opacity: 0 !important;
@@ -742,6 +747,7 @@
         /* Dropdown menu items */
         [class*="dropdown-item"], [class*="dropdownItem"], [class*="DropdownItem"],
         [class*="model-option"], [class*="modelOption"], [class*="ModelOption"],
+        .kiro-dropdown-item,
         [role="option"], [role="menuitem"] {
           display: flex !important;
           visibility: visible !important;
@@ -754,8 +760,31 @@
         }
         
         [class*="dropdown-item"]:hover, [class*="dropdownItem"]:hover,
+        .kiro-dropdown-item:hover,
         [role="option"]:hover, [role="menuitem"]:hover {
           background: rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        /* Hide model descriptions in dropdown - keep only name and credit */
+        .kiro-dropdown-item [class*="description"],
+        .kiro-dropdown-item [class*="Description"],
+        .kiro-dropdown-item [class*="subtitle"],
+        .kiro-dropdown-item [class*="Subtitle"],
+        .kiro-dropdown-item > div:last-child:not(:first-child),
+        .kiro-dropdown-menu [class*="description"],
+        .kiro-dropdown-menu [class*="Description"],
+        [class*="dropdown-item"] [class*="description"],
+        [class*="dropdown-item"] [class*="Description"],
+        [role="option"] [class*="description"],
+        [role="option"] [class*="Description"] {
+          display: none !important;
+        }
+        
+        /* Compact model dropdown items */
+        .kiro-dropdown-item,
+        .kiro-dropdown-menu > div {
+          padding: 8px 12px !important;
+          min-height: auto !important;
         }
         
         /* Model selector button */
@@ -1017,6 +1046,7 @@
       
       removePlaceholderText();
       fixContextWindowCircles();
+      hideRevertButton();
       
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -1050,6 +1080,16 @@
       });
       
       makeInteractive();
+    }
+    
+    function hideRevertButton() {
+      // Hide Revert button by finding buttons with "Revert" text in snackbar
+      panels.chat.content.querySelectorAll('.kiro-snackbar button, .kiro-snackbar-actions button').forEach(btn => {
+        const text = (btn.textContent || '').trim().toLowerCase();
+        if (text === 'revert') {
+          btn.style.display = 'none';
+        }
+      });
     }
     
     function removePlaceholderText() {
@@ -1395,7 +1435,7 @@
         html += `<div class="file-tree-folder" data-path="${escapeHtml(folderPath)}">
           <div class="file-tree-folder-header" data-folder="${escapeHtml(folderPath)}">
             <span class="file-tree-folder-icon codicon codicon-chevron-right ${isExpanded ? 'expanded' : ''}"></span>
-            <span class="codicon codicon-folder${isExpanded ? '-opened' : ''}" style="color: #dcb67a;"></span>
+            <span class="codicon codicon-folder${isExpanded ? '-opened' : ''}" style="color: #a78bfa;"></span>
             <span class="file-tree-folder-name">${escapeHtml(folderName)}</span>
           </div>
           <div class="file-tree-folder-contents ${isExpanded ? 'expanded' : ''}">${renderTreeNode(node.folders[folderName], folderPath)}</div>
@@ -1561,8 +1601,65 @@
           e.preventDefault(); e.stopPropagation();
           const label = wrapper.querySelector('label');
           await sendClickToKiro({ tag: 'div', text: label ? label.textContent.trim() : 'toggle', role: 'switch', isToggle: true });
+          // Refresh snapshot after toggle to show updated state
+          // Use longer delay (800ms) to allow server polling to capture the change
+          // Then refresh again at 1500ms to ensure we have the latest state
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 800);
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 1500);
           return false;
         };
+      });
+      
+      // Notification banner buttons (View all, X) in snackbar and agent-outcome
+      // Note: Revert and Follow buttons are hidden
+      const notificationSelectors = [
+        '.kiro-snackbar button',
+        '.kiro-snackbar-actions button',
+        '.kiro-snackbar-header button',
+        '.agent-outcome-notification button',
+        '.agent-outcome button',
+        '[class*="notification"] button',
+        '[class*="outcome"] button'
+      ];
+      notificationSelectors.forEach(sel => {
+        try {
+          content.querySelectorAll(sel).forEach(btn => {
+            const btnText = (btn.textContent || '').trim().toLowerCase();
+            // Skip Follow and Revert buttons (hidden via CSS/JS)
+            if (btnText.includes('follow') || btnText === 'revert') return;
+            
+            btn.style.cursor = 'pointer';
+            btn.onclick = async (e) => {
+              e.preventDefault(); e.stopPropagation();
+              
+              // Identify the button - for icon buttons use aria-label or detect close icon
+              let buttonText = (btn.textContent || '').trim().substring(0, 50);
+              const ariaLabel = btn.getAttribute('aria-label') || '';
+              const isIconButton = btn.classList.contains('kiro-icon-button');
+              const hasCloseIcon = btn.querySelector('.codicon-close, .codicon-x, [class*="close"]');
+              
+              // For X/close icon buttons with no text
+              if (!buttonText && (isIconButton || hasCloseIcon)) {
+                buttonText = ariaLabel || 'dismiss';
+              }
+              
+              const clickInfo = {
+                tag: 'button',
+                text: buttonText,
+                ariaLabel: ariaLabel,
+                role: btn.getAttribute('role') || 'button',
+                className: btn.className || '',
+                isNotificationButton: true,
+                isIconButton: isIconButton || !buttonText
+              };
+              console.log('[Click] Notification button:', clickInfo.text || clickInfo.ariaLabel || 'icon-button');
+              await sendClickToKiro(clickInfo);
+              // Refresh after clicking notification buttons
+              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+              return false;
+            };
+          });
+        } catch(e) {}
       });
       
       // Tabs
@@ -1588,6 +1685,118 @@
           await sendClickToKiro({ tag: 'div', text: labelText, role: 'tab', isTab: true, tabLabel: labelText });
           return false;
         };
+      });
+      
+      // Model selector buttons and dropdown options
+      const modelNames = ['claude', 'sonnet', 'opus', 'haiku', 'auto', 'gpt', 'model', 'gemini', 'llama'];
+      const modelSelectorSelectors = [
+        '[class*="model-selector"]', '[class*="modelSelector"]', '[class*="ModelSelector"]',
+        '[class*="model-dropdown"]', '[class*="modelDropdown"]', '[class*="ModelDropdown"]',
+        '[aria-label*="model" i]', '[aria-label*="Model"]',
+        '[class*="select-model"]', '[class*="selectModel"]',
+        '[role="combobox"]'
+      ];
+      
+      // Handle model selector buttons
+      modelSelectorSelectors.forEach(sel => {
+        try {
+          content.querySelectorAll(sel).forEach(el => {
+            if (el.onclick) return;
+            el.style.cursor = 'pointer';
+            el.onclick = async (e) => {
+              e.preventDefault(); e.stopPropagation();
+              const clickInfo = {
+                tag: el.tagName?.toLowerCase() || 'button',
+                text: (el.textContent || '').trim().substring(0, 100),
+                ariaLabel: el.getAttribute('aria-label') || '',
+                role: el.getAttribute('role') || 'button',
+                className: el.className || '',
+                isModelSelector: true
+              };
+              await sendClickToKiro(clickInfo);
+              // Refresh snapshot after clicking to show dropdown
+              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
+              return false;
+            };
+          });
+        } catch(e) {}
+      });
+      
+      // Handle dropdown menu items (model options) - including Kiro-specific classes
+      const dropdownItemSelectors = [
+        '.kiro-dropdown-item',
+        '.kiro-dropdown-menu > div',
+        '[role="option"]', '[role="menuitem"]', '[role="listitem"]',
+        '[class*="dropdown-item"]', '[class*="dropdownItem"]', '[class*="DropdownItem"]',
+        '[class*="menu-item"]', '[class*="menuItem"]', '[class*="MenuItem"]'
+      ];
+      
+      dropdownItemSelectors.forEach(sel => {
+        try {
+          content.querySelectorAll(sel).forEach(el => {
+            if (el.onclick) return;
+            // Skip if it's inside a tab
+            if (el.closest('[role="tab"]')) return;
+            
+            const elText = (el.textContent || '').toLowerCase();
+            const isModelOption = modelNames.some(m => elText.includes(m));
+            
+            // Only attach handler if it looks like a model option
+            if (!isModelOption) return;
+            
+            el.style.cursor = 'pointer';
+            el.onclick = async (e) => {
+              e.preventDefault(); e.stopPropagation();
+              
+              // Extract just the model name for cleaner matching
+              let modelText = (el.textContent || '').trim();
+              // Try to get just the first line (model name)
+              const firstLine = modelText.split('\n')[0].trim();
+              if (firstLine.length > 5 && firstLine.length < 50) {
+                modelText = firstLine;
+              }
+              
+              const clickInfo = {
+                tag: el.tagName?.toLowerCase() || 'div',
+                text: modelText.substring(0, 50),
+                ariaLabel: el.getAttribute('aria-label') || '',
+                role: el.getAttribute('role') || 'option',
+                className: el.className || '',
+                isModelOption: true,
+                isModelSelector: false
+              };
+              await sendClickToKiro(clickInfo);
+              // Refresh snapshot after selecting option
+              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+              return false;
+            };
+          });
+        } catch(e) {}
+      });
+      
+      // Also detect model-related buttons by text content
+      content.querySelectorAll('button, [role="button"]').forEach(btn => {
+        if (btn.onclick) return;
+        const btnText = (btn.textContent || '').toLowerCase();
+        const isModelRelated = modelNames.some(m => btnText.includes(m));
+        
+        if (isModelRelated) {
+          btn.style.cursor = 'pointer';
+          btn.onclick = async (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const clickInfo = {
+              tag: 'button',
+              text: (btn.textContent || '').trim().substring(0, 100),
+              ariaLabel: btn.getAttribute('aria-label') || '',
+              role: btn.getAttribute('role') || 'button',
+              className: btn.className || '',
+              isModelSelector: true
+            };
+            await sendClickToKiro(clickInfo);
+            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
+            return false;
+          };
+        }
       });
       
       // File links
@@ -1743,8 +1952,32 @@
     // =============================================================================
     // Kiro Communication
     // =============================================================================
+    
+    // Rate limiting for message sending
+    let lastMessageTime = 0;
+    const MESSAGE_RATE_LIMIT_MS = 1000; // Minimum 1 second between messages
+    let pendingMessage = false;
+    
     async function sendToKiro(message) {
       if (!message || !selectedCascadeId) return;
+      
+      // Rate limiting check
+      const now = Date.now();
+      if (now - lastMessageTime < MESSAGE_RATE_LIMIT_MS) {
+        if (!pendingMessage) {
+          showToast('Please wait before sending another message', 1500);
+        }
+        return;
+      }
+      
+      if (pendingMessage) {
+        showToast('Message already being sent', 1500);
+        return;
+      }
+      
+      pendingMessage = true;
+      lastMessageTime = now;
+      
       try {
         const r = await fetch(`/send/${selectedCascadeId}`, {
           method: 'POST',
@@ -1756,10 +1989,12 @@
         else showToast(result.error || 'Failed to send');
       } catch (e) {
         showToast('Failed to send');
+      } finally {
+        pendingMessage = false;
       }
     }
     
-    async function sendClickToKiro(clickInfo) {
+    async function sendClickToKiro(clickInfo, retryCount = 0) {
       if (!selectedCascadeId) return;
       
       const isNavigation = clickInfo.ariaLabel?.toLowerCase().includes('back') ||
@@ -1770,15 +2005,27 @@
       if (isNavigation) navigationPending = true;
       
       try {
-        await fetch(`/click/${selectedCascadeId}`, {
+        const response = await fetch(`/click/${selectedCascadeId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(clickInfo)
         });
         
+        const result = await response.json();
+        
+        // Handle retry for model option clicks (dropdown was opened, need to click option)
+        if (result.needsRetry && clickInfo.isModelOption && retryCount < 2) {
+          console.log('[Click] Dropdown opened, retrying option click in 350ms...');
+          await new Promise(resolve => setTimeout(resolve, 350));
+          return sendClickToKiro(clickInfo, retryCount + 1);
+        }
+        
         if (isNavigation) setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
+        
+        return result;
       } catch (e) {
         navigationPending = false;
+        return { success: false, error: e.message };
       }
     }
     

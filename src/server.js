@@ -19,6 +19,14 @@ import { captureMetadata, captureCSS, captureSnapshot, captureEditor } from './s
 // Utils
 import { generateId, computeHash } from './utils/hash.js';
 import { getLocalIP } from './utils/network.js';
+import {
+  CDP_PORTS,
+  DISCOVERY_INTERVAL_ACTIVE,
+  DISCOVERY_INTERVAL_STABLE,
+  SNAPSHOT_INTERVAL_ACTIVE,
+  SNAPSHOT_INTERVAL_IDLE,
+  SNAPSHOT_IDLE_THRESHOLD
+} from './utils/constants.js';
 
 // Routes
 import { createApiRouter } from './routes/api.js';
@@ -31,7 +39,6 @@ const __dirname = dirname(__filename);
 // =============================================================================
 
 const PORT = process.env.PORT || 3000;
-const CDP_PORTS = [9000, 9001, 9002, 9003, 9222, 9229];
 
 // =============================================================================
 // State Management
@@ -44,12 +51,12 @@ const pollingState = {
   lastCascadeCount: 0,
   lastMainWindowConnected: false,
   discoveryInterval: null,
-  discoveryIntervalMs: 10000,
+  discoveryIntervalMs: DISCOVERY_INTERVAL_ACTIVE,
   stableCount: 0,
   snapshotInterval: null,
-  snapshotIntervalMs: 1000,
+  snapshotIntervalMs: SNAPSHOT_INTERVAL_ACTIVE,
   lastSnapshotChange: Date.now(),
-  idleThreshold: 10000
+  idleThreshold: SNAPSHOT_IDLE_THRESHOLD
 };
 
 // =============================================================================
@@ -113,7 +120,6 @@ async function discoverTargets() {
         foundCascadeIds.add(cascadeId);
         
         if (!cascades.has(cascadeId)) {
-          console.log(`[Discovery] Found new Kiro Agent: ${target.title} (${cascadeId})`);
           stateChanged = true;
           
           try {
@@ -145,7 +151,10 @@ async function discoverTargets() {
           cascades.get(cascadeId).metadata.windowTitle = target.title || cascades.get(cascadeId).metadata.windowTitle;
         }
       }
-    } catch (err) {}
+    } catch (err) {
+      // Log port scanning errors for debugging
+      console.debug(`[Discovery] Error scanning port ${port}: ${err.message}`);
+    }
   }
   
   // Clean up disconnected targets
@@ -153,7 +162,11 @@ async function discoverTargets() {
     if (!foundCascadeIds.has(cascadeId)) {
       console.log(`[Discovery] Target no longer available: ${cascadeId}`);
       stateChanged = true;
-      try { cascade.cdp.close(); } catch (e) {}
+      try { 
+        cascade.cdp.close(); 
+      } catch (e) {
+        console.debug(`[Discovery] Error closing cascade ${cascadeId}: ${e.message}`);
+      }
       cascades.delete(cascadeId);
       broadcastCascadeList();
     }
@@ -206,8 +219,10 @@ async function pollSnapshots() {
       }
       
       // Capture editor from main window
+      // Store rootContextId locally to avoid race conditions during async operations
       const mainCDP = mainWindowCDP.connection;
-      if (mainCDP?.rootContextId) {
+      const contextId = mainCDP?.rootContextId;
+      if (mainCDP && contextId) {
         const editor = await captureEditor(mainCDP);
         if (editor?.hasContent) {
           const editorHash = computeHash(editor.content + editor.fileName);
@@ -239,14 +254,14 @@ async function pollSnapshots() {
 function adjustDiscoveryInterval(hasChanges) {
   if (hasChanges) {
     pollingState.stableCount = 0;
-    if (pollingState.discoveryIntervalMs !== 10000) {
-      pollingState.discoveryIntervalMs = 10000;
+    if (pollingState.discoveryIntervalMs !== DISCOVERY_INTERVAL_ACTIVE) {
+      pollingState.discoveryIntervalMs = DISCOVERY_INTERVAL_ACTIVE;
       restartDiscoveryInterval();
     }
   } else {
     pollingState.stableCount++;
-    if (pollingState.stableCount >= 3 && pollingState.discoveryIntervalMs !== 30000) {
-      pollingState.discoveryIntervalMs = 30000;
+    if (pollingState.stableCount >= 3 && pollingState.discoveryIntervalMs !== DISCOVERY_INTERVAL_STABLE) {
+      pollingState.discoveryIntervalMs = DISCOVERY_INTERVAL_STABLE;
       restartDiscoveryInterval();
       console.log('[Discovery] Stable state, slowing to 30s interval');
     }
@@ -262,14 +277,14 @@ function adjustSnapshotInterval(hasChanges) {
   const now = Date.now();
   if (hasChanges) {
     pollingState.lastSnapshotChange = now;
-    if (pollingState.snapshotIntervalMs !== 1000) {
-      pollingState.snapshotIntervalMs = 1000;
+    if (pollingState.snapshotIntervalMs !== SNAPSHOT_INTERVAL_ACTIVE) {
+      pollingState.snapshotIntervalMs = SNAPSHOT_INTERVAL_ACTIVE;
       restartSnapshotInterval();
     }
   } else {
     const idleTime = now - pollingState.lastSnapshotChange;
-    if (idleTime > pollingState.idleThreshold && pollingState.snapshotIntervalMs !== 3000) {
-      pollingState.snapshotIntervalMs = 3000;
+    if (idleTime > pollingState.idleThreshold && pollingState.snapshotIntervalMs !== SNAPSHOT_INTERVAL_IDLE) {
+      pollingState.snapshotIntervalMs = SNAPSHOT_INTERVAL_IDLE;
       restartSnapshotInterval();
     }
   }
@@ -314,7 +329,7 @@ function broadcastCascadeList() {
 // =============================================================================
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '1mb' })); // Limit request body size
 app.use(express.static(join(__dirname, 'public')));
 
 // Mount API routes

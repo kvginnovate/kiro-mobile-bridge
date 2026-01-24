@@ -3,6 +3,7 @@
  */
 import http from 'http';
 import { WebSocket } from 'ws';
+import { CDP_CALL_TIMEOUT, HTTP_TIMEOUT } from '../utils/constants.js';
 
 /**
  * Fetch JSON from a CDP endpoint
@@ -14,7 +15,7 @@ export function fetchCDPTargets(port, path = '/json/list') {
   return new Promise((resolve, reject) => {
     const url = `http://127.0.0.1:${port}${path}`;
     
-    const req = http.get(url, { timeout: 2000 }, (res) => {
+    const req = http.get(url, { timeout: HTTP_TIMEOUT }, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
@@ -35,6 +36,22 @@ export function fetchCDPTargets(port, path = '/json/list') {
 }
 
 /**
+ * @typedef {Object} PendingCall
+ * @property {Function} resolve - Promise resolve function
+ * @property {Function} reject - Promise reject function
+ * @property {NodeJS.Timeout} timeoutId - Timeout handle for cleanup
+ */
+
+/**
+ * @typedef {Object} CDPConnection
+ * @property {WebSocket} ws - WebSocket connection
+ * @property {Array} contexts - Execution contexts
+ * @property {number|null} rootContextId - Root context ID
+ * @property {Function} call - Make a CDP call
+ * @property {Function} close - Close the connection
+ */
+
+/**
  * Create a CDP connection to a target
  * @param {string} wsUrl - WebSocket debugger URL
  * @returns {Promise<CDPConnection>} - CDP connection object
@@ -43,10 +60,26 @@ export function connectToCDP(wsUrl) {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(wsUrl);
     let idCounter = 1;
+    /** @type {Map<number, PendingCall>} */
     const pendingCalls = new Map();
     const contexts = [];
     let rootContextId = null;
     let isConnected = false;
+    
+    /**
+     * Clear all pending calls and their timeouts
+     * @param {Error} error - Error to reject pending calls with
+     */
+    function clearAllPendingCalls(error) {
+      for (const [id, pending] of pendingCalls) {
+        // Clear the timeout to prevent memory leak
+        if (pending.timeoutId) {
+          clearTimeout(pending.timeoutId);
+        }
+        pending.reject(error);
+      }
+      pendingCalls.clear();
+    }
     
     ws.on('message', (rawMsg) => {
       try {
@@ -75,12 +108,19 @@ export function connectToCDP(wsUrl) {
         }
         
         if (msg.id !== undefined && pendingCalls.has(msg.id)) {
-          const { resolve: res, reject: rej } = pendingCalls.get(msg.id);
+          const pending = pendingCalls.get(msg.id);
+          
+          // Clear the timeout since we got a response
+          if (pending.timeoutId) {
+            clearTimeout(pending.timeoutId);
+          }
+          
           pendingCalls.delete(msg.id);
+          
           if (msg.error) {
-            rej(new Error(`CDP Error: ${msg.error.message} (code: ${msg.error.code})`));
+            pending.reject(new Error(`CDP Error: ${msg.error.message} (code: ${msg.error.code})`));
           } else {
-            res(msg.result);
+            pending.resolve(msg.result);
           }
         }
       } catch (e) {
@@ -97,6 +137,12 @@ export function connectToCDP(wsUrl) {
         contexts,
         get rootContextId() { return rootContextId; },
         
+        /**
+         * Make a CDP call
+         * @param {string} method - CDP method name
+         * @param {object} params - Method parameters
+         * @returns {Promise<any>} - Call result
+         */
         call(method, params = {}) {
           return new Promise((res, rej) => {
             if (!isConnected) {
@@ -105,24 +151,35 @@ export function connectToCDP(wsUrl) {
             }
             
             const id = idCounter++;
-            pendingCalls.set(id, { resolve: res, reject: rej });
-            ws.send(JSON.stringify({ id, method, params }));
             
-            setTimeout(() => {
+            // Set up timeout with cleanup
+            const timeoutId = setTimeout(() => {
               if (pendingCalls.has(id)) {
                 pendingCalls.delete(id);
                 rej(new Error(`CDP call timeout: ${method}`));
               }
-            }, 10000);
+            }, CDP_CALL_TIMEOUT);
+            
+            // Store pending call with timeout reference for cleanup
+            pendingCalls.set(id, { resolve: res, reject: rej, timeoutId });
+            
+            try {
+              ws.send(JSON.stringify({ id, method, params }));
+            } catch (sendError) {
+              // Clean up on send failure
+              clearTimeout(timeoutId);
+              pendingCalls.delete(id);
+              rej(new Error(`Failed to send CDP call: ${sendError.message}`));
+            }
           });
         },
         
+        /**
+         * Close the CDP connection
+         */
         close() {
           isConnected = false;
-          for (const [, { reject }] of pendingCalls) {
-            reject(new Error('CDP connection closed'));
-          }
-          pendingCalls.clear();
+          clearAllPendingCalls(new Error('CDP connection closed'));
           ws.terminate();
         }
       };
@@ -147,10 +204,7 @@ export function connectToCDP(wsUrl) {
     ws.on('close', () => {
       console.log('[CDP] Connection closed');
       isConnected = false;
-      for (const [, { reject }] of pendingCalls) {
-        reject(new Error('CDP connection closed'));
-      }
-      pendingCalls.clear();
+      clearAllPendingCalls(new Error('CDP connection closed'));
     });
   });
 }

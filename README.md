@@ -104,6 +104,18 @@ Open the Network URL on your phone to monitor Kiro.
 - Check your firewall allows connections on port 3000
 - Try the IP address shown in the server output (not `localhost`)
 
+#### Linux: Firewall blocking connections
+
+If you're on Linux and can't connect from your phone, your firewall may be blocking port 3000. Allow it with:
+
+```bash
+# UFW (Ubuntu, Arch, etc.)
+sudo ufw allow 3000/tcp
+
+# Or with iptables directly
+sudo iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
+```
+
 ## Security Notes
 
 #### Only run this on trusted networks.

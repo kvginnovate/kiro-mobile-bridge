@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.0.7 (2026-01-23)
+- ci(release): Improve commit message handling in changelog generation
+
+
 ## v1.0.6 (2026-01-24)
 - fix(ui): Fix send button not clickable on mobile interface
 - fix(ui): Remove placeholder text overlap in chat input

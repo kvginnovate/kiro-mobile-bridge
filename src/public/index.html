@@ -9,234 +9,213 @@
   <title>Kiro Mobile Bridge</title>
   <link rel="stylesheet" href="https://unpkg.com/@vscode/codicons@0.0.35/dist/codicon.css">
   <style>
+    /* =============================================================================
+       Base Styles
+       ============================================================================= */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; background: #1e1e1e; font-family: "Segoe WPC", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, "Droid Sans", sans-serif; font-size: 13px; color: #fff; }
+    html, body { 
+      height: 100%; 
+      overflow: hidden; 
+      background: #1e1e1e; 
+      font-family: "Segoe WPC", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, sans-serif; 
+      font-size: 13px; 
+      color: #fff; 
+    }
     .app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
     
-    /* Navigation Bar (combined header + tabs) */
-    .nav-bar { display: flex; align-items: center; background: #1e1e1e; border-bottom: 1px solid #3c3c3c; padding: 0 8px; flex-shrink: 0; }
+    /* =============================================================================
+       Navigation Bar
+       ============================================================================= */
+    .nav-bar { 
+      display: flex; 
+      align-items: center; 
+      background: #1e1e1e; 
+      border-bottom: 1px solid #3c3c3c; 
+      padding: 0 8px; 
+      flex-shrink: 0; 
+    }
     .status { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 10px 8px; }
     .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #666; }
     .status-dot.connected { background: #4caf50; }
     .status-dot.disconnected { background: #f44336; }
-    .status-text { color: #888; display: none; }
     .nav-tabs { display: flex; align-items: center; flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .nav-tabs::-webkit-scrollbar { display: none; }
-    .nav-tab { display: flex; align-items: center; gap: 6px; padding: 10px 16px; color: #888; font-size: 12px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s ease; white-space: nowrap; user-select: none; }
-    .header-title { font-size: 13px; font-weight: 600; color: #888; padding: 10px 12px; white-space: nowrap; }
+    .nav-tab { 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+      padding: 10px 16px; 
+      color: #888; 
+      font-size: 12px; 
+      font-weight: 500; 
+      cursor: pointer; 
+      border-bottom: 2px solid transparent; 
+      transition: all 0.2s ease; 
+      white-space: nowrap; 
+      user-select: none; 
+    }
     .nav-tab:hover { color: #ccc; background: rgba(255,255,255,0.05); }
     .nav-tab.active { color: #fff; border-bottom-color: #7138cc; }
     .nav-tab .codicon { font-size: 14px; }
     
-    /* Panel Container */
+    /* =============================================================================
+       Panel Container
+       ============================================================================= */
     .panel-container { flex: 1; overflow: hidden; position: relative; }
     .panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; display: none; }
     .panel.active { display: flex; flex-direction: column; }
     
-    /* Chat Panel */
+    /* =============================================================================
+       Chat Panel
+       ============================================================================= */
     .chat-container { flex: 1; overflow: hidden; position: relative; }
     .chat-content { width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
     #chatContent, #chatContent * { font-family: inherit; }
     #chatContent code, #chatContent pre { font-family: Menlo, Monaco, "Courier New", monospace !important; }
     #chatContent .codicon { font-family: codicon !important; font-size: 16px; line-height: 1; }
     
-    /* Editor Panel */
+    /* =============================================================================
+       Editor Panel
+       ============================================================================= */
     .editor-container { flex: 1; overflow: hidden; background: #1e1e1e; display: flex; flex-direction: column; position: relative; }
     .editor-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #252526; border-bottom: 1px solid #3c3c3c; flex-shrink: 0; user-select: none; }
-    .editor-filename { font-size: 13px; color: #fff; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .editor-filename { font-size: 13px; color: #fff; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
     .editor-search-btn { color: #888; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
     .editor-search-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
-    .editor-explorer-btn { display: flex; align-items: center; gap: 6px; color: #888; font-size: 14px; cursor: pointer; padding: 4px 8px; border-radius: 4px; background: #3c3c3c; }
-    .editor-explorer-btn:hover { background: #4a4a4a; }
-    .editor-explorer-text { font-size: 11px; font-weight: 600; color: #888; letter-spacing: 0.5px; }
+    .editor-explorer-btn { display: flex; align-items: center; gap: 6px; color: #a78bfa; font-size: 14px; cursor: pointer; padding: 4px 10px; border-radius: 6px; background: rgba(113, 56, 204, 0.15); border: 1px solid rgba(113, 56, 204, 0.3); }
+    .editor-explorer-btn:hover { background: rgba(113, 56, 204, 0.25); border-color: rgba(113, 56, 204, 0.5); }
+    .editor-explorer-text { font-size: 11px; font-weight: 600; color: #a78bfa; letter-spacing: 0.5px; }
+    .editor-explorer-indicator { font-size: 10px; color: #888; margin-left: 2px; transition: transform 0.2s ease; }
     .editor-search-bar { display: none; align-items: center; gap: 8px; padding: 6px 12px; background: #252526; border-bottom: 1px solid #3c3c3c; }
     .editor-search-bar.open { display: flex; }
     .editor-search-bar input { flex: 1; padding: 6px 10px; background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px; color: #fff; font-size: 13px; outline: none; }
     .editor-search-bar input:focus { border-color: #007acc; }
     .editor-search-count { font-size: 12px; color: #888; min-width: 50px; text-align: center; }
-    .editor-search-nav { color: #888; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
-    .editor-search-nav:hover { color: #fff; background: rgba(255,255,255,0.1); }
-    .editor-search-close { color: #888; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
-    .editor-search-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+    .editor-search-nav, .editor-search-close { color: #888; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
+    .editor-search-nav:hover, .editor-search-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
     .editor-content { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: #1e1e1e; }
     .editor-code { margin: 0; padding: 8px 0; font-family: Consolas, 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #d4d4d4; background: #1e1e1e; }
     .editor-line { display: flex; min-height: 18px; }
     .editor-line:hover { background: rgba(255,255,255,0.04); }
-    .editor-line-num { width: 50px; min-width: 50px; text-align: right; padding-right: 16px; color: #858585; user-select: none; flex-shrink: 0; font-size: 12px; font-family: inherit; }
-    .editor-line-code { flex: 1; padding-right: 12px; white-space: pre; overflow-x: auto; tab-size: 2; font-family: inherit; }
+    .editor-line-num { width: 50px; min-width: 50px; text-align: right; padding-right: 16px; color: #858585; user-select: none; flex-shrink: 0; font-size: 12px; }
+    .editor-line-code { flex: 1; padding-right: 12px; white-space: pre; overflow-x: auto; tab-size: 2; }
     .search-highlight { background: #ffd500; color: #000; border-radius: 2px; padding: 0 1px; }
     .search-highlight.current { background: #ff6b00; color: #fff; outline: 2px solid #ff6b00; }
     
-    /* File Tree Panel */
-    .file-tree-panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #252526; display: flex; flex-direction: column; z-index: 100; display: none; }
-    .file-tree-panel.open { display: flex; }
-    .file-tree-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #252526; border-bottom: 1px solid #3c3c3c; }
-    .file-tree-header-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-    .file-tree-close { margin-left: auto; color: #888; cursor: pointer; font-size: 16px; }
-    .file-tree-close:hover { color: #fff; }
+    /* =============================================================================
+       Tasks Panel
+       ============================================================================= */
+    .tasks-container { flex: 1; overflow: hidden; background: #0d0d0d; display: flex; flex-direction: column; }
+    .tasks-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #0d0d0d; flex-shrink: 0; }
+    .tasks-dropdown { flex: 1; padding: 10px 14px; background: #1a1a1a; border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .tasks-dropdown option { background: #1a1a1a; color: #fff; }
+    .tasks-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px 24px; }
+    .tasks-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #444; text-align: center; padding: 32px; }
+    .tasks-empty .codicon { font-size: 40px; margin-bottom: 16px; }
+    .task-md { font-size: 14px; }
+    
+    /* Task Groups */
+    .task-group { background: #141414; border-radius: 16px; margin-bottom: 6px; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .task-group.expanded { background: #181818; box-shadow: 0 0 0 1px rgba(60, 60, 60, 0.5), 0 8px 32px rgba(0,0,0,0.4); }
+    .task-group.expanded.completed { box-shadow: 0 0 0 1px rgba(113, 56, 204, 0.4), 0 8px 32px rgba(0,0,0,0.4); }
+    .task-group-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .task-group-indicator { width: 24px; height: 24px; min-width: 24px; border-radius: 50%; background: #2a2a2a; display: flex; align-items: center; justify-content: center; }
+    .task-group-indicator svg { display: none; width: 14px; height: 14px; color: #fff; }
+    .task-group.completed .task-group-indicator { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); }
+    .task-group.completed .task-group-indicator svg { display: block; }
+    .task-group-number { color: #666; font-size: 14px; font-weight: 700; width: 24px; text-align: center; }
+    .task-group.expanded .task-group-number { color: #ccc; }
+    .task-group.completed .task-group-number { color: #a855f7; }
+    .task-group-title { font-size: 14px; font-weight: 500; color: #e5e5e5; flex: 1; line-height: 1.4; }
+    .task-group.completed .task-group-title { color: #888; }
+    .task-group-meta { display: flex; align-items: center; gap: 8px; }
+    .task-group-count { font-size: 12px; font-weight: 600; color: #444; padding: 4px 10px; background: #1f1f1f; border-radius: 16px; }
+    .task-group.completed .task-group-count { color: #a855f7; background: rgba(124, 58, 237, 0.15); }
+    .task-group-arrow { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: #444; transition: transform 0.3s ease; }
+    .task-group-arrow svg { width: 12px; height: 12px; }
+    .task-group.expanded .task-group-arrow { transform: rotate(90deg); color: #888; }
+    .task-group-body { max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .task-group.expanded .task-group-body { max-height: 2000px; }
+    .task-group-body-inner { padding: 0 16px 12px 52px; }
+    
+    /* Task Items */
+    .task-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .task-item:last-child { border-bottom: none; }
+    .task-checkbox { width: 18px; height: 18px; min-width: 18px; border: 2px solid #444; border-radius: 5px; display: flex; align-items: center; justify-content: center; background: transparent; }
+    .task-checkbox.checked { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-color: transparent; }
+    .task-checkbox.checked svg { display: block; }
+    .task-checkbox svg { display: none; width: 10px; height: 10px; color: #fff; }
+    .task-text { flex: 1; font-size: 13px; line-height: 1.4; color: #999; padding-top: 1px; }
+    .task-text.completed { color: #555; }
+    .task-item.indent-2 { padding-left: 20px; }
+    .task-item.indent-3 { padding-left: 40px; }
+    
+    /* =============================================================================
+       File Tree Dropdown (under Explorer button)
+       ============================================================================= */
+    .file-tree-dropdown { 
+      position: absolute; 
+      top: 100%; 
+      left: 0; 
+      width: 280px; 
+      max-height: 400px;
+      background: #1e1e1e; 
+      border: 1px solid #3c3c3c;
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      display: none; 
+      flex-direction: column; 
+      z-index: 100;
+      margin-top: 4px;
+    }
+    .file-tree-dropdown.open { display: flex; }
     .file-tree { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 0; }
-    .file-tree-folder-header { display: flex; align-items: center; gap: 6px; padding: 4px 8px; cursor: pointer; user-select: none; }
-    .file-tree-folder-header:hover { background: rgba(255,255,255,0.05); }
+    .file-tree-folder-header { display: flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer; user-select: none; }
+    .file-tree-folder-header:hover { background: rgba(255,255,255,0.08); }
     .file-tree-folder-icon { color: #888; font-size: 14px; transition: transform 0.15s; }
     .file-tree-folder-icon.expanded { transform: rotate(90deg); }
     .file-tree-folder-name { font-size: 13px; color: #c5c5c5; }
     .file-tree-folder-contents { padding-left: 16px; display: none; }
     .file-tree-folder-contents.expanded { display: block; }
-    .file-tree-file { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 24px; cursor: pointer; }
-    .file-tree-file:hover { background: rgba(255,255,255,0.05); }
+    .file-tree-file { display: flex; align-items: center; gap: 6px; padding: 6px 10px 6px 26px; cursor: pointer; }
+    .file-tree-file:hover { background: rgba(255,255,255,0.08); }
     .file-tree-file:active { background: #094771; }
     .file-tree-file-icon { color: #888; font-size: 14px; }
     .file-tree-file-name { font-size: 13px; color: #c5c5c5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .file-tree-empty { padding: 20px; text-align: center; color: #666; font-size: 13px; }
-    .file-tree-loading { padding: 20px; text-align: center; color: #888; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .file-tree-empty, .file-tree-loading { padding: 20px; text-align: center; color: #666; font-size: 13px; }
+    .file-tree-loading { color: #888; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .editor-explorer-wrapper { position: relative; }
     
-    /* Syntax Highlighting - Kiro Dark Theme */
-    .token-keyword { color: #c586c0; font-weight: normal; }
-    .token-string { color: #ce9178; }
-    .token-number { color: #b5cea8; }
-    .token-comment { color: #6a9955; font-style: italic; }
-    .token-function { color: #dcdcaa; }
-    .token-type { color: #4ec9b0; }
-    .token-operator { color: #d4d4d4; }
-    .token-property { color: #9cdcfe; }
-    .token-variable { color: #9cdcfe; }
-    .token-constant { color: #4fc1ff; }
-    .token-class { color: #4ec9b0; }
-    .token-punctuation { color: #d4d4d4; }
-    .token-tag { color: #569cd6; }
-    .token-attr-name { color: #9cdcfe; }
-    .token-attr-value { color: #ce9178; }
-    /* Kiro theme token classes */
-    .tok-kw { color: #c586c0; } /* Keywords - purple/pink */
-    .tok-str { color: #ce9178; } /* Strings - orange */
-    .tok-num { color: #b5cea8; } /* Numbers - light green */
-    .tok-cmt { color: #6a9955; font-style: italic; } /* Comments - green italic */
-    .tok-fn { color: #dcdcaa; } /* Functions - yellow */
-    .tok-type { color: #4ec9b0; } /* Types - teal */
-    /* Syntax Highlighting */
-    .token-keyword { color: #569cd6; font-weight: 500; }
-    .token-string { color: #ce9178; }
-    .token-number { color: #b5cea8; }
-    .token-comment { color: #6a9955; font-style: italic; }
-    .token-function { color: #dcdcaa; }
-    .token-type { color: #4ec9b0; }
-    .token-operator { color: #d4d4d4; }
+    /* =============================================================================
+       Syntax Highlighting (Kiro Dark Theme)
+       ============================================================================= */
+    .tok-kw { color: #c586c0; }
+    .tok-str { color: #ce9178; }
+    .tok-num { color: #b5cea8; }
+    .tok-cmt { color: #6a9955; font-style: italic; }
+    .tok-fn { color: #dcdcaa; }
+    .tok-type { color: #4ec9b0; }
     
-    /* Loading & Toast */
+    /* =============================================================================
+       Loading & Toast
+       ============================================================================= */
     .loading { display: flex; align-items: center; justify-content: center; height: 100%; color: #888; font-size: 14px; flex-direction: column; gap: 12px; }
     .loading-spinner { width: 24px; height: 24px; border: 2px solid #3c3c3c; border-top-color: #7138cc; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #f44336; color: #fff; padding: 10px 16px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; z-index: 1000; }
     .toast.visible { opacity: 1; }
     .toast.success { background: #4caf50; }
     
-    /* Empty State */
+    /* =============================================================================
+       Empty State
+       ============================================================================= */
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; text-align: center; padding: 20px; }
     .empty-state .codicon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
     .empty-state p { font-size: 14px; max-width: 280px; }
-    
-    /* Task List Styling - Match Kiro IDE */
-    [class*="task"], [class*="Task"] {
-      font-family: "Segoe WPC", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, "Droid Sans", sans-serif !important;
-    }
-    
-    /* Task section headers (CURRENT TASKS, TASKS IN QUEUE) */
-    [class*="task"] h2, [class*="Task"] h2,
-    [class*="task"] h3, [class*="Task"] h3,
-    [class*="task-header"], [class*="TaskHeader"],
-    [class*="section-title"], [class*="SectionTitle"] {
-      font-size: 13px !important;
-      font-weight: 700 !important;
-      letter-spacing: 0.5px !important;
-      text-transform: uppercase !important;
-      color: #ffffff !important;
-      margin: 0 0 12px 0 !important;
-      padding: 0 !important;
-      line-height: 1.4 !important;
-    }
-    
-    /* Task list containers */
-    [class*="task-list"], [class*="TaskList"],
-    [class*="task-section"], [class*="TaskSection"] {
-      margin-bottom: 24px !important;
-      padding: 0 !important;
-    }
-    
-    /* Empty state messages (No active tasks, No tasks in queue) */
-    [class*="task"] p:empty, [class*="Task"] p:empty,
-    [class*="no-task"], [class*="NoTask"],
-    [class*="empty-task"], [class*="EmptyTask"],
-    [class*="task-empty"], [class*="TaskEmpty"] {
-      font-size: 13px !important;
-      font-style: italic !important;
-      color: #888888 !important;
-      margin: 0 0 16px 0 !important;
-      padding: 0 !important;
-      line-height: 1.6 !important;
-    }
-    
-    /* Catch all paragraphs under task sections that look like empty states */
-    [class*="task"] p, [class*="Task"] p {
-      font-size: 13px !important;
-      line-height: 1.6 !important;
-    }
-    
-    /* Specific targeting for common patterns */
-    div[class*="current"] h2, div[class*="Current"] h2,
-    div[class*="queue"] h2, div[class*="Queue"] h2 {
-      font-size: 13px !important;
-      font-weight: 700 !important;
-      letter-spacing: 0.5px !important;
-      text-transform: uppercase !important;
-      color: #ffffff !important;
-    }
-    
-    /* Horizontal divider between sections */
-    [class*="task-divider"], [class*="TaskDivider"],
-    [class*="task"] hr, [class*="Task"] hr {
-      border: none !important;
-      border-top: 1px solid #3c3c3c !important;
-      margin: 20px 0 !important;
-    }
-    
-    /* Individual task items (when they exist) */
-    [class*="task-item"], [class*="TaskItem"] {
-      padding: 8px 12px !important;
-      margin: 4px 0 !important;
-      background: rgba(255, 255, 255, 0.03) !important;
-      border-radius: 4px !important;
-      border-left: 2px solid #7138cc !important;
-      font-size: 13px !important;
-      color: #cccccc !important;
-      line-height: 1.5 !important;
-    }
-    
-    [class*="task-item"]:hover, [class*="TaskItem"]:hover {
-      background: rgba(255, 255, 255, 0.05) !important;
-    }
-    
-    /* Task item with close button */
-    [class*="task-item"] button, [class*="TaskItem"] button {
-      margin-left: 8px !important;
-      padding: 2px 6px !important;
-      font-size: 11px !important;
-      background: rgba(255, 255, 255, 0.1) !important;
-      border: 1px solid #4a464f !important;
-      border-radius: 3px !important;
-      color: #888 !important;
-      cursor: pointer !important;
-    }
-    
-    [class*="task-item"] button:hover, [class*="TaskItem"] button:hover {
-      background: rgba(255, 255, 255, 0.15) !important;
-      color: #fff !important;
-    }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- Navigation Bar (tabs | title + indicator) -->
     <nav class="nav-bar">
       <div class="nav-tabs" id="navTabs">
         <div class="nav-tab active" data-panel="chat">
@@ -245,17 +224,18 @@
         </div>
         <div class="nav-tab" data-panel="editor">
           <span class="codicon codicon-code"></span>
-          <span>Editor</span>
+          <span>Code</span>
+        </div>
+        <div class="nav-tab" data-panel="tasks">
+          <span class="codicon codicon-checklist"></span>
+          <span>Tasks</span>
         </div>
       </div>
-      <span class="header-title">Kiro Mobile</span>
       <div class="status">
         <span class="status-dot" id="statusDot"></span>
-        <span class="status-text" id="statusText">Connecting...</span>
       </div>
     </nav>
     
-    <!-- Panel Container -->
     <div class="panel-container">
       <!-- Chat Panel -->
       <div class="panel active" id="chatPanel">
@@ -268,34 +248,47 @@
       <!-- Editor Panel -->
       <div class="panel" id="editorPanel">
         <div class="editor-container">
-          <div class="loading" id="editorLoading"><div class="loading-spinner"></div><span>Loading editor...</span></div>
+          <div class="loading" id="editorLoading"><div class="loading-spinner"></div><span>Loading code...</span></div>
           <div class="editor-header" id="editorHeader" style="display: none;">
+            <div class="editor-explorer-wrapper">
+              <div class="editor-explorer-btn" id="editorExplorerBtn" title="Browse and select files">
+                <span class="codicon codicon-folder" style="color: #a78bfa;"></span>
+                <span class="editor-explorer-text">EXPLORER</span>
+                <span class="codicon codicon-chevron-down editor-explorer-indicator" id="explorerChevron"></span>
+              </div>
+              <div class="file-tree-dropdown" id="fileTreeDropdown">
+                <div class="file-tree" id="fileTree">
+                  <div class="file-tree-loading"><div class="loading-spinner"></div>Loading files...</div>
+                </div>
+              </div>
+            </div>
             <span class="codicon codicon-file-code" style="color: #888;"></span>
             <span class="editor-filename" id="editorFilename">No file open</span>
-            <span class="editor-search-btn codicon codicon-search" id="editorSearchBtn" title="Find in file"></span>
-            <div class="editor-explorer-btn" id="editorExplorerBtn" title="Open Explorer">
-              <span class="codicon codicon-folder" style="color: #dcb67a;"></span>
-              <span class="editor-explorer-text">EXPLORER</span>
-            </div>
+            <div style="flex: 1;"></div>
+            <span class="editor-search-btn codicon codicon-search" id="editorSearchBtn" title="Find"></span>
           </div>
           <div class="editor-search-bar" id="editorSearchBar">
-            <input type="text" id="editorSearchInput" placeholder="Find in file..." autocomplete="off" />
+            <input type="text" id="editorSearchInput" placeholder="Find..." autocomplete="off" />
             <span class="editor-search-count" id="editorSearchCount"></span>
-            <span class="editor-search-nav codicon codicon-arrow-up" id="editorSearchPrev" title="Previous"></span>
-            <span class="editor-search-nav codicon codicon-arrow-down" id="editorSearchNext" title="Next"></span>
-            <span class="editor-search-close codicon codicon-close" id="editorSearchClose" title="Close"></span>
-          </div>
-          <div class="file-tree-panel" id="fileTreePanel">
-            <div class="file-tree-header">
-              <span class="codicon codicon-folder-opened" style="color: #dcb67a;"></span>
-              <span class="file-tree-header-title">Explorer</span>
-              <span class="file-tree-close codicon codicon-close" id="fileTreeClose"></span>
-            </div>
-            <div class="file-tree" id="fileTree">
-              <div class="file-tree-loading"><div class="loading-spinner"></div>Loading files...</div>
-            </div>
+            <span class="editor-search-nav codicon codicon-arrow-up" id="editorSearchPrev"></span>
+            <span class="editor-search-nav codicon codicon-arrow-down" id="editorSearchNext"></span>
+            <span class="editor-search-close codicon codicon-close" id="editorSearchClose"></span>
           </div>
           <div class="editor-content" id="editorContent" style="display: none;"></div>
+        </div>
+      </div>
+      
+      <!-- Tasks Panel -->
+      <div class="panel" id="tasksPanel">
+        <div class="tasks-container">
+          <div class="loading" id="tasksLoading"><div class="loading-spinner"></div><span>Loading tasks...</span></div>
+          <div class="tasks-header" id="tasksHeader" style="display: none;">
+            <span class="codicon codicon-checklist" style="color: #7138cc; font-size: 16px;"></span>
+            <select class="tasks-dropdown" id="tasksDropdown">
+              <option value="">Select a spec...</option>
+            </select>
+          </div>
+          <div class="tasks-content" id="tasksContent" style="display: none;"></div>
         </div>
       </div>
     </div>
@@ -304,215 +297,165 @@
   </div>
 
   <script>
+    // =============================================================================
     // State
+    // =============================================================================
     let ws = null, reconnectAttempts = 0, reconnectTimeout = null;
     let cascades = [], selectedCascadeId = null, currentStyles = null;
-    let isTypingInKiroInput = false;
-    let activePanel = 'chat';
-    let lastSuccessfulSnapshot = null;
-    let navigationPending = false;
-    let workspaceFiles = []; // Cached file list
-    let fileTreeOpen = false;
-    let expandedFolders = new Set(); // Track expanded folders
-    let updateDebounceTimer = null; // Debounce rapid snapshot updates
-    let isRendering = false; // Prevent concurrent renders
+    let isTypingInKiroInput = false, activePanel = 'chat';
+    let lastSuccessfulSnapshot = null, navigationPending = false;
+    let workspaceFiles = [], fileTreeOpen = false, expandedFolders = new Set();
+    let updateDebounceTimer = null, isRendering = false;
+    let tasksData = [], selectedTaskIndex = -1, tasksPollingTimer = null, lastTasksHash = '';
+    let searchMatches = [], currentMatchIndex = -1;
     
+    // =============================================================================
     // DOM Elements
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    const navTabs = document.getElementById('navTabs');
-    const toast = document.getElementById('toast');
-    const fileTreePanel = document.getElementById('fileTreePanel');
-    const fileTree = document.getElementById('fileTree');
-    const fileTreeClose = document.getElementById('fileTreeClose');
+    // =============================================================================
+    const $ = id => document.getElementById(id);
+    const statusDot = $('statusDot');
+    const navTabs = $('navTabs');
+    const toast = $('toast');
+    const fileTreeDropdown = $('fileTreeDropdown');
+    const fileTree = $('fileTree');
+    const explorerChevron = $('explorerChevron');
     
-    // Panel elements
     const panels = {
-      chat: {
-        panel: document.getElementById('chatPanel'),
-        loading: document.getElementById('chatLoading'),
-        content: document.getElementById('chatContent'),
-        container: document.getElementById('chatContainer')
-      },
-      editor: {
-        panel: document.getElementById('editorPanel'),
-        loading: document.getElementById('editorLoading'),
-        content: document.getElementById('editorContent'),
-        header: document.getElementById('editorHeader'),
-        filename: document.getElementById('editorFilename')
-      }
+      chat: { panel: $('chatPanel'), loading: $('chatLoading'), content: $('chatContent'), container: $('chatContainer') },
+      editor: { panel: $('editorPanel'), loading: $('editorLoading'), content: $('editorContent'), header: $('editorHeader'), filename: $('editorFilename') },
+      tasks: { panel: $('tasksPanel'), loading: $('tasksLoading'), content: $('tasksContent'), header: $('tasksHeader'), dropdown: $('tasksDropdown') }
     };
     
-    // Search state
-    let searchMatches = [];
-    let currentMatchIndex = -1;
-    let originalEditorContent = '';
-    
-    // Search DOM elements
-    const editorSearchBtn = document.getElementById('editorSearchBtn');
-    const editorSearchBar = document.getElementById('editorSearchBar');
-    const editorSearchInput = document.getElementById('editorSearchInput');
-    const editorSearchCount = document.getElementById('editorSearchCount');
-    const editorSearchPrev = document.getElementById('editorSearchPrev');
-    const editorSearchNext = document.getElementById('editorSearchNext');
-    const editorSearchClose = document.getElementById('editorSearchClose');
-
-    // Status management
+    // =============================================================================
+    // Utilities
+    // =============================================================================
     function setStatus(status) {
       statusDot.className = 'status-dot ' + status;
-      statusText.textContent = status === 'connected' ? 'Connected' : status === 'disconnected' ? 'Disconnected' : 'Connecting...';
     }
-
+    
     function showToast(message, duration = 3000, isSuccess = false) {
       toast.textContent = message;
       toast.className = 'toast visible' + (isSuccess ? ' success' : '');
-      setTimeout(() => { toast.classList.remove('visible'); }, duration);
+      setTimeout(() => toast.classList.remove('visible'), duration);
     }
-
-    // Navigation
-    navTabs.addEventListener('click', (e) => {
-      const tab = e.target.closest('.nav-tab');
-      if (!tab) return;
-      
-      const panelName = tab.dataset.panel;
-      if (panelName === activePanel) return;
-      
-      // Update tabs
-      navTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      
-      // Update panels
-      Object.keys(panels).forEach(key => {
-        panels[key].panel.classList.toggle('active', key === panelName);
-      });
-      
-      activePanel = panelName;
-      
-      // Fetch content for the new panel
-      if (selectedCascadeId) {
-        fetchPanelContent(panelName, selectedCascadeId);
-      }
-    });
-
-    // WebSocket connection
-    function connect() {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${window.location.host}`);
-      
-      ws.onopen = () => {
-        setStatus('connected');
-        reconnectAttempts = 0;
-      };
-      
-      ws.onmessage = (e) => {
-        try {
-          handleMessage(JSON.parse(e.data));
-        } catch (err) {
-          console.error('Failed to parse message:', err);
-        }
-      };
-      
-      ws.onclose = () => {
-        setStatus('disconnected');
-        scheduleReconnect();
-      };
-      
-      ws.onerror = () => {};
+    
+    function escapeHtml(text) {
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
-
-    function scheduleReconnect() {
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-      reconnectAttempts++;
-      reconnectTimeout = setTimeout(connect, delay);
-    }
-
-    function handleMessage(data) {
-      if (data.type === 'cascade_list') {
-        cascades = data.cascades || [];
-        if (!selectedCascadeId && cascades.length > 0) {
-          selectCascade(cascades[0].id);
-        }
-      } else if (data.type === 'snapshot_update' && data.cascadeId === selectedCascadeId) {
-        // Only fetch if user is not typing AND the updated panel is the active one
-        // AND we're not currently rendering (prevent flickering from rapid updates)
-        const panel = data.panel || 'chat';
-        if (!isTypingInKiroInput && panel === activePanel && !isRendering) {
-          // Debounce rapid updates - wait 500ms before fetching
-          if (updateDebounceTimer) clearTimeout(updateDebounceTimer);
-          updateDebounceTimer = setTimeout(() => {
-            fetchPanelContent(panel, data.cascadeId, true); // true = isUpdate (don't scroll)
-          }, 500);
-        }
-      }
-    }
-
-    function selectCascade(cascadeId) {
-      selectedCascadeId = cascadeId;
-      currentStyles = null;
-      workspaceFiles = []; // Clear file cache when switching cascades
-      
-      if (cascadeId) {
-        fetchStyles(cascadeId).then(() => {
-          fetchPanelContent(activePanel, cascadeId);
-        });
-      } else {
-        showLoading('chat', 'Waiting for Kiro...');
-      }
-    }
-
-    async function fetchStyles(cascadeId) {
-      try {
-        const r = await fetch(`/styles/${cascadeId}`);
-        if (r.ok) currentStyles = await r.text();
-      } catch (e) {
-        console.error('Failed to fetch styles:', e);
-      }
-    }
-
+    
     function showLoading(panelName, msg = 'Loading...') {
       const p = panels[panelName];
-      if (p.loading) {
-        p.loading.querySelector('span').textContent = msg;
-        p.loading.style.display = 'flex';
-      }
+      if (p.loading) { p.loading.querySelector('span').textContent = msg; p.loading.style.display = 'flex'; }
       if (p.content) p.content.style.display = 'none';
       if (p.header) p.header.style.display = 'none';
     }
-
+    
     function hideLoading(panelName) {
       const p = panels[panelName];
       if (p.loading) p.loading.style.display = 'none';
       if (p.content) p.content.style.display = 'block';
       if (p.header) p.header.style.display = 'flex';
     }
-
-    // Fetch panel content
-    async function fetchPanelContent(panelName, cascadeId, isUpdate = false) {
-      switch (panelName) {
-        case 'chat':
-          await fetchChatSnapshot(cascadeId, isUpdate);
-          break;
-        case 'editor':
-          await fetchEditorSnapshot(cascadeId, isUpdate);
-          break;
+    
+    function showEmptyState(panelName, icon, message) {
+      const p = panels[panelName];
+      p.content.innerHTML = `<div class="empty-state"><span class="codicon ${icon}"></span><p>${message}</p></div>`;
+      hideLoading(panelName);
+    }
+    
+    // =============================================================================
+    // Navigation
+    // =============================================================================
+    navTabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('.nav-tab');
+      if (!tab || tab.dataset.panel === activePanel) return;
+      
+      if (activePanel === 'tasks') stopTasksPolling();
+      
+      navTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      Object.keys(panels).forEach(key => panels[key].panel.classList.toggle('active', key === tab.dataset.panel));
+      activePanel = tab.dataset.panel;
+      
+      if (selectedCascadeId) fetchPanelContent(activePanel, selectedCascadeId);
+    });
+    
+    // =============================================================================
+    // WebSocket Connection
+    // =============================================================================
+    function connect() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}`);
+      
+      ws.onopen = () => { setStatus('connected'); reconnectAttempts = 0; };
+      ws.onmessage = (e) => { try { handleMessage(JSON.parse(e.data)); } catch (err) {} };
+      ws.onclose = () => { setStatus('disconnected'); scheduleReconnect(); };
+      ws.onerror = () => {};
+    }
+    
+    function scheduleReconnect() {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+      reconnectAttempts++;
+      reconnectTimeout = setTimeout(connect, delay);
+    }
+    
+    function handleMessage(data) {
+      if (data.type === 'cascade_list') {
+        cascades = data.cascades || [];
+        if (!selectedCascadeId && cascades.length > 0) selectCascade(cascades[0].id);
+      } else if (data.type === 'snapshot_update' && data.cascadeId === selectedCascadeId) {
+        const panel = data.panel || 'chat';
+        if (!isTypingInKiroInput && panel === activePanel && !isRendering) {
+          if (updateDebounceTimer) clearTimeout(updateDebounceTimer);
+          updateDebounceTimer = setTimeout(() => fetchPanelContent(panel, data.cascadeId, true), 500);
+        }
       }
     }
-
-    // Chat snapshot
+    
+    function selectCascade(cascadeId) {
+      selectedCascadeId = cascadeId;
+      currentStyles = null;
+      workspaceFiles = [];
+      lastTasksHash = '';
+      stopTasksPolling();
+      
+      if (cascadeId) {
+        fetchStyles(cascadeId).then(() => fetchPanelContent(activePanel, cascadeId));
+      } else {
+        showLoading('chat', 'Waiting for Kiro...');
+      }
+    }
+    
+    // =============================================================================
+    // Data Fetching
+    // =============================================================================
+    async function fetchStyles(cascadeId) {
+      try {
+        const r = await fetch(`/styles/${cascadeId}`);
+        if (r.ok) currentStyles = await r.text();
+      } catch (e) {}
+    }
+    
+    async function fetchPanelContent(panelName, cascadeId, isUpdate = false) {
+      switch (panelName) {
+        case 'chat': await fetchChatSnapshot(cascadeId, isUpdate); break;
+        case 'editor': await fetchEditorSnapshot(cascadeId, isUpdate); break;
+        case 'tasks': await fetchTasksContent(cascadeId, isUpdate); break;
+      }
+    }
+    
     async function fetchChatSnapshot(cascadeId, isUpdate = false) {
       try {
         const r = await fetch(`/snapshot/${cascadeId}`);
         if (!r.ok) {
-          if (navigationPending) {
-            setTimeout(() => fetchChatSnapshot(cascadeId, isUpdate), 500);
-            return;
-          }
+          if (navigationPending) { setTimeout(() => fetchChatSnapshot(cascadeId, isUpdate), 500); return; }
           if (r.status === 404) showLoading('chat', 'Waiting for snapshot...');
           return;
         }
         const snapshot = await r.json();
-        if (snapshot && snapshot.html && snapshot.html.length > 100) {
+        if (snapshot?.html?.length > 100) {
           lastSuccessfulSnapshot = snapshot;
           navigationPending = false;
           renderChatSnapshot(snapshot, isUpdate);
@@ -525,68 +468,7 @@
         if (!navigationPending) showToast('Failed to load chat');
       }
     }
-
-    function renderChatSnapshot(snapshot, isUpdate = false) {
-      // Prevent concurrent renders
-      if (isRendering) return;
-      isRendering = true;
-      
-      // Save scroll position of inner scrollable element before update
-      let innerScrollable = panels.chat.content.querySelector('.overflow-y-auto, [class*="scroll"]');
-      const hadContent = innerScrollable && innerScrollable.scrollHeight > 100;
-      const scrollTop = innerScrollable ? innerScrollable.scrollTop : 0;
-      const scrollHeight = innerScrollable ? innerScrollable.scrollHeight : 0;
-      const clientHeight = innerScrollable ? innerScrollable.clientHeight : 0;
-      const wasAtBottom = !hadContent || (scrollHeight - scrollTop - clientHeight < 100);
-      
-      let html = getBaseStyles();
-      if (currentStyles) html += `<style>${currentStyles}</style>`;
-      html += snapshot.html || '';
-      
-      panels.chat.content.innerHTML = html;
-      
-      // Set background color - use solid dark background instead of transparent
-      if (snapshot.bodyBg) {
-        panels.chat.container.style.background = snapshot.bodyBg;
-      } else {
-        // Fallback to solid dark background matching Kiro IDE
-        panels.chat.container.style.background = '#1e1e1e';
-      }
-      
-      hideLoading('chat');
-      
-      // Remove placeholder text that overlaps with input
-      removePlaceholderText();
-      
-      // Find the new inner scrollable element and scroll it
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // Find all scrollable elements and scroll them
-          const scrollables = panels.chat.content.querySelectorAll('.overflow-y-auto, [class*="scroll"]');
-          scrollables.forEach(el => {
-            if (el.scrollHeight > el.clientHeight + 10) {
-              if (!isUpdate || wasAtBottom) {
-                el.scrollTop = el.scrollHeight;
-              } else if (hadContent) {
-                el.scrollTop = scrollTop;
-              }
-            }
-          });
-          
-          // Also scroll the main container if needed
-          if (!isUpdate || wasAtBottom) {
-            panels.chat.content.scrollTop = panels.chat.content.scrollHeight;
-          }
-          
-          // Release rendering lock
-          isRendering = false;
-        });
-      });
-      
-      makeInteractive();
-    }
-
-    // Editor snapshot
+    
     async function fetchEditorSnapshot(cascadeId, isUpdate = false) {
       try {
         const r = await fetch(`/editor/${cascadeId}`);
@@ -594,320 +476,192 @@
           showEmptyState('editor', 'codicon-file-code', 'No file is currently open. Open a file in Kiro to view it here.');
           return;
         }
-        const data = await r.json();
-        renderEditorSnapshot(data, isUpdate);
+        renderEditorSnapshot(await r.json(), isUpdate);
       } catch (e) {
         showEmptyState('editor', 'codicon-file-code', 'Failed to load editor');
       }
     }
-
-    function renderEditorSnapshot(data, isUpdate = false) {
-      const scrollTop = panels.editor.content.scrollTop;
+    
+    async function fetchTasksContent(cascadeId, isUpdate = false) {
+      // Only show loading if we don't have cached data
+      const hasCachedData = tasksData.length > 0 && lastTasksHash;
+      if (!isUpdate && !hasCachedData) showLoading('tasks', 'Loading tasks...');
       
-      // Update header
-      panels.editor.filename.textContent = data.fileName || 'Untitled';
-      
-      // Show header
-      panels.editor.header.style.display = 'flex';
-      
-      // Store original content for search
-      originalEditorContent = data.content || '';
-      
-      // Reset search when new file loaded
-      closeEditorSearch();
-      
-      // Prefer text content over raw HTML for better mobile display
-      if (data.content && data.content.trim().length > 0) {
-        const lines = data.content.split('\n');
-        let html = '';
+      try {
+        const r = await fetch(`/tasks/${cascadeId}`);
+        if (!r.ok) { showTasksEmptyState('No tasks found.'); stopTasksPolling(); return; }
         
-        // Add note if partial content
-        if (data.isPartial || data.note) {
-          html += `<div style="padding: 8px 12px; background: #2d2d30; color: #888; font-size: 11px; border-bottom: 1px solid #3c3c3c;">
-            <span class="codicon codicon-info" style="margin-right: 6px;"></span>
-            ${data.note || 'Showing visible lines only. Scroll in Kiro to see more.'}
-          </div>`;
+        const data = await r.json();
+        const newTasks = data.tasks || [];
+        const newHash = JSON.stringify(newTasks);
+        
+        if (newTasks.length === 0) { showTasksEmptyState('No task files found.'); stopTasksPolling(); return; }
+        
+        if (newHash !== lastTasksHash) {
+          lastTasksHash = newHash;
+          tasksData = newTasks;
+          populateTasksDropdown();
+          if (selectedTaskIndex < 0 || selectedTaskIndex >= tasksData.length) selectedTaskIndex = 0;
+          renderTaskContent(tasksData[selectedTaskIndex]);
         }
-        
-        html += '<pre class="editor-code">';
-        
-        // Use startLine from server if available, otherwise start from 1
-        const startLineNum = data.startLine || 1;
-        
-        // Filter out empty lines at the start if there are too many
-        let startIdx = 0;
-        while (startIdx < lines.length && lines[startIdx].trim() === '' && startIdx < 3) {
-          startIdx++;
-        }
-        
-        const displayLines = lines.slice(startIdx);
-        displayLines.forEach((line, idx) => {
-          const lineNum = startLineNum + startIdx + idx;
-          // Convert tabs to spaces first, then highlight
-          const lineWithSpaces = line.replace(/\t/g, '  ');
-          const highlighted = highlightSyntax(lineWithSpaces, data.language);
-          html += `<div class="editor-line"><span class="editor-line-num">${lineNum}</span><span class="editor-line-code">${highlighted || ' '}</span></div>`;
-        });
-        html += '</pre>';
-        
-        // Add line count info
-        const endLine = startLineNum + startIdx + displayLines.length - 1;
-        html += `<div style="padding: 6px 12px; background: #252526; color: #666; font-size: 11px; border-top: 1px solid #3c3c3c;">
-          Lines ${startLineNum}-${endLine}${data.lineCount ? ` of ${data.lineCount}` : ''}
-        </div>`;
-        
-        panels.editor.content.innerHTML = html;
-        panels.editor.content.style.display = 'block';
-        console.log('[Editor] Rendered', displayLines.length, 'lines of code starting from line', startLineNum);
-      } else if (data.html && data.html.length > 100) {
-        // Fallback to raw HTML if no text content
-        let html = getBaseStyles();
-        if (currentStyles) html += `<style>${currentStyles}</style>`;
-        html += data.html;
-        panels.editor.content.innerHTML = html;
-        panels.editor.content.style.display = 'block';
-        console.log('[Editor] Rendered raw HTML');
-      } else {
-        showEmptyState('editor', 'codicon-file-code', 'No editor content available. Open a file in Kiro to view it here.');
-        return;
-      }
-      hideLoading('editor');
-      
-      // Preserve scroll on updates
-      if (isUpdate) {
-        panels.editor.content.scrollTop = scrollTop;
+        // Always ensure UI is visible after successful fetch
+        panels.tasks.header.style.display = 'flex';
+        panels.tasks.content.style.display = 'block';
+        hideLoading('tasks');
+        startTasksPolling(cascadeId);
+      } catch (e) {
+        if (!isUpdate) showTasksEmptyState('Failed to load tasks');
+        stopTasksPolling();
       }
     }
-
-    // Syntax highlighting - simple and safe approach
-    function highlightSyntax(line, language) {
-      // First escape HTML to prevent XSS
-      const escaped = escapeHtml(line);
+    
+    // =============================================================================
+    // Tasks Panel
+    // =============================================================================
+    function startTasksPolling(cascadeId) {
+      if (tasksPollingTimer) return;
+      tasksPollingTimer = setInterval(() => {
+        if (activePanel === 'tasks' && selectedCascadeId) fetchTasksContent(selectedCascadeId, true);
+      }, 3000);
+    }
+    
+    function stopTasksPolling() {
+      if (tasksPollingTimer) { clearInterval(tasksPollingTimer); tasksPollingTimer = null; }
+    }
+    
+    function showTasksEmptyState(message) {
+      panels.tasks.header.style.display = 'none';
+      panels.tasks.content.innerHTML = `<div class="tasks-empty"><span class="codicon codicon-checklist"></span><p>${message}</p></div>`;
+      panels.tasks.content.style.display = 'flex';
+      hideLoading('tasks');
+    }
+    
+    function populateTasksDropdown() {
+      const dropdown = panels.tasks.dropdown;
+      dropdown.innerHTML = '';
+      tasksData.forEach((task, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = task.name;
+        if (index === selectedTaskIndex) option.selected = true;
+        dropdown.appendChild(option);
+      });
       
-      // Skip highlighting for very long lines or if no language
-      if (escaped.length > 1000 || !language) {
-        return escaped;
-      }
-      
-      // Language detection
-      const isJS = ['javascript', 'typescript', 'jsx', 'tsx', 'js', 'ts'].includes(language);
-      const isPython = language === 'python' || language === 'py';
-      const isJSON = language === 'json';
-      const isYAML = language === 'yaml' || language === 'yml';
-      const isShell = ['bash', 'sh', 'shell', 'zsh'].includes(language);
-      const isHTML = language === 'html' || language === 'xml';
-      const isCSS = language === 'css' || language === 'scss' || language === 'sass' || language === 'less';
-      const isMarkdown = language === 'markdown' || language === 'md';
-      
-      // For HTML files, use a simpler approach - just colorize without spans that could break
-      if (isHTML) {
-        let result = escaped;
-        // Comments
-        result = result.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="tok-cmt">$1</span>');
-        // Strings in attributes
-        result = result.replace(/=(&quot;[^&]*?&quot;)/g, '=<span class="tok-str">$1</span>');
-        result = result.replace(/=(&#39;[^&]*?&#39;)/g, '=<span class="tok-str">$1</span>');
-        return result;
-      }
-      
-      // For CSS files
-      if (isCSS) {
-        let result = escaped;
-        // Comments
-        result = result.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="tok-cmt">$1</span>');
-        // Strings
-        result = result.replace(/(&quot;[^&]*?&quot;)/g, '<span class="tok-str">$1</span>');
-        result = result.replace(/(&#39;[^&]*?&#39;)/g, '<span class="tok-str">$1</span>');
-        // Numbers with units
-        result = result.replace(/:\s*([0-9]+(?:\.[0-9]+)?(?:px|em|rem|%|vh|vw|s|ms)?)/g, ': <span class="tok-num">$1</span>');
-        // Hex colors
-        result = result.replace(/(#[0-9a-fA-F]{3,8})\b/g, '<span class="tok-num">$1</span>');
-        return result;
-      }
-      
-      // Build result by processing character by character for other languages
-      let result = '';
-      let i = 0;
-      
-      while (i < escaped.length) {
-        // Check for comments
-        if (isJS && escaped.slice(i, i + 2) === '//') {
-          result += '<span class="tok-cmt">' + escaped.slice(i) + '</span>';
-          break;
+      dropdown.onchange = async (e) => {
+        selectedTaskIndex = parseInt(e.target.value, 10);
+        if (tasksData[selectedTaskIndex]) {
+          renderTaskContent(tasksData[selectedTaskIndex]);
+          await openSpecInKiro(tasksData[selectedTaskIndex].name);
         }
-        if ((isPython || isShell || isYAML) && escaped[i] === '#') {
-          result += '<span class="tok-cmt">' + escaped.slice(i) + '</span>';
-          break;
-        }
-        
-        // Check for strings (escaped quotes: &quot; or &#39;)
-        if (escaped.slice(i, i + 6) === '&quot;') {
-          const endIdx = escaped.indexOf('&quot;', i + 6);
-          if (endIdx !== -1) {
-            const str = escaped.slice(i, endIdx + 6);
-            result += '<span class="tok-str">' + str + '</span>';
-            i = endIdx + 6;
-            continue;
+      };
+    }
+    
+    async function openSpecInKiro(specName) {
+      if (!selectedCascadeId || !specName) return;
+      showToast(`Opening ${specName}...`, 1500);
+      try {
+        await fetch(`/open-spec/${selectedCascadeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ specName })
+        });
+      } catch (e) {}
+    }
+    
+    function renderTaskContent(task) {
+      if (!task?.content) { panels.tasks.content.innerHTML = '<div class="tasks-empty"><p>No content</p></div>'; return; }
+      panels.tasks.content.innerHTML = `<div class="task-md">${parseTaskMarkdown(task.content)}</div>`;
+      
+      panels.tasks.content.querySelectorAll('.task-group-header').forEach(header => {
+        const clickables = header.querySelectorAll('.task-group-title, .task-group-indicator, .task-group-arrow, .task-group-count');
+        clickables.forEach(el => {
+          if (el) {
+            el.style.cursor = 'pointer';
+            el.onclick = (e) => { e.stopPropagation(); header.closest('.task-group').classList.toggle('expanded'); };
           }
-        }
-        if (escaped.slice(i, i + 5) === '&#39;') {
-          const endIdx = escaped.indexOf('&#39;', i + 5);
-          if (endIdx !== -1) {
-            const str = escaped.slice(i, endIdx + 5);
-            result += '<span class="tok-str">' + str + '</span>';
-            i = endIdx + 5;
-            continue;
-          }
-        }
-        
-        // Check for numbers
-        if (/[0-9]/.test(escaped[i]) && (i === 0 || /[^a-zA-Z_]/.test(escaped[i - 1]))) {
-          let numEnd = i;
-          while (numEnd < escaped.length && /[0-9.]/.test(escaped[numEnd])) {
-            numEnd++;
-          }
-          if (numEnd > i) {
-            result += '<span class="tok-num">' + escaped.slice(i, numEnd) + '</span>';
-            i = numEnd;
-            continue;
-          }
-        }
-        
-        // Check for keywords (word boundary)
-        if (/[a-zA-Z_]/.test(escaped[i]) && (i === 0 || /[^a-zA-Z0-9_]/.test(escaped[i - 1]))) {
-          let wordEnd = i;
-          while (wordEnd < escaped.length && /[a-zA-Z0-9_]/.test(escaped[wordEnd])) {
-            wordEnd++;
-          }
-          const word = escaped.slice(i, wordEnd);
+        });
+      });
+    }
+    
+    function parseTaskMarkdown(markdown) {
+      const lines = markdown.split('\n');
+      let html = '';
+      let currentGroupNumber = '', currentGroupTitle = '', currentGroupTasks = [];
+      
+      const arrowIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>`;
+      const checkIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>`;
+      
+      const flushGroup = () => {
+        if (currentGroupTitle && currentGroupTasks.length > 0) {
+          const completed = currentGroupTasks.filter(t => t.checked).length;
+          const total = currentGroupTasks.length;
+          const isComplete = completed === total;
+          const hasIncomplete = completed < total;
           
-          // Define keywords per language
-          let keywords = [];
-          if (isJS) {
-            keywords = ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'import', 'export', 'from', 'async', 'await', 'try', 'catch', 'throw', 'new', 'this', 'class', 'extends', 'true', 'false', 'null', 'undefined', 'typeof', 'instanceof', 'switch', 'case', 'break', 'continue', 'default', 'static', 'get', 'set'];
-          } else if (isPython) {
-            keywords = ['def', 'class', 'return', 'if', 'elif', 'else', 'for', 'while', 'import', 'from', 'as', 'try', 'except', 'raise', 'with', 'async', 'await', 'None', 'True', 'False', 'self', 'and', 'or', 'not', 'in', 'is', 'lambda', 'pass', 'break', 'continue'];
-          } else if (isJSON) {
-            keywords = ['true', 'false', 'null'];
-          } else if (isYAML) {
-            keywords = ['true', 'false', 'null', 'yes', 'no'];
-          } else if (!isMarkdown) {
-            keywords = ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'import', 'export', 'true', 'false', 'null', 'class', 'public', 'private', 'static', 'void', 'int', 'string', 'bool'];
-          }
+          html += `<div class="task-group${hasIncomplete ? ' expanded' : ''}${isComplete ? ' completed' : ''}" data-task-number="${currentGroupNumber}">`;
+          html += `<div class="task-group-header"><div class="task-group-indicator">${checkIcon}</div>`;
+          html += `<span class="task-group-number">${currentGroupNumber}</span>`;
+          html += `<span class="task-group-title">${escapeHtml(currentGroupTitle)}</span>`;
+          html += `<div class="task-group-meta"><span class="task-group-count">${completed}/${total}</span>`;
+          html += `<span class="task-group-arrow">${arrowIcon}</span></div></div>`;
+          html += `<div class="task-group-body"><div class="task-group-body-inner">`;
           
-          if (keywords.includes(word)) {
-            result += '<span class="tok-kw">' + word + '</span>';
-          } else {
-            result += word;
-          }
-          i = wordEnd;
+          currentGroupTasks.slice(1).forEach(task => {
+            const indent = task.indent > 1 ? ` indent-${Math.min(task.indent, 3)}` : '';
+            html += `<div class="task-item${indent}"><span class="task-checkbox${task.checked ? ' checked' : ''}">${checkIcon}</span>`;
+            html += `<span class="task-text${task.checked ? ' completed' : ''}">${escapeHtml(task.text)}</span></div>`;
+          });
+          
+          html += `</div></div></div>`;
+        }
+        currentGroupNumber = ''; currentGroupTitle = ''; currentGroupTasks = [];
+      };
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#') || !trimmed.startsWith('- [')) continue;
+        
+        const mainMatch = trimmed.match(/^- \[([ xX])\] (\d+)\.?\s+(.*)$/);
+        if (mainMatch) {
+          flushGroup();
+          currentGroupNumber = mainMatch[2];
+          currentGroupTitle = mainMatch[3];
+          currentGroupTasks.push({ text: mainMatch[3], checked: mainMatch[1].toLowerCase() === 'x', indent: 0 });
           continue;
         }
         
-        // Default: just add the character
-        result += escaped[i];
-        i++;
-      }
-      
-      return result;
-    }
-
-    // Helper functions
-    function escapeHtml(text) {
-      return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function showEmptyState(panelName, icon, message) {
-      const p = panels[panelName];
-      p.content.innerHTML = `
-        <div class="empty-state">
-          <span class="codicon ${icon}"></span>
-          <p>${message}</p>
-        </div>
-      `;
-      hideLoading(panelName);
-    }
-
-    function toggleSection(header) {
-      header.classList.toggle('collapsed');
-      const content = header.nextElementSibling;
-      if (content) content.classList.toggle('collapsed');
-    }
-
-    // Remove placeholder text that overlaps with input field
-    function removePlaceholderText() {
-      const content = panels.chat.content;
-      
-      // Method 1: Find elements by class name containing "placeholder"
-      content.querySelectorAll('[class*="placeholder"], [class*="Placeholder"]').forEach(el => {
-        // Don't remove actual input elements
-        if (el.matches('[contenteditable], textarea, input, [data-lexical-editor]')) return;
-        if (el.querySelector('[contenteditable], textarea, input, [data-lexical-editor]')) return;
+        const subMatch = trimmed.match(/^- \[([ xX])\] (\d+\.\d+)\s+(.*)$/);
+        if (subMatch && currentGroupTitle) {
+          currentGroupTasks.push({ text: subMatch[3], checked: subMatch[1].toLowerCase() === 'x', indent: 1 });
+          continue;
+        }
         
-        // Hide it
-        el.style.display = 'none';
-        el.style.visibility = 'hidden';
-        el.style.opacity = '0';
-      });
-      
-      // Method 2: Find elements with data-placeholder attribute
-      content.querySelectorAll('[data-placeholder]').forEach(el => {
-        // Remove the data-placeholder attribute to prevent CSS ::before content
-        if (!el.matches('[contenteditable], [data-lexical-editor]')) {
-          el.style.display = 'none';
-        }
-      });
-      
-      // Method 3: Find any element containing placeholder-like text and hide it
-      const placeholderTexts = ['ask a question', 'describe a task', 'type a message', 'enter a message'];
-      
-      const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null, false);
-      const nodesToHide = [];
-      
-      while (walker.nextNode()) {
-        const text = (walker.currentNode.textContent || '').toLowerCase();
-        for (const placeholder of placeholderTexts) {
-          if (text.includes(placeholder)) {
-            const parent = walker.currentNode.parentElement;
-            if (parent && !parent.matches('[contenteditable], textarea, input, [data-lexical-editor]')) {
-              nodesToHide.push(parent);
-            }
-            break;
+        const taskMatch = line.match(/^(\s*)- \[([ xX])\] (.*)$/);
+        if (taskMatch) {
+          const indent = Math.floor(taskMatch[1].length / 2);
+          const isChecked = taskMatch[2].toLowerCase() === 'x';
+          const text = taskMatch[3];
+          
+          const numMatch = text.match(/^(\d+)\.?\s+(.*)$/);
+          if (numMatch && indent === 0) {
+            flushGroup();
+            currentGroupNumber = numMatch[1];
+            currentGroupTitle = numMatch[2];
+            currentGroupTasks.push({ text: numMatch[2], checked: isChecked, indent: 0 });
+          } else if (currentGroupTitle) {
+            currentGroupTasks.push({ text, checked: isChecked, indent: Math.max(1, indent) });
           }
         }
       }
       
-      nodesToHide.forEach(el => {
-        el.style.display = 'none';
-        el.style.visibility = 'hidden';
-      });
-      
-      // Method 4: Find absolutely positioned elements inside input containers and hide them
-      // These are often placeholder overlays
-      const inputContainers = content.querySelectorAll('[class*="input"], [class*="composer"], [class*="editor"]');
-      inputContainers.forEach(container => {
-        container.querySelectorAll('*').forEach(el => {
-          const style = window.getComputedStyle(el);
-          // If it's absolutely positioned and not the input itself, it might be a placeholder
-          if (style.position === 'absolute' && 
-              !el.matches('[contenteditable], textarea, input, [data-lexical-editor], button, svg')) {
-            const text = (el.textContent || '').toLowerCase();
-            if (text.includes('ask') || text.includes('task') || text.includes('question') || 
-                text.includes('describe') || text.includes('message') || text.includes('type')) {
-              el.style.display = 'none';
-              el.style.visibility = 'hidden';
-            }
-          }
-        });
-      });
+      flushGroup();
+      return html;
     }
 
-    // Base styles for chat panel
+    
+    // =============================================================================
+    // Chat Rendering
+    // =============================================================================
     function getBaseStyles() {
       return `<style>
         :root, body, #root, .app { 
@@ -944,38 +698,30 @@
           background-color: #1e1e1e !important;
         }
         
-        /* ========== HIDE PLACEHOLDER TEXT IN INPUT AREA ========== */
-        /* Placeholder removal is handled via JavaScript in removePlaceholderText() */
         /* Keep input elements visible and interactive */
-        [contenteditable="true"],
-        [data-lexical-editor="true"],
-        .ProseMirror,
-        textarea {
+        [contenteditable="true"], [data-lexical-editor="true"], .ProseMirror, textarea {
           display: block !important;
           visibility: visible !important;
           opacity: 1 !important;
           pointer-events: auto !important;
         }
         
-        /* CRITICAL: Hide tooltips, popovers, and overlay elements - but NOT dropdown buttons */
-        [role="tooltip"],
-        [data-tooltip],
+        /* Hide tooltips, popovers, and overlay elements */
+        [role="tooltip"], [data-tooltip],
         [class*="tooltip"]:not(button):not([role="button"]),
         [class*="Tooltip"]:not(button):not([role="button"]),
         [class*="popover"]:not(button):not([role="button"]),
         [class*="Popover"]:not(button):not([role="button"]),
         [class*="overlay"]:not(button):not([role="button"]):not([class*="dropdown"]),
         [class*="Overlay"]:not(button):not([role="button"]):not([class*="dropdown"]),
-        [class*="modal"],
-        [class*="Modal"] {
+        [class*="modal"], [class*="Modal"] {
           display: none !important;
           visibility: hidden !important;
           opacity: 0 !important;
           pointer-events: none !important;
         }
         
-        /* ========== MODEL SELECTOR DROPDOWN ========== */
-        /* Dropdown menu panel - needs solid background and proper z-index */
+        /* Model selector dropdown */
         [class*="dropdown-menu"], [class*="dropdownMenu"], [class*="DropdownMenu"],
         [class*="dropdown-content"], [class*="dropdownContent"], [class*="DropdownContent"],
         [class*="model-list"], [class*="modelList"], [class*="ModelList"],
@@ -1007,31 +753,12 @@
           color: #cccccc !important;
         }
         
-        /* Hide model descriptions in dropdown - only show model name */
-        [class*="model-description"], [class*="modelDescription"], [class*="ModelDescription"],
-        [class*="model-info"], [class*="modelInfo"], [class*="ModelInfo"],
-        [class*="dropdown-item"] > span:not(:first-child),
-        [class*="model-option"] > span:not(:first-child),
-        [role="option"] > div:last-child,
-        [role="option"] > span:last-child:not(:first-child),
-        [role="menuitem"] > div:last-child,
-        [class*="credit"], [class*="Credit"] {
-          display: none !important;
-        }
-        
-        /* Simplify model dropdown items - just show the name */
-        [role="option"], [role="menuitem"] {
-          flex-direction: row !important;
-          align-items: center !important;
-          gap: 8px !important;
-        }
-        
         [class*="dropdown-item"]:hover, [class*="dropdownItem"]:hover,
         [role="option"]:hover, [role="menuitem"]:hover {
           background: rgba(255, 255, 255, 0.1) !important;
         }
         
-        /* Model selector button - NO border, match Kiro style */
+        /* Model selector button */
         [class*="model-selector"], [class*="modelSelector"], [class*="ModelSelector"],
         [class*="model-dropdown"], [class*="modelDropdown"], [class*="ModelDropdown"],
         button[class*="dropdown"], [role="button"][class*="dropdown"],
@@ -1056,61 +783,28 @@
           background: rgba(255, 255, 255, 0.1) !important;
         }
         
-        /* Hide notification bars and change acceptance UI */
-        [class*="notification"], [class*="Notification"],
-        [class*="toast"], [class*="Toast"],
-        [class*="banner"], [class*="Banner"],
-        [class*="change-accepted"], [class*="changeAccepted"],
-        [class*="revert"], [class*="Revert"],
-        [class*="view-all"], [class*="viewAll"],
-        [class*="status-bar-notification"],
-        div[role="status"], div[role="alert"] {
-          display: none !important;
-          visibility: hidden !important;
-          opacity: 0 !important;
-          height: 0 !important;
-          overflow: hidden !important;
-        }
-        
-        /* Model selector chevron/arrow icon */
-        [class*="model-selector"] svg, [class*="modelSelector"] svg,
-        [class*="model-dropdown"] svg, button[class*="dropdown"] svg {
-          width: 12px !important;
-          height: 12px !important;
-          flex-shrink: 0 !important;
-        }
-        
-        /* Model name text inside selector */
-        [class*="model-selector"] span, [class*="modelSelector"] span,
-        [class*="model-name"], [class*="modelName"] {
-          overflow: hidden !important;
-          text-overflow: ellipsis !important;
-          white-space: nowrap !important;
-        }
-        
-        /* Reset positioning for captured content to prevent layout issues */
+        /* Reset positioning */
         #root, .app, [class*="cascade"], [class*="Cascade"] {
           position: relative !important;
         }
         
-        /* Ensure proper stacking and no fixed positioning breaks layout */
-        [style*="position: fixed"],
-        [style*="position:fixed"] {
+        [style*="position: fixed"], [style*="position:fixed"] {
           position: absolute !important;
         }
         
         * { font-family: inherit; }
         code, pre, .monaco-editor { font-family: Menlo, Monaco, "Courier New", monospace !important; }
-        /* Icon sizes - keep them small like in IDE */
+        
+        /* Icon sizes */
         svg[viewBox="0 0 24 24"] { width: 16px !important; height: 16px !important; }
         svg[viewBox="0 0 16 16"] { width: 14px !important; height: 14px !important; }
         svg { color: inherit; max-width: 20px !important; max-height: 20px !important; }
         svg path, svg rect { fill: currentColor; }
         svg[fill="none"] path { fill: none; }
-        /* Preserve stroke-based SVG circles (like context window progress ring) */
         svg circle[stroke] { fill: none !important; }
         svg circle:not([stroke]) { fill: currentColor; }
-        /* Context window progress circle styling */
+        
+        /* Context window progress circle */
         svg[class*="context"], svg[class*="progress"], [class*="context"] svg {
           overflow: visible !important;
         }
@@ -1118,7 +812,6 @@
           fill: none !important;
           stroke-linecap: round !important;
         }
-        /* Context window indicator - circular progress ring */
         [class*="context-window"], [class*="contextWindow"], [class*="ContextWindow"],
         [class*="context-indicator"], [class*="contextIndicator"], [class*="ContextIndicator"],
         [class*="token-usage"], [class*="tokenUsage"], [class*="TokenUsage"] {
@@ -1132,7 +825,6 @@
           position: relative !important;
           flex-shrink: 0 !important;
         }
-        /* Create gray background circle using box-shadow on the container */
         [class*="context-window"]::before, [class*="contextWindow"]::before, [class*="ContextWindow"]::before,
         [class*="context-indicator"]::before, [class*="contextIndicator"]::before {
           content: '' !important;
@@ -1161,15 +853,12 @@
           stroke-linecap: round !important;
           stroke: #4ade80 !important;
         }
-        /* Ensure circles are visible */
-        [class*="context"] svg circle,
-        [class*="Context"] svg circle {
+        [class*="context"] svg circle, [class*="Context"] svg circle {
           display: block !important;
           visibility: visible !important;
         }
         
-        /* ========== CHAT INPUT TOOLBAR AREA ========== */
-        /* The toolbar/footer area containing model selector, context, autopilot, input */
+        /* Chat input toolbar area */
         [class*="chat-input"], [class*="chatInput"], [class*="ChatInput"],
         [class*="input-area"], [class*="inputArea"], [class*="InputArea"],
         [class*="message-input"], [class*="messageInput"], [class*="MessageInput"],
@@ -1183,7 +872,7 @@
           border-top: 1px solid var(--color-border-primary, #4a464f) !important;
         }
         
-        /* Input toolbar row (contains # button, model selector, context, autopilot) */
+        /* Input toolbar row */
         [class*="input-toolbar"], [class*="inputToolbar"], [class*="InputToolbar"],
         [class*="chat-toolbar"], [class*="chatToolbar"], [class*="ChatToolbar"],
         [class*="composer-toolbar"], [class*="composerToolbar"] {
@@ -1194,7 +883,7 @@
           flex-wrap: wrap !important;
         }
         
-        /* Context button (# symbol) - NO border, match Kiro style */
+        /* Context button (# symbol) */
         [class*="context-button"], [class*="contextButton"], [class*="ContextButton"],
         button[aria-label*="context"], button[aria-label*="Context"],
         [class*="hash-button"], [class*="hashButton"] {
@@ -1219,30 +908,15 @@
           background: rgba(255, 255, 255, 0.1) !important;
         }
         
-        /* ========== MESSAGE TEXT FLOW - INLINE ELEMENTS ========== */
-        /* Fix text flow so file links and code stay inline with text */
-        [class*="message"] p,
-        [class*="Message"] p,
-        [class*="chat"] p,
-        [class*="Chat"] p {
+        /* Message text flow - inline elements */
+        [class*="message"] p, [class*="Message"] p, [class*="chat"] p, [class*="Chat"] p {
           display: block !important;
         }
         
-        /* Make file links, code, and inline elements stay inline */
-        [class*="message"] a,
-        [class*="Message"] a,
-        [class*="message"] code,
-        [class*="Message"] code,
-        [class*="message"] span,
-        [class*="Message"] span,
-        [class*="chat"] a,
-        [class*="Chat"] a,
-        [class*="chat"] code,
-        [class*="Chat"] code,
-        [class*="file-link"],
-        [class*="FileLink"],
-        [class*="inline"],
-        code:not(pre code) {
+        [class*="message"] a, [class*="Message"] a, [class*="message"] code, [class*="Message"] code,
+        [class*="message"] span, [class*="Message"] span, [class*="chat"] a, [class*="Chat"] a,
+        [class*="chat"] code, [class*="Chat"] code, [class*="file-link"], [class*="FileLink"],
+        [class*="inline"], code:not(pre code) {
           display: inline !important;
           vertical-align: baseline !important;
         }
@@ -1256,17 +930,10 @@
           font-size: 12px !important;
         }
         
-        /* File badges/chips should be inline */
-        [class*="file-badge"],
-        [class*="FileBadge"],
-        [class*="file-chip"],
-        [class*="FileChip"],
-        [class*="deleted"],
-        [class*="Deleted"],
-        [class*="created"],
-        [class*="Created"],
-        [class*="modified"],
-        [class*="Modified"] {
+        /* File badges/chips */
+        [class*="file-badge"], [class*="FileBadge"], [class*="file-chip"], [class*="FileChip"],
+        [class*="deleted"], [class*="Deleted"], [class*="created"], [class*="Created"],
+        [class*="modified"], [class*="Modified"] {
           display: inline-flex !important;
           align-items: center !important;
           gap: 4px !important;
@@ -1278,19 +945,10 @@
           vertical-align: middle !important;
         }
         
-        /* Bullet lists should have proper inline content */
-        ul li, ol li {
-          display: list-item !important;
-        }
-        
-        ul li > *, ol li > * {
-          display: inline !important;
-        }
-        
-        ul li > p, ol li > p {
-          display: inline !important;
-          margin: 0 !important;
-        }
+        /* Bullet lists */
+        ul li, ol li { display: list-item !important; }
+        ul li > *, ol li > * { display: inline !important; }
+        ul li > p, ol li > p { display: inline !important; margin: 0 !important; }
         
         [role="switch"], [class*="toggle"] {
           overflow: visible !important;
@@ -1298,117 +956,7 @@
           flex-shrink: 0 !important;
         }
         
-        /* ========== TASK LIST STYLING - EXACT KIRO IDE MATCH ========== */
-        
-        /* Force solid background for task containers */
-        [class*="task"], [class*="Task"],
-        div:has(> h1:contains("CURRENT TASKS")),
-        div:has(> h2:contains("CURRENT TASKS")),
-        div:has(> h3:contains("CURRENT TASKS")),
-        div:has(> h1:contains("TASKS IN QUEUE")),
-        div:has(> h2:contains("TASKS IN QUEUE")),
-        div:has(> h3:contains("TASKS IN QUEUE")) {
-          font-family: "Segoe WPC", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, "Droid Sans", sans-serif !important;
-          background: #1e1e1e !important;
-          background-color: #1e1e1e !important;
-        }
-        
-        /* Task section headers - BOLD WHITE UPPERCASE */
-        h1:contains("CURRENT TASKS"),
-        h2:contains("CURRENT TASKS"),
-        h3:contains("CURRENT TASKS"),
-        h1:contains("TASKS IN QUEUE"),
-        h2:contains("TASKS IN QUEUE"),
-        h3:contains("TASKS IN QUEUE"),
-        [class*="task"] h1, [class*="Task"] h1,
-        [class*="task"] h2, [class*="Task"] h2,
-        [class*="task"] h3, [class*="Task"] h3,
-        [class*="task-header"], [class*="TaskHeader"],
-        [class*="section-title"], [class*="SectionTitle"],
-        div[class*="current"] h1, div[class*="Current"] h1,
-        div[class*="current"] h2, div[class*="Current"] h2,
-        div[class*="current"] h3, div[class*="Current"] h3,
-        div[class*="queue"] h1, div[class*="Queue"] h1,
-        div[class*="queue"] h2, div[class*="Queue"] h2,
-        div[class*="queue"] h3, div[class*="Queue"] h3 {
-          font-size: 13px !important;
-          font-weight: 700 !important;
-          letter-spacing: 0.5px !important;
-          text-transform: uppercase !important;
-          color: #ffffff !important;
-          margin: 0 0 12px 0 !important;
-          padding: 0 !important;
-          line-height: 1.4 !important;
-          background: transparent !important;
-        }
-        
-        /* Empty state messages - ITALIC GRAY */
-        p:contains("No active tasks"),
-        p:contains("No tasks in queue"),
-        [class*="task"] p:not([class*="task-item"]), 
-        [class*="Task"] p:not([class*="TaskItem"]),
-        [class*="no-task"], [class*="NoTask"],
-        [class*="empty-task"], [class*="EmptyTask"],
-        [class*="task-empty"], [class*="TaskEmpty"] {
-          font-size: 13px !important;
-          font-style: italic !important;
-          color: #888888 !important;
-          margin: 0 0 16px 0 !important;
-          padding: 0 !important;
-          line-height: 1.6 !important;
-          background: transparent !important;
-        }
-        
-        /* Task list containers */
-        [class*="task-list"], [class*="TaskList"],
-        [class*="task-section"], [class*="TaskSection"] {
-          margin-bottom: 24px !important;
-          padding: 0 !important;
-          background: #1e1e1e !important;
-        }
-        
-        /* Horizontal divider between sections */
-        [class*="task-divider"], [class*="TaskDivider"],
-        [class*="task"] hr, [class*="Task"] hr {
-          border: none !important;
-          border-top: 1px solid #3c3c3c !important;
-          margin: 20px 0 !important;
-          background: transparent !important;
-        }
-        
-        /* Individual task items (when they exist) */
-        [class*="task-item"], [class*="TaskItem"] {
-          padding: 8px 12px !important;
-          margin: 4px 0 !important;
-          background: rgba(255, 255, 255, 0.03) !important;
-          border-radius: 4px !important;
-          border-left: 2px solid #7138cc !important;
-          font-size: 13px !important;
-          color: #cccccc !important;
-          line-height: 1.5 !important;
-        }
-        
-        [class*="task-item"]:hover, [class*="TaskItem"]:hover {
-          background: rgba(255, 255, 255, 0.05) !important;
-        }
-        
-        /* Task item with close button */
-        [class*="task-item"] button, [class*="TaskItem"] button {
-          margin-left: 8px !important;
-          padding: 2px 6px !important;
-          font-size: 11px !important;
-          background: rgba(255, 255, 255, 0.1) !important;
-          border: 1px solid #4a464f !important;
-          border-radius: 3px !important;
-          color: #888 !important;
-          cursor: pointer !important;
-        }
-        
-        [class*="task-item"] button:hover, [class*="TaskItem"] button:hover {
-          background: rgba(255, 255, 255, 0.15) !important;
-          color: #fff !important;
-        }
-        
+        /* Toggle switch styling */
         .kiro-toggle-switch {
           display: flex !important;
           align-items: center !important;
@@ -1447,616 +995,429 @@
         }
       </style>`;
     }
-
-    // Make chat elements interactive
-    function makeInteractive() {
-      const content = panels.chat.content;
-      
-      // Input fields - support both Lexical and ProseMirror/TipTap editors
-      const inputSelectors = ['[data-lexical-editor="true"]', '[contenteditable="true"][role="textbox"]', '[contenteditable="true"]', 'textarea', '.ProseMirror', '.tiptap'];
-      for (const selector of inputSelectors) {
-        content.querySelectorAll(selector).forEach(el => {
-          el.style.cursor = 'text';
-          el.addEventListener('focus', () => { isTypingInKiroInput = true; });
-          el.addEventListener('blur', () => { setTimeout(() => { isTypingInKiroInput = false; }, 500); });
-          el.addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              const text = el.textContent || el.value || '';
-              if (text.trim()) {
-                await sendToKiro(text.trim());
-                el.textContent = '';
-                el.innerHTML = '';
-                isTypingInKiroInput = false;
-              }
-            }
-          });
-        });
-      }
-      
-      // Toggle switches
-      content.querySelectorAll('.kiro-toggle-switch, [role="switch"], input[type="checkbox"][role="switch"]').forEach(toggle => {
-        const input = toggle.tagName === 'INPUT' ? toggle : toggle.querySelector('input[type="checkbox"]');
-        const wrapper = toggle.closest('.kiro-toggle-switch') || toggle;
-        
-        wrapper.style.cursor = 'pointer';
-        wrapper.onclick = async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const label = wrapper.querySelector('label');
-          const clickInfo = {
-            tag: 'div',
-            text: label ? label.textContent.trim() : 'toggle',
-            role: 'switch',
-            isToggle: true,
-            toggleId: input ? input.id : '',
-            checked: input ? input.checked : false
-          };
-          await sendClickToKiro(clickInfo);
-          return false;
-        };
-      });
-      
-      // Send button - find and make it work
-      // CONFIRMED via Playwriter: The send button is <button data-variant="submit"> with codicon-arrow-up icon
-      
-      // Helper function to attach send handler to a button
-      const attachSendHandler = (btn) => {
-        if (!btn || btn.dataset.sendHandlerAttached) return;
-        btn.dataset.sendHandlerAttached = 'true';
-        
-        // Remove disabled so button is always clickable and highlighted
-        btn.removeAttribute('disabled');
-        btn.style.cursor = 'pointer';
-        
-        btn.onclick = async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          // Find the input field and get its text
-          const inputSelectors = ['.tiptap', '.ProseMirror', '[data-lexical-editor="true"]', '[contenteditable="true"]', 'textarea'];
-          let inputText = '';
-          let inputEl = null;
-          
-          for (const inputSel of inputSelectors) {
-            const input = content.querySelector(inputSel);
-            if (input) {
-              inputEl = input;
-              inputText = input.textContent || input.innerText || input.value || '';
-              if (inputText.trim()) break;
-            }
-          }
-          
-          if (inputText.trim()) {
-            await sendToKiro(inputText.trim());
-            // Clear the input after sending
-            if (inputEl) {
-              if (inputEl.textContent !== undefined) {
-                inputEl.textContent = '';
-                inputEl.innerHTML = '';
-              } else if (inputEl.value !== undefined) {
-                inputEl.value = '';
-              }
-            }
-            showToast('Sent!', 1500, true);
-          } else {
-            showToast('Type a message first', 1500);
-          }
-          return false;
-        };
-      };
-      
-      // PRIMARY METHOD: Find the submit button by data-variant="submit" (CONFIRMED via Playwriter)
-      const submitBtn = content.querySelector('button[data-variant="submit"]');
-      if (submitBtn) {
-        attachSendHandler(submitBtn);
-      }
-      
-      // FALLBACK Method 1: Find buttons with codicon-arrow-up (Kiro's send icon)
-      content.querySelectorAll('button').forEach(btn => {
-        if (btn.dataset.sendHandlerAttached) return;
-        const hasArrowUp = btn.querySelector('.codicon-arrow-up, .codicon-send, [class*="arrow-up"]');
-        if (hasArrowUp) {
-          attachSendHandler(btn);
-        }
-      });
-      
-      // FALLBACK Method 2: Find SVGs that look like arrows
-      content.querySelectorAll('svg').forEach(svg => {
-        const svgClass = (svg.getAttribute('class') || '').toLowerCase();
-        const svgParent = svg.closest('button');
-        
-        if (svgClass.includes('arrow') || svgClass.includes('send') || svgClass.includes('lucide')) {
-          if (svgParent) {
-            attachSendHandler(svgParent);
-          }
-        }
-      });
-      
-      // FALLBACK Method 3: Find buttons by various selectors
-      const sendButtonSelectors = [
-        'button[type="submit"]',
-        'button[aria-label*="send" i]',
-        'button[aria-label*="submit" i]',
-        '[class*="send-button"]',
-        '[class*="sendButton"]',
-        '[class*="submit-button"]',
-        '[class*="submitButton"]'
-      ];
-      
-      for (const selector of sendButtonSelectors) {
-        try {
-          content.querySelectorAll(selector).forEach(el => {
-            const btn = el.closest('button') || el;
-            if (btn.tagName === 'BUTTON') {
-              attachSendHandler(btn);
-            }
-          });
-        } catch(e) {}
-      }
-      
-      // Method 3: Find ALL buttons and attach handler to ones that look like send buttons
-      // This is more reliable than using getBoundingClientRect which doesn't work before layout
-      content.querySelectorAll('button').forEach(btn => {
-        if (btn.dataset.sendHandlerAttached) return;
-        
-        const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
-        const className = (btn.className || '').toLowerCase();
-        const innerHTML = btn.innerHTML.toLowerCase();
-        
-        // Skip buttons that are clearly NOT send buttons
-        if (ariaLabel.includes('context') || ariaLabel.includes('model') || 
-            ariaLabel.includes('close') || ariaLabel.includes('menu') ||
-            className.includes('context') || className.includes('model') ||
-            className.includes('dropdown') || className.includes('toggle') ||
-            className.includes('close') || className.includes('menu')) {
-          return;
-        }
-        
-        // Check if button contains an arrow SVG (common for send buttons)
-        const hasSvg = btn.querySelector('svg');
-        const hasArrowPath = btn.querySelector('path, line, polyline');
-        
-        // If button has an SVG with arrow-like elements, it's likely a send button
-        if (hasSvg && hasArrowPath) {
-          attachSendHandler(btn);
-        }
-      });
-      
-      // Tabs
-      content.querySelectorAll('[role="tab"]').forEach(tab => {
-        const closeBtn = tab.querySelector('[aria-label="close"], [class*="close"]');
-        
-        if (closeBtn) {
-          closeBtn.style.cursor = 'pointer';
-          closeBtn.onclick = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // FIXED: Include tab label to identify which tab's close button to click
-            const labelEl = tab.querySelector('.kiro-tabs-item-label, [class*="label"]');
-            const tabLabel = labelEl ? labelEl.textContent.trim() : tab.textContent.trim();
-            
-            console.log('[Tab Close] Closing tab:', tabLabel);
-            
-            await sendClickToKiro({ 
-              tag: 'button', 
-              text: 'close', 
-              ariaLabel: 'close', 
-              role: 'button', 
-              isCloseButton: true,
-              parentTabLabel: tabLabel  // NEW: Identify which tab this close button belongs to
-            });
-            return false;
-          };
-        }
-        
-        tab.style.cursor = 'pointer';
-        tab.onclick = async (e) => {
-          if (e.target.closest('[aria-label="close"], [class*="close"], button')) return;
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const labelEl = tab.querySelector('.kiro-tabs-item-label, [class*="label"]');
-          const labelText = labelEl ? labelEl.textContent.trim() : tab.textContent.trim();
-          
-          await sendClickToKiro({ tag: 'div', text: labelText, role: 'tab', isTab: true, tabLabel: labelText });
-          return false;
-        };
-      });
-      
-      // File links - detect file paths in chat and make them clickable to open in Editor
-      const fileExtensions = /\.(ts|tsx|js|jsx|py|java|html|css|json|md|yaml|yml|xml|sql|go|rs|c|cpp|h|cs|rb|php|sh|vue|svelte|astro|cob|cbl)$/i;
-      const filePathPattern = /^[a-zA-Z0-9_\-./\\]+\.[a-zA-Z0-9]+$/;
-      
-      // Look for elements that might contain file paths
-      content.querySelectorAll('a, code, span, [class*="file"], [class*="path"], [data-path]').forEach(el => {
-        if (el.onclick) return;
-        const text = (el.textContent || '').trim();
-        const dataPath = el.getAttribute('data-path') || '';
-        const href = el.getAttribute('href') || '';
-        
-        // Check if this looks like a file path
-        const isFilePath = (
-          fileExtensions.test(text) ||
-          fileExtensions.test(dataPath) ||
-          fileExtensions.test(href) ||
-          (filePathPattern.test(text) && text.includes('/'))
-        );
-        
-        if (isFilePath) {
-          const filePath = dataPath || text || href;
-          el.style.cursor = 'pointer';
-          el.style.textDecoration = 'underline';
-          el.style.color = '#7eb6ff';
-          el.title = `Open ${filePath} in Editor`;
-          
-          el.onclick = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            await openFileInEditor(filePath);
-            return false;
-          };
-        }
-      });
-      
-      // Buttons and clickable elements
-      const clickableSelectors = ['button', '[role="button"]', '[role="menuitem"]', '[role="option"]', '[role="checkbox"]', 'a[href]', '[tabindex="0"]'];
-      const allClickables = new Set();
-      clickableSelectors.forEach(sel => {
-        try { content.querySelectorAll(sel).forEach(el => allClickables.add(el)); } catch(e) {}
-      });
-      
-      // Also add dropdown menu items
-      content.querySelectorAll('[class*="dropdown-item"], [class*="dropdownItem"], [class*="model-option"], [class*="modelOption"]').forEach(el => {
-        allClickables.add(el);
-      });
-      
-      // ADDED: Support for History panel items and other cursor-pointer elements
-      // History items are divs with cursor-pointer class containing session info
-      content.querySelectorAll('[class*="cursor-pointer"], [class*="hover\\:"], [class*="group"]').forEach(el => {
-        // Check if this looks like a history/session item (contains date pattern)
-        const text = el.textContent || '';
-        const hasDate = /\d{1,2}\/\d{1,2}\/\d{4}/.test(text);
-        const hasTime = /\d{1,2}:\d{2}/.test(text);
-        if (hasDate || hasTime || el.classList.contains('cursor-pointer')) {
-          allClickables.add(el);
-        }
-      });
-      
-      // Also look for any div that has inline cursor:pointer style
-      content.querySelectorAll('div, span').forEach(el => {
-        const style = el.getAttribute('style') || '';
-        if (style.includes('cursor') && style.includes('pointer')) {
-          allClickables.add(el);
-        }
-      });
-      
-      allClickables.forEach(el => {
-        if (el.matches && el.matches('[contenteditable], textarea, input:not([type="checkbox"])')) return;
-        if (el.closest('[role="tab"]')) return;
-        if (el.closest('.kiro-toggle-switch')) return;
-        if (el.onclick) return;
-        
-        el.style.cursor = 'pointer';
-        el.onclick = async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const clickInfo = getElementClickInfo(el);
-          
-          // Check if this is a model selection item
-          if (el.matches('[role="option"], [role="menuitem"], [class*="model"], [class*="Model"]') || 
-              el.closest('[role="listbox"], [role="menu"], [class*="dropdown-menu"], [class*="dropdownMenu"]')) {
-            clickInfo.isModelSelection = true;
-            clickInfo.modelName = el.textContent?.trim().split('\n')[0] || '';
-          }
-          
-          await sendClickToKiro(clickInfo);
-          return false;
-        };
-      });
-    }
-
-    function getElementClickInfo(el) {
-      const info = {
-        tag: el.tagName?.toLowerCase() || '',
-        text: (el.textContent || '').trim().substring(0, 100),
-        ariaLabel: el.getAttribute('aria-label') || '',
-        title: el.getAttribute('title') || '',
-        role: el.getAttribute('role') || '',
-        className: el.className || '',
-        isTab: el.getAttribute('role') === 'tab',
-        dataTestId: el.getAttribute('data-testid') || ''
-      };
-      
-      if (!info.ariaLabel) {
-        const parent = el.closest('[aria-label]');
-        if (parent) info.ariaLabel = parent.getAttribute('aria-label') || '';
-      }
-      
-      return info;
-    }
-
-    async function sendToKiro(message) {
-      if (!message || !selectedCascadeId) return;
-      try {
-        const r = await fetch(`/send/${selectedCascadeId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message })
-        });
-        const result = await r.json();
-        if (result.success) showToast('Sent!', 1500, true);
-        else showToast(result.error || 'Failed to send');
-      } catch (e) {
-        showToast('Failed to send');
-      }
-    }
-
-    async function sendClickToKiro(clickInfo) {
-      if (!selectedCascadeId) return;
-      
-      const isNavigation = 
-        clickInfo.ariaLabel?.toLowerCase().includes('back') ||
-        clickInfo.ariaLabel?.toLowerCase().includes('close') ||
-        clickInfo.text?.toLowerCase().includes('back') ||
-        clickInfo.role === 'tab';
-      
-      const isModelSelection = clickInfo.isModelSelection || 
-        clickInfo.role === 'option' || 
-        clickInfo.role === 'menuitem' ||
-        clickInfo.className?.includes('model');
-      
-      if (isNavigation) navigationPending = true;
-      
-      try {
-        await fetch(`/click/${selectedCascadeId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(clickInfo)
-        });
-        
-        if (isNavigation || isModelSelection) {
-          // Refresh snapshot after navigation or model selection
-          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
-        }
-      } catch (e) {
-        navigationPending = false;
-      }
-    }
-
-    // Open file in Editor tab
-    async function openFileInEditor(filePath) {
-      if (!selectedCascadeId || !filePath) return;
-      
-      showToast(`Opening ${filePath}...`, 1500);
-      
-      // Switch to Editor tab immediately
-      const editorTab = document.querySelector('[data-panel="editor"]');
-      if (editorTab) {
-        navTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-        editorTab.classList.add('active');
-        
-        Object.values(panels).forEach(p => {
-          if (p.panel) p.panel.classList.remove('active');
-        });
-        panels.editor.panel.classList.add('active');
-        activePanel = 'editor';
-        
-        // Show loading state
-        showLoading('editor', 'Loading file...');
-      }
-      
-      try {
-        // First, try to read the file directly from filesystem (bypasses Monaco limitation)
-        const readResult = await fetch(`/readFile/${selectedCascadeId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filePath })
-        });
-        
-        if (readResult.ok) {
-          const data = await readResult.json();
-          if (data.content) {
-            renderEditorSnapshot(data);
-            showToast(`Opened ${data.fileName || filePath}`, 1500, true);
-            console.log('[Editor] Loaded file directly:', data.fileName, data.lineCount, 'lines');
-            return;
-          }
-        } else {
-          const errorData = await readResult.json().catch(() => ({}));
-          console.log('[Editor] Direct file read failed:', errorData.error || readResult.status);
-        }
-        
-        // Fallback: Try to click on the file link in Kiro to open it in Monaco
-        console.log('[Editor] Falling back to Monaco capture...');
-        const clickResult = await fetch(`/click/${selectedCascadeId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            tag: 'a',
-            text: filePath,
-            isFileLink: true,
-            filePath: filePath
-          })
-        });
-        
-        const result = await clickResult.json();
-        console.log('Click result:', result);
-        
-        // Wait for the file to open in Kiro
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Fetch the editor content from Monaco
-        const fetchEditor = async () => {
-          try {
-            const r = await fetch(`/editor/${selectedCascadeId}`);
-            if (r.ok) {
-              const data = await r.json();
-              if (data.content || data.html) {
-                renderEditorSnapshot(data);
-                showToast(`Opened ${data.fileName || filePath}`, 1500, true);
-                return true;
-              }
-            }
-          } catch (e) {}
-          return false;
-        };
-        
-        // Try fetching a few times with delays
-        if (!await fetchEditor()) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          if (!await fetchEditor()) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            if (!await fetchEditor()) {
-              showEmptyState('editor', 'codicon-file-code', `Could not load ${filePath}. File may not exist or path is incorrect.`);
-            }
-          }
-        }
-        
-      } catch (e) {
-        showToast('Failed to open file');
-        console.error('Open file error:', e);
-        showEmptyState('editor', 'codicon-file-code', 'Failed to load file. Check console for details.');
-      }
-    }
-
-    // ==================== File Tree ====================
     
-    // Toggle file tree panel
+    function renderChatSnapshot(snapshot, isUpdate = false) {
+      if (isRendering) return;
+      isRendering = true;
+      
+      let innerScrollable = panels.chat.content.querySelector('.overflow-y-auto, [class*="scroll"]');
+      const hadContent = innerScrollable && innerScrollable.scrollHeight > 100;
+      const scrollTop = innerScrollable ? innerScrollable.scrollTop : 0;
+      const scrollHeight = innerScrollable ? innerScrollable.scrollHeight : 0;
+      const clientHeight = innerScrollable ? innerScrollable.clientHeight : 0;
+      const wasAtBottom = !hadContent || (scrollHeight - scrollTop - clientHeight < 100);
+      
+      let html = getBaseStyles();
+      if (currentStyles) html += `<style>${currentStyles}</style>`;
+      html += snapshot.html || '';
+      
+      panels.chat.content.innerHTML = html;
+      panels.chat.container.style.background = snapshot.bodyBg || '#1e1e1e';
+      hideLoading('chat');
+      
+      removePlaceholderText();
+      fixContextWindowCircles();
+      
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Only detect history panel by class names - NOT by date patterns
+          // Date patterns are too aggressive and match regular chat timestamps
+          const hasHistoryClass = panels.chat.content.querySelector('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"], [class*="conversation-list"], [class*="ConversationList"]');
+          
+          panels.chat.content.querySelectorAll('.overflow-y-auto, [class*="scroll"]').forEach(el => {
+            const isHistoryContainer = el.matches('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"]') ||
+              el.closest('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"]');
+            
+            if (el.scrollHeight > el.clientHeight + 10) {
+              if (isHistoryContainer) {
+                el.scrollTop = 0;
+              } else if (!isUpdate || wasAtBottom) {
+                el.scrollTop = el.scrollHeight;
+              } else if (hadContent) {
+                el.scrollTop = scrollTop;
+              }
+            }
+          });
+          
+          // Only scroll main content to top if it's clearly a history panel
+          if (hasHistoryClass) {
+            panels.chat.content.scrollTop = 0;
+          } else if (!isUpdate || wasAtBottom) {
+            panels.chat.content.scrollTop = panels.chat.content.scrollHeight;
+          }
+          isRendering = false;
+        });
+      });
+      
+      makeInteractive();
+    }
+    
+    function removePlaceholderText() {
+      const content = panels.chat.content;
+      content.querySelectorAll('[class*="placeholder"], [class*="Placeholder"]').forEach(el => {
+        if (!el.matches('[contenteditable], textarea, input, [data-lexical-editor]') && 
+            !el.querySelector('[contenteditable], textarea, input, [data-lexical-editor]')) {
+          el.style.display = 'none';
+        }
+      });
+    }
+    
+    function fixContextWindowCircles() {
+      panels.chat.content.querySelectorAll('svg').forEach(svg => {
+        const circles = svg.querySelectorAll('circle');
+        if (circles.length >= 1) {
+          let progressCircle = null;
+          circles.forEach(circle => {
+            const dashArray = circle.getAttribute('stroke-dasharray') || circle.style.strokeDasharray;
+            if (dashArray && dashArray !== 'none') progressCircle = circle;
+          });
+          
+          if (progressCircle && !svg.querySelector('circle[data-track="true"]')) {
+            const cx = progressCircle.getAttribute('cx') || '8';
+            const cy = progressCircle.getAttribute('cy') || '8';
+            const r = progressCircle.getAttribute('r') || '6';
+            const strokeWidth = progressCircle.getAttribute('stroke-width') || '2';
+            
+            const trackCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            trackCircle.setAttribute('cx', cx);
+            trackCircle.setAttribute('cy', cy);
+            trackCircle.setAttribute('r', r);
+            trackCircle.setAttribute('stroke', '#3c3c3c');
+            trackCircle.setAttribute('stroke-width', strokeWidth);
+            trackCircle.setAttribute('fill', 'none');
+            trackCircle.setAttribute('data-track', 'true');
+            
+            svg.insertBefore(trackCircle, svg.firstChild);
+            progressCircle.setAttribute('stroke', '#4ade80');
+          }
+        }
+      });
+    }
+    
+    // =============================================================================
+    // Editor Rendering
+    // =============================================================================
+    function renderEditorSnapshot(data, isUpdate = false) {
+      const scrollTop = panels.editor.content.scrollTop;
+      panels.editor.filename.textContent = data.fileName || 'Untitled';
+      panels.editor.header.style.display = 'flex';
+      closeEditorSearch();
+      
+      if (data.content?.trim().length > 0) {
+        const lines = data.content.split('\n');
+        let html = '';
+        
+        if (data.isPartial || data.note) {
+          html += `<div style="padding: 8px 12px; background: #2d2d30; color: #888; font-size: 11px; border-bottom: 1px solid #3c3c3c;">
+            <span class="codicon codicon-info" style="margin-right: 6px;"></span>${data.note || 'Showing visible lines only.'}
+          </div>`;
+        }
+        
+        html += '<pre class="editor-code">';
+        const startLineNum = data.startLine || 1;
+        let startIdx = 0;
+        while (startIdx < lines.length && lines[startIdx].trim() === '' && startIdx < 3) startIdx++;
+        
+        lines.slice(startIdx).forEach((line, idx) => {
+          const lineNum = startLineNum + startIdx + idx;
+          const highlighted = highlightSyntax(line.replace(/\t/g, '  '), data.language);
+          html += `<div class="editor-line"><span class="editor-line-num">${lineNum}</span><span class="editor-line-code">${highlighted || ' '}</span></div>`;
+        });
+        html += '</pre>';
+        
+        const endLine = startLineNum + startIdx + lines.slice(startIdx).length - 1;
+        html += `<div style="padding: 6px 12px; background: #252526; color: #666; font-size: 11px; border-top: 1px solid #3c3c3c;">
+          Lines ${startLineNum}-${endLine}${data.lineCount ? ` of ${data.lineCount}` : ''}
+        </div>`;
+        
+        panels.editor.content.innerHTML = html;
+        panels.editor.content.style.display = 'block';
+      } else {
+        showEmptyState('editor', 'codicon-file-code', 'No editor content available.');
+        return;
+      }
+      
+      hideLoading('editor');
+      if (isUpdate) panels.editor.content.scrollTop = scrollTop;
+    }
+    
+    function highlightSyntax(line, language) {
+      const escaped = escapeHtml(line);
+      if (escaped.length > 1000 || !language) return escaped;
+      
+      const isJS = ['javascript', 'typescript', 'jsx', 'tsx', 'js', 'ts'].includes(language);
+      const isPython = language === 'python' || language === 'py';
+      
+      let result = '';
+      let i = 0;
+      
+      while (i < escaped.length) {
+        // Comments
+        if (isJS && escaped.slice(i, i + 2) === '//') { result += '<span class="tok-cmt">' + escaped.slice(i) + '</span>'; break; }
+        if ((isPython) && escaped[i] === '#') { result += '<span class="tok-cmt">' + escaped.slice(i) + '</span>'; break; }
+        
+        // Strings
+        if (escaped.slice(i, i + 6) === '&quot;') {
+          const endIdx = escaped.indexOf('&quot;', i + 6);
+          if (endIdx !== -1) { result += '<span class="tok-str">' + escaped.slice(i, endIdx + 6) + '</span>'; i = endIdx + 6; continue; }
+        }
+        if (escaped.slice(i, i + 5) === '&#39;') {
+          const endIdx = escaped.indexOf('&#39;', i + 5);
+          if (endIdx !== -1) { result += '<span class="tok-str">' + escaped.slice(i, endIdx + 5) + '</span>'; i = endIdx + 5; continue; }
+        }
+        
+        // Numbers
+        if (/[0-9]/.test(escaped[i]) && (i === 0 || /[^a-zA-Z_]/.test(escaped[i - 1]))) {
+          let numEnd = i;
+          while (numEnd < escaped.length && /[0-9.]/.test(escaped[numEnd])) numEnd++;
+          if (numEnd > i) { result += '<span class="tok-num">' + escaped.slice(i, numEnd) + '</span>'; i = numEnd; continue; }
+        }
+        
+        // Keywords
+        if (/[a-zA-Z_]/.test(escaped[i]) && (i === 0 || /[^a-zA-Z0-9_]/.test(escaped[i - 1]))) {
+          let wordEnd = i;
+          while (wordEnd < escaped.length && /[a-zA-Z0-9_]/.test(escaped[wordEnd])) wordEnd++;
+          const word = escaped.slice(i, wordEnd);
+          
+          let keywords = [];
+          if (isJS) keywords = ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'import', 'export', 'from', 'async', 'await', 'try', 'catch', 'throw', 'new', 'this', 'class', 'extends', 'true', 'false', 'null', 'undefined'];
+          else if (isPython) keywords = ['def', 'class', 'return', 'if', 'elif', 'else', 'for', 'while', 'import', 'from', 'as', 'try', 'except', 'raise', 'with', 'async', 'await', 'None', 'True', 'False', 'self'];
+          
+          if (keywords.includes(word)) result += '<span class="tok-kw">' + word + '</span>';
+          else result += word;
+          i = wordEnd;
+          continue;
+        }
+        
+        result += escaped[i];
+        i++;
+      }
+      
+      return result;
+    }
+    
+    // =============================================================================
+    // Editor Search
+    // =============================================================================
+    function openEditorSearch() {
+      $('editorSearchBar').classList.add('open');
+      $('editorSearchInput').focus();
+      $('editorSearchInput').select();
+    }
+    
+    function closeEditorSearch() {
+      $('editorSearchBar').classList.remove('open');
+      $('editorSearchInput').value = '';
+      searchMatches = [];
+      currentMatchIndex = -1;
+      $('editorSearchCount').textContent = '';
+      panels.editor.content.querySelectorAll('.editor-line-code[data-original-html]').forEach(el => {
+        el.innerHTML = el.dataset.originalHtml;
+        delete el.dataset.originalHtml;
+      });
+    }
+    
+    function performSearch(query) {
+      panels.editor.content.querySelectorAll('.editor-line-code[data-original-html]').forEach(el => {
+        el.innerHTML = el.dataset.originalHtml;
+        delete el.dataset.originalHtml;
+      });
+      searchMatches = [];
+      currentMatchIndex = -1;
+      
+      if (!query || query.length < 1) { $('editorSearchCount').textContent = ''; return; }
+      
+      const queryLower = query.toLowerCase();
+      panels.editor.content.querySelectorAll('.editor-line-code').forEach((lineEl, lineIndex) => {
+        const text = lineEl.textContent;
+        const textLower = text.toLowerCase();
+        let startIndex = 0, matchIndex;
+        
+        while ((matchIndex = textLower.indexOf(queryLower, startIndex)) !== -1) {
+          searchMatches.push({ lineIndex, lineEl, startIndex: matchIndex, endIndex: matchIndex + query.length });
+          startIndex = matchIndex + 1;
+        }
+      });
+      
+      if (searchMatches.length > 0) {
+        highlightSearchMatches(query);
+        currentMatchIndex = 0;
+        scrollToSearchMatch(0);
+        updateSearchCount();
+      } else {
+        $('editorSearchCount').textContent = 'No results';
+      }
+    }
+    
+    function highlightSearchMatches(query) {
+      const queryLower = query.toLowerCase();
+      panels.editor.content.querySelectorAll('.editor-line-code').forEach(lineEl => {
+        const text = lineEl.textContent;
+        if (text.toLowerCase().includes(queryLower)) {
+          if (!lineEl.dataset.originalHtml) lineEl.dataset.originalHtml = lineEl.innerHTML;
+          
+          const matches = [];
+          let idx = 0;
+          while ((idx = text.toLowerCase().indexOf(queryLower, idx)) !== -1) {
+            matches.push({ start: idx, end: idx + query.length });
+            idx++;
+          }
+          
+          if (matches.length > 0) {
+            let result = '', lastEnd = 0;
+            matches.forEach(match => {
+              result += escapeHtml(text.slice(lastEnd, match.start));
+              result += `<span class="search-highlight">${escapeHtml(text.slice(match.start, match.end))}</span>`;
+              lastEnd = match.end;
+            });
+            result += escapeHtml(text.slice(lastEnd));
+            lineEl.innerHTML = result;
+          }
+        }
+      });
+    }
+    
+    function scrollToSearchMatch(index) {
+      const highlights = panels.editor.content.querySelectorAll('.search-highlight');
+      highlights.forEach(el => el.classList.remove('current'));
+      
+      if (highlights[index]) {
+        highlights[index].classList.add('current');
+        const lineEl = highlights[index].closest('.editor-line');
+        if (lineEl) {
+          const container = panels.editor.content;
+          const containerRect = container.getBoundingClientRect();
+          const lineRect = lineEl.getBoundingClientRect();
+          const scrollTop = container.scrollTop + (lineRect.top - containerRect.top) - (containerRect.height / 2) + (lineRect.height / 2);
+          container.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
+        }
+      }
+    }
+    
+    function updateSearchCount() {
+      $('editorSearchCount').textContent = searchMatches.length > 0 ? `${currentMatchIndex + 1}/${searchMatches.length}` : 'No results';
+    }
+    
+    function goToNextMatch() {
+      if (searchMatches.length === 0) return;
+      currentMatchIndex = (currentMatchIndex + 1) % searchMatches.length;
+      scrollToSearchMatch(currentMatchIndex);
+      updateSearchCount();
+    }
+    
+    function goToPrevMatch() {
+      if (searchMatches.length === 0) return;
+      currentMatchIndex = (currentMatchIndex - 1 + searchMatches.length) % searchMatches.length;
+      scrollToSearchMatch(currentMatchIndex);
+      updateSearchCount();
+    }
+    
+    // Setup search
+    $('editorSearchBtn').onclick = openEditorSearch;
+    $('editorSearchClose').onclick = closeEditorSearch;
+    $('editorSearchNext').onclick = goToNextMatch;
+    $('editorSearchPrev').onclick = goToPrevMatch;
+    $('editorSearchInput').oninput = (e) => performSearch(e.target.value);
+    $('editorSearchInput').onkeydown = (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); e.shiftKey ? goToPrevMatch() : goToNextMatch(); }
+      else if (e.key === 'Escape') closeEditorSearch();
+    };
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && activePanel === 'editor') { e.preventDefault(); openEditorSearch(); }
+    });
+
+    // =============================================================================
+    // File Tree
+    // =============================================================================
     function toggleFileTree() {
       fileTreeOpen = !fileTreeOpen;
-      fileTreePanel.classList.toggle('open', fileTreeOpen);
-      
-      if (fileTreeOpen) {
-        // Load files if not cached
-        if (workspaceFiles.length === 0) {
-          fetchWorkspaceFiles();
-        } else {
-          renderFileTree(workspaceFiles);
-        }
-      }
+      fileTreeDropdown.classList.toggle('open', fileTreeOpen);
+      explorerChevron.style.transform = fileTreeOpen ? 'rotate(180deg)' : '';
+      if (fileTreeOpen && workspaceFiles.length === 0) fetchWorkspaceFiles();
+      else if (fileTreeOpen) renderFileTree(workspaceFiles);
     }
     
-    // Close file tree
     function closeFileTree() {
       fileTreeOpen = false;
-      fileTreePanel.classList.remove('open');
+      fileTreeDropdown.classList.remove('open');
+      explorerChevron.style.transform = '';
     }
     
-    // Fetch workspace files from server
     async function fetchWorkspaceFiles() {
       if (!selectedCascadeId) return;
-      
       fileTree.innerHTML = '<div class="file-tree-loading"><div class="loading-spinner"></div>Loading files...</div>';
       
       try {
         const r = await fetch(`/files/${selectedCascadeId}`);
         if (!r.ok) throw new Error('Failed to fetch files');
-        
         const data = await r.json();
         workspaceFiles = data.files || [];
-        console.log(`[FileTree] Loaded ${workspaceFiles.length} files`);
         renderFileTree(workspaceFiles);
       } catch (e) {
-        console.error('Failed to fetch files:', e);
         fileTree.innerHTML = '<div class="file-tree-empty">Failed to load files</div>';
       }
     }
     
-    // Build tree structure from flat file list
     function buildFileTree(files) {
       const root = { folders: {}, files: [] };
-      
       files.forEach(file => {
         const parts = file.path.split(/[/\\]/);
         let current = root;
-        
-        // Navigate/create folder structure
         for (let i = 0; i < parts.length - 1; i++) {
           const folderName = parts[i];
-          if (!current.folders[folderName]) {
-            current.folders[folderName] = { folders: {}, files: [] };
-          }
+          if (!current.folders[folderName]) current.folders[folderName] = { folders: {}, files: [] };
           current = current.folders[folderName];
         }
-        
-        // Add file to current folder
         current.files.push({ name: parts[parts.length - 1], path: file.path });
       });
-      
       return root;
     }
     
-    // Get file icon based on extension
     function getFileIcon(name) {
       const ext = name.split('.').pop()?.toLowerCase();
       const iconMap = {
-        'js': 'codicon-file-code', 'jsx': 'codicon-file-code',
-        'ts': 'codicon-file-code', 'tsx': 'codicon-file-code',
-        'html': 'codicon-file-code', 'css': 'codicon-file-code',
-        'json': 'codicon-json', 'md': 'codicon-markdown',
-        'py': 'codicon-file-code', 'java': 'codicon-file-code',
-        'go': 'codicon-file-code', 'rs': 'codicon-file-code',
-        'cob': 'codicon-file-code', 'cbl': 'codicon-file-code',
+        'js': 'codicon-file-code', 'jsx': 'codicon-file-code', 'ts': 'codicon-file-code', 'tsx': 'codicon-file-code',
+        'html': 'codicon-file-code', 'css': 'codicon-file-code', 'json': 'codicon-json', 'md': 'codicon-markdown',
+        'py': 'codicon-file-code', 'java': 'codicon-file-code', 'go': 'codicon-file-code', 'rs': 'codicon-file-code',
         'sql': 'codicon-database', 'txt': 'codicon-file'
       };
       return iconMap[ext] || 'codicon-file';
     }
     
-    // Render tree node recursively
-    function renderTreeNode(node, path = '', depth = 0) {
+    function renderTreeNode(node, path = '') {
       let html = '';
-      
-      // Sort folders first, then files
       const folderNames = Object.keys(node.folders).sort();
       const sortedFiles = [...node.files].sort((a, b) => a.name.localeCompare(b.name));
       
-      // Render folders
       folderNames.forEach(folderName => {
         const folderPath = path ? `${path}/${folderName}` : folderName;
         const isExpanded = expandedFolders.has(folderPath);
-        
-        html += `
-          <div class="file-tree-folder" data-path="${escapeHtml(folderPath)}">
-            <div class="file-tree-folder-header" data-folder="${escapeHtml(folderPath)}">
-              <span class="file-tree-folder-icon codicon codicon-chevron-right ${isExpanded ? 'expanded' : ''}"></span>
-              <span class="codicon codicon-folder${isExpanded ? '-opened' : ''}" style="color: #dcb67a;"></span>
-              <span class="file-tree-folder-name">${escapeHtml(folderName)}</span>
-            </div>
-            <div class="file-tree-folder-contents ${isExpanded ? 'expanded' : ''}">
-              ${renderTreeNode(node.folders[folderName], folderPath, depth + 1)}
-            </div>
+        html += `<div class="file-tree-folder" data-path="${escapeHtml(folderPath)}">
+          <div class="file-tree-folder-header" data-folder="${escapeHtml(folderPath)}">
+            <span class="file-tree-folder-icon codicon codicon-chevron-right ${isExpanded ? 'expanded' : ''}"></span>
+            <span class="codicon codicon-folder${isExpanded ? '-opened' : ''}" style="color: #dcb67a;"></span>
+            <span class="file-tree-folder-name">${escapeHtml(folderName)}</span>
           </div>
-        `;
+          <div class="file-tree-folder-contents ${isExpanded ? 'expanded' : ''}">${renderTreeNode(node.folders[folderName], folderPath)}</div>
+        </div>`;
       });
       
-      // Render files
       sortedFiles.forEach(file => {
-        html += `
-          <div class="file-tree-file" data-path="${escapeHtml(file.path)}">
-            <span class="file-tree-file-icon codicon ${getFileIcon(file.name)}"></span>
-            <span class="file-tree-file-name">${escapeHtml(file.name)}</span>
-          </div>
-        `;
+        html += `<div class="file-tree-file" data-path="${escapeHtml(file.path)}">
+          <span class="file-tree-file-icon codicon ${getFileIcon(file.name)}"></span>
+          <span class="file-tree-file-name">${escapeHtml(file.name)}</span>
+        </div>`;
       });
       
       return html;
     }
     
-    // Render file tree
     function renderFileTree(files) {
-      if (files.length === 0) {
-        fileTree.innerHTML = '<div class="file-tree-empty">No files found</div>';
-        return;
-      }
+      if (files.length === 0) { fileTree.innerHTML = '<div class="file-tree-empty">No files found</div>'; return; }
       
-      // Build and render tree structure
       const tree = buildFileTree(files);
       fileTree.innerHTML = renderTreeNode(tree);
       
-      // Add click handlers for folders
       fileTree.querySelectorAll('.file-tree-folder-header').forEach(header => {
         header.onclick = (e) => {
           e.stopPropagation();
@@ -2082,251 +1443,429 @@
         };
       });
       
-      // Add click handlers for files
       fileTree.querySelectorAll('.file-tree-file').forEach(item => {
-        item.onclick = () => {
-          const path = item.dataset.path;
-          closeFileTree();
-          openFileInEditor(path);
+        item.onclick = () => { closeFileTree(); openFileInEditor(item.dataset.path); };
+      });
+    }
+    
+    // =============================================================================
+    // Chat Interactivity
+    // =============================================================================
+    function makeInteractive() {
+      const content = panels.chat.content;
+      
+      // Input fields
+      const inputSelectors = ['[data-lexical-editor="true"]', '[contenteditable="true"]', 'textarea', '.ProseMirror', '.tiptap'];
+      inputSelectors.forEach(selector => {
+        content.querySelectorAll(selector).forEach(el => {
+          el.style.cursor = 'text';
+          el.addEventListener('focus', () => { isTypingInKiroInput = true; });
+          el.addEventListener('blur', () => { setTimeout(() => { isTypingInKiroInput = false; }, 500); });
+          el.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              const text = el.textContent || el.value || '';
+              if (text.trim()) {
+                await sendToKiro(text.trim());
+                el.textContent = ''; el.innerHTML = '';
+                isTypingInKiroInput = false;
+              }
+            }
+          });
+        });
+      });
+      
+      // Send button
+      const attachSendHandler = (btn) => {
+        if (!btn || btn.dataset.sendHandlerAttached) return;
+        btn.dataset.sendHandlerAttached = 'true';
+        btn.removeAttribute('disabled');
+        btn.style.cursor = 'pointer';
+        
+        btn.onclick = async (e) => {
+          e.preventDefault(); e.stopPropagation();
+          let inputText = '', inputEl = null;
+          
+          // Find the ACTUAL chat input (last visible editor, not old messages)
+          // Look for input containers first, then fall back to last visible editor
+          const inputContainerSelectors = [
+            '[class*="chat-input"]',
+            '[class*="message-input"]', 
+            '[class*="composer"]',
+            '[class*="input-area"]',
+            '[class*="InputArea"]',
+            'form[class*="chat"]'
+          ];
+          
+          // Strategy 1: Find editor inside input container
+          for (const containerSel of inputContainerSelectors) {
+            const container = content.querySelector(containerSel);
+            if (container) {
+              const editorInContainer = container.querySelector('.tiptap, .ProseMirror, [data-lexical-editor="true"], [contenteditable="true"], textarea');
+              if (editorInContainer && editorInContainer.offsetParent !== null) {
+                inputEl = editorInContainer;
+                inputText = editorInContainer.textContent || editorInContainer.innerText || editorInContainer.value || '';
+                break;
+              }
+            }
+          }
+          
+          // Strategy 2: Find editor near the submit button itself
+          if (!inputEl) {
+            const btnParent = btn.closest('form') || btn.parentElement?.parentElement?.parentElement;
+            if (btnParent) {
+              const nearbyEditor = btnParent.querySelector('.tiptap, .ProseMirror, [data-lexical-editor="true"], [contenteditable="true"], textarea');
+              if (nearbyEditor && nearbyEditor.offsetParent !== null) {
+                inputEl = nearbyEditor;
+                inputText = nearbyEditor.textContent || nearbyEditor.innerText || nearbyEditor.value || '';
+              }
+            }
+          }
+          
+          // Strategy 3: Get the LAST visible editor (input is typically at bottom)
+          if (!inputEl) {
+            for (const sel of ['.tiptap', '.ProseMirror', '[data-lexical-editor="true"]', '[contenteditable="true"]', 'textarea']) {
+              const allEditors = [...content.querySelectorAll(sel)].filter(el => el.offsetParent !== null);
+              if (allEditors.length > 0) {
+                inputEl = allEditors.at(-1); // Get LAST one, not first
+                inputText = inputEl.textContent || inputEl.innerText || inputEl.value || '';
+                if (inputText.trim()) break;
+              }
+            }
+          }
+          
+          if (inputText.trim()) {
+            await sendToKiro(inputText.trim());
+            if (inputEl) { inputEl.textContent = ''; inputEl.innerHTML = ''; }
+            showToast('Sent!', 1500, true);
+          } else {
+            showToast('Type a message first', 1500);
+          }
+          return false;
+        };
+      };
+      
+      const submitBtn = content.querySelector('button[data-variant="submit"]');
+      if (submitBtn) attachSendHandler(submitBtn);
+      
+      content.querySelectorAll('button').forEach(btn => {
+        if (btn.dataset.sendHandlerAttached) return;
+        if (btn.querySelector('.codicon-arrow-up, .codicon-send')) attachSendHandler(btn);
+      });
+      
+      // Toggle switches
+      content.querySelectorAll('[role="switch"], input[type="checkbox"][role="switch"]').forEach(toggle => {
+        const wrapper = toggle.closest('.kiro-toggle-switch') || toggle;
+        wrapper.style.cursor = 'pointer';
+        wrapper.onclick = async (e) => {
+          e.preventDefault(); e.stopPropagation();
+          const label = wrapper.querySelector('label');
+          await sendClickToKiro({ tag: 'div', text: label ? label.textContent.trim() : 'toggle', role: 'switch', isToggle: true });
+          return false;
+        };
+      });
+      
+      // Tabs
+      content.querySelectorAll('[role="tab"]').forEach(tab => {
+        const closeBtn = tab.querySelector('[aria-label="close"], [class*="close"]');
+        if (closeBtn) {
+          closeBtn.style.cursor = 'pointer';
+          closeBtn.onclick = async (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const labelEl = tab.querySelector('.kiro-tabs-item-label, [class*="label"]');
+            const tabLabel = labelEl ? labelEl.textContent.trim() : tab.textContent.trim();
+            await sendClickToKiro({ tag: 'button', text: 'close', ariaLabel: 'close', role: 'button', isCloseButton: true, parentTabLabel: tabLabel });
+            return false;
+          };
+        }
+        
+        tab.style.cursor = 'pointer';
+        tab.onclick = async (e) => {
+          if (e.target.closest('[aria-label="close"], [class*="close"], button')) return;
+          e.preventDefault(); e.stopPropagation();
+          const labelEl = tab.querySelector('.kiro-tabs-item-label, [class*="label"]');
+          const labelText = labelEl ? labelEl.textContent.trim() : tab.textContent.trim();
+          await sendClickToKiro({ tag: 'div', text: labelText, role: 'tab', isTab: true, tabLabel: labelText });
+          return false;
+        };
+      });
+      
+      // File links
+      const fileExtensions = /\.(ts|tsx|js|jsx|py|java|html|css|json|md|yaml|yml|xml|sql|go|rs|c|cpp|h|cs|rb|php|sh|vue|svelte)$/i;
+      content.querySelectorAll('a, code, span, [class*="file"], [class*="path"], [data-path]').forEach(el => {
+        if (el.onclick) return;
+        const text = (el.textContent || '').trim();
+        const dataPath = el.getAttribute('data-path') || '';
+        const href = el.getAttribute('href') || '';
+        
+        if (fileExtensions.test(text) || fileExtensions.test(dataPath) || fileExtensions.test(href)) {
+          const filePath = dataPath || text || href;
+          el.style.cursor = 'pointer';
+          el.style.color = '#7eb6ff';
+          el.title = `Open ${filePath} in Editor`;
+          el.onclick = async (e) => { e.preventDefault(); e.stopPropagation(); await openFileInEditor(filePath); return false; };
+        }
+      });
+      
+      // Buttons and clickable elements
+      const clickableSelectors = ['button', '[role="button"]', '[role="menuitem"]', '[role="option"]', '[role="checkbox"]', 'a[href]', '[tabindex="0"]'];
+      const allClickables = new Set();
+      clickableSelectors.forEach(sel => { try { content.querySelectorAll(sel).forEach(el => allClickables.add(el)); } catch(e) {} });
+      
+      allClickables.forEach(el => {
+        if (el.matches && el.matches('[contenteditable], textarea, input:not([type="checkbox"])')) return;
+        if (el.closest('[role="tab"]') || el.closest('.kiro-toggle-switch') || el.onclick) return;
+        
+        el.style.cursor = 'pointer';
+        el.onclick = async (e) => {
+          e.preventDefault(); e.stopPropagation();
+          const clickInfo = {
+            tag: el.tagName?.toLowerCase() || '',
+            text: (el.textContent || '').trim().substring(0, 100),
+            ariaLabel: el.getAttribute('aria-label') || '',
+            role: el.getAttribute('role') || '',
+            className: el.className || ''
+          };
+          await sendClickToKiro(clickInfo);
+          return false;
+        };
+      });
+      
+      // Chat history items - detect and make clickable
+      // Kiro history items typically have: icon, title text, and date
+      // We need to find these items even if they don't have semantic roles
+      
+      // First, find all potential history item containers
+      const potentialHistoryItems = [];
+      
+      // Look for elements that contain date patterns (history items have dates)
+      const datePattern = /\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}:\d{2}:\d{2}\s*(AM|PM)?/i;
+      
+      content.querySelectorAll('div, li, article, section').forEach(el => {
+        // Skip if already has handler
+        if (el.onclick) return;
+        // Skip inputs
+        if (el.matches('[contenteditable], textarea, input')) return;
+        // Skip very large containers
+        if (el.children.length > 15) return;
+        // Skip if inside tab or toggle
+        if (el.closest('[role="tab"]') || el.closest('.kiro-toggle-switch')) return;
+        
+        const text = el.textContent || '';
+        const hasDate = datePattern.test(text);
+        const hasIcon = el.querySelector('svg, [class*="icon"], [class*="Icon"], .codicon');
+        const textLength = text.trim().length;
+        
+        // History items typically have: date + some text (20-500 chars) + possibly an icon
+        if (hasDate && textLength > 20 && textLength < 500) {
+          // Check if this looks like a list item (has siblings with similar structure)
+          const parent = el.parentElement;
+          const siblings = parent ? [...parent.children].filter(c => c.tagName === el.tagName) : [];
+          const isInList = siblings.length > 1;
+          
+          // Also check for cursor pointer style or clickable class
+          const computedStyle = window.getComputedStyle(el);
+          const hasPointer = computedStyle.cursor === 'pointer';
+          const hasClickableClass = el.className && (
+            el.className.includes('item') || 
+            el.className.includes('Item') ||
+            el.className.includes('row') ||
+            el.className.includes('Row') ||
+            el.className.includes('entry') ||
+            el.className.includes('Entry')
+          );
+          
+          if (isInList || hasPointer || hasClickableClass || hasIcon) {
+            potentialHistoryItems.push(el);
+          }
+        }
+      });
+      
+      // Also add standard selectors
+      const historySelectors = [
+        '[role="listitem"]',
+        '[role="option"]',
+        '[class*="history-item"]',
+        '[class*="historyItem"]',
+        '[class*="session-item"]',
+        '[class*="sessionItem"]',
+        '[class*="chat-item"]',
+        '[class*="chatItem"]'
+      ];
+      
+      historySelectors.forEach(selector => {
+        try {
+          content.querySelectorAll(selector).forEach(el => {
+            if (!el.onclick && !potentialHistoryItems.includes(el)) {
+              potentialHistoryItems.push(el);
+            }
+          });
+        } catch(e) {}
+      });
+      
+      // Attach click handlers to all potential history items
+      potentialHistoryItems.forEach(el => {
+        el.style.cursor = 'pointer';
+        el.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Extract the title (first meaningful text, not the date)
+          let itemText = '';
+          const textNodes = [];
+          el.querySelectorAll('span, p, div').forEach(child => {
+            const t = child.textContent?.trim();
+            if (t && t.length > 5 && !datePattern.test(t)) {
+              textNodes.push(t);
+            }
+          });
+          itemText = textNodes[0] || el.textContent?.trim().split('\n')[0] || '';
+          itemText = itemText.substring(0, 100);
+          
+          const clickInfo = {
+            tag: el.tagName?.toLowerCase() || 'div',
+            text: itemText,
+            ariaLabel: el.getAttribute('aria-label') || '',
+            role: el.getAttribute('role') || 'listitem',
+            className: el.className || '',
+            isHistoryItem: true
+          };
+          
+          await sendClickToKiro(clickInfo);
+          
+          // Refresh snapshot after clicking history item
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+          return false;
         };
       });
     }
     
-    // Setup file tree event listeners
-    function setupFileTree() {
-      const explorerBtn = document.getElementById('editorExplorerBtn');
-      
-      // Explorer button click toggles file tree
-      explorerBtn.onclick = (e) => {
-        e.stopPropagation();
-        toggleFileTree();
-      };
-      
-      // Close button
-      fileTreeClose.onclick = (e) => {
-        e.stopPropagation();
-        closeFileTree();
-      };
-      
-      // Prevent clicks inside panel from closing it
-      fileTreePanel.onclick = (e) => {
-        e.stopPropagation();
-      };
-      
-      // Close on escape key
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && fileTreeOpen) {
-          closeFileTree();
-        }
-      });
-    }
-    
-    // Initialize file tree
-    setupFileTree();
-    
-    // ==================== Editor Search ====================
-    
-    function openEditorSearch() {
-      editorSearchBar.classList.add('open');
-      editorSearchInput.focus();
-      editorSearchInput.select();
-    }
-    
-    function closeEditorSearch() {
-      editorSearchBar.classList.remove('open');
-      editorSearchInput.value = '';
-      searchMatches = [];
-      currentMatchIndex = -1;
-      editorSearchCount.textContent = '';
-      clearSearchHighlights();
-    }
-    
-    function clearSearchHighlights() {
-      // Restore original HTML for lines that were modified
-      const modifiedLines = panels.editor.content.querySelectorAll('.editor-line-code[data-original-html]');
-      modifiedLines.forEach(el => {
-        el.innerHTML = el.dataset.originalHtml;
-        delete el.dataset.originalHtml;
-      });
-    }
-    
-    function performSearch(query) {
-      clearSearchHighlights();
-      searchMatches = [];
-      currentMatchIndex = -1;
-      
-      if (!query || query.length < 1) {
-        editorSearchCount.textContent = '';
-        return;
-      }
-      
-      const codeElements = panels.editor.content.querySelectorAll('.editor-line-code');
-      const queryLower = query.toLowerCase();
-      
-      codeElements.forEach((lineEl, lineIndex) => {
-        const text = lineEl.textContent;
-        const textLower = text.toLowerCase();
-        let startIndex = 0;
-        let matchIndex;
-        
-        while ((matchIndex = textLower.indexOf(queryLower, startIndex)) !== -1) {
-          searchMatches.push({
-            lineIndex,
-            lineEl,
-            startIndex: matchIndex,
-            endIndex: matchIndex + query.length
-          });
-          startIndex = matchIndex + 1;
-        }
-      });
-      
-      if (searchMatches.length > 0) {
-        highlightMatches(query);
-        currentMatchIndex = 0;
-        scrollToMatch(0);
-        updateSearchCount();
-      } else {
-        editorSearchCount.textContent = 'No results';
+    // =============================================================================
+    // Kiro Communication
+    // =============================================================================
+    async function sendToKiro(message) {
+      if (!message || !selectedCascadeId) return;
+      try {
+        const r = await fetch(`/send/${selectedCascadeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const result = await r.json();
+        if (result.success) showToast('Sent!', 1500, true);
+        else showToast(result.error || 'Failed to send');
+      } catch (e) {
+        showToast('Failed to send');
       }
     }
     
-    function highlightMatches(query) {
-      const codeElements = panels.editor.content.querySelectorAll('.editor-line-code');
-      const queryLower = query.toLowerCase();
+    async function sendClickToKiro(clickInfo) {
+      if (!selectedCascadeId) return;
       
-      codeElements.forEach(lineEl => {
-        const text = lineEl.textContent;
-        const textLower = text.toLowerCase();
+      const isNavigation = clickInfo.ariaLabel?.toLowerCase().includes('back') ||
+        clickInfo.ariaLabel?.toLowerCase().includes('close') ||
+        clickInfo.text?.toLowerCase().includes('back') ||
+        clickInfo.role === 'tab';
+      
+      if (isNavigation) navigationPending = true;
+      
+      try {
+        await fetch(`/click/${selectedCascadeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(clickInfo)
+        });
         
-        if (textLower.includes(queryLower)) {
-          // Store original HTML to restore later
-          if (!lineEl.dataset.originalHtml) {
-            lineEl.dataset.originalHtml = lineEl.innerHTML;
-          }
-          
-          // Work with text content, find all match positions
-          const matches = [];
-          let idx = 0;
-          while ((idx = textLower.indexOf(queryLower, idx)) !== -1) {
-            matches.push({ start: idx, end: idx + query.length });
-            idx++;
-          }
-          
-          if (matches.length > 0) {
-            // Rebuild the line with highlights
-            let result = '';
-            let lastEnd = 0;
-            
-            matches.forEach(match => {
-              // Add text before match (escaped)
-              result += escapeHtml(text.slice(lastEnd, match.start));
-              // Add highlighted match
-              result += `<span class="search-highlight">${escapeHtml(text.slice(match.start, match.end))}</span>`;
-              lastEnd = match.end;
-            });
-            
-            // Add remaining text
-            result += escapeHtml(text.slice(lastEnd));
-            
-            lineEl.innerHTML = result;
+        if (isNavigation) setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
+      } catch (e) {
+        navigationPending = false;
+      }
+    }
+    
+    async function openFileInEditor(filePath) {
+      if (!selectedCascadeId || !filePath) return;
+      
+      showToast(`Opening ${filePath}...`, 1500);
+      
+      // Switch to Editor tab
+      const editorTab = document.querySelector('[data-panel="editor"]');
+      if (editorTab) {
+        navTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        editorTab.classList.add('active');
+        Object.values(panels).forEach(p => { if (p.panel) p.panel.classList.remove('active'); });
+        panels.editor.panel.classList.add('active');
+        activePanel = 'editor';
+        showLoading('editor', 'Loading file...');
+      }
+      
+      try {
+        // Try direct file read first
+        const readResult = await fetch(`/readFile/${selectedCascadeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filePath })
+        });
+        
+        if (readResult.ok) {
+          const data = await readResult.json();
+          if (data.content) {
+            renderEditorSnapshot(data);
+            showToast(`Opened ${data.fileName || filePath}`, 1500, true);
+            return;
           }
         }
-      });
-    }
-    
-    function scrollToMatch(index) {
-      const highlights = panels.editor.content.querySelectorAll('.search-highlight');
-      
-      // Remove current class from all
-      highlights.forEach(el => el.classList.remove('current'));
-      
-      if (highlights[index]) {
-        highlights[index].classList.add('current');
         
-        // Get the scroll container and the highlight element
-        const container = panels.editor.content;
-        const element = highlights[index];
+        // Fallback: Click file link in Kiro
+        await fetch(`/click/${selectedCascadeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tag: 'a', text: filePath, isFileLink: true, filePath })
+        });
         
-        // Get the line element (parent of the highlight)
-        const lineEl = element.closest('.editor-line');
-        if (lineEl) {
-          // Calculate scroll position to center the line
-          const containerRect = container.getBoundingClientRect();
-          const lineRect = lineEl.getBoundingClientRect();
-          const scrollTop = container.scrollTop + (lineRect.top - containerRect.top) - (containerRect.height / 2) + (lineRect.height / 2);
-          
-          container.scrollTo({
-            top: Math.max(0, scrollTop),
-            behavior: 'smooth'
-          });
-        }
-      }
-    }
-    
-    function updateSearchCount() {
-      if (searchMatches.length > 0) {
-        editorSearchCount.textContent = `${currentMatchIndex + 1}/${searchMatches.length}`;
-      } else {
-        editorSearchCount.textContent = 'No results';
-      }
-    }
-    
-    function goToNextMatch() {
-      if (searchMatches.length === 0) return;
-      currentMatchIndex = (currentMatchIndex + 1) % searchMatches.length;
-      scrollToMatch(currentMatchIndex);
-      updateSearchCount();
-    }
-    
-    function goToPrevMatch() {
-      if (searchMatches.length === 0) return;
-      currentMatchIndex = (currentMatchIndex - 1 + searchMatches.length) % searchMatches.length;
-      scrollToMatch(currentMatchIndex);
-      updateSearchCount();
-    }
-    
-    // Setup editor search
-    function setupEditorSearch() {
-      editorSearchBtn.onclick = () => openEditorSearch();
-      editorSearchClose.onclick = () => closeEditorSearch();
-      editorSearchNext.onclick = () => goToNextMatch();
-      editorSearchPrev.onclick = () => goToPrevMatch();
-      
-      editorSearchInput.oninput = (e) => {
-        performSearch(e.target.value);
-      };
-      
-      editorSearchInput.onkeydown = (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          if (e.shiftKey) {
-            goToPrevMatch();
-          } else {
-            goToNextMatch();
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        const fetchEditor = async () => {
+          try {
+            const r = await fetch(`/editor/${selectedCascadeId}`);
+            if (r.ok) {
+              const data = await r.json();
+              if (data.content || data.html) { renderEditorSnapshot(data); showToast(`Opened ${data.fileName || filePath}`, 1500, true); return true; }
+            }
+          } catch (e) {}
+          return false;
+        };
+        
+        if (!await fetchEditor()) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (!await fetchEditor()) {
+            showEmptyState('editor', 'codicon-file-code', `Could not load ${filePath}.`);
           }
-        } else if (e.key === 'Escape') {
-          closeEditorSearch();
         }
-      };
-      
-      // Ctrl+F / Cmd+F to open search
-      document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'f' && activePanel === 'editor') {
-          e.preventDefault();
-          openEditorSearch();
-        }
-      });
+      } catch (e) {
+        showToast('Failed to open file');
+        showEmptyState('editor', 'codicon-file-code', 'Failed to load file.');
+      }
     }
     
-    setupEditorSearch();
-
-    // Visibility change handler
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && (!ws || ws.readyState !== WebSocket.OPEN)) {
-        connect();
-      }
+    // =============================================================================
+    // Event Listeners Setup
+    // =============================================================================
+    $('editorExplorerBtn').onclick = (e) => { e.stopPropagation(); toggleFileTree(); };
+    fileTreeDropdown.onclick = (e) => { e.stopPropagation(); };
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (fileTreeOpen && !e.target.closest('.editor-explorer-wrapper')) closeFileTree();
     });
-
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && fileTreeOpen) closeFileTree();
+    });
+    
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && (!ws || ws.readyState !== WebSocket.OPEN)) connect();
+    });
+    
     // Initialize
     connect();
   </script>

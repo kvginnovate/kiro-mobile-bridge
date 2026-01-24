@@ -11,11 +11,14 @@ Kiro Mobile Bridge is a mobile web interface that lets developers monitor and in
 ## Key Features
 - 📱 Mobile-optimized web interface with tab navigation
 - 💬 Chat Panel - View and send messages to Kiro's agent
-- 📁 Files Panel - Browse file explorer and Kiro panels (specs, hooks, steering)
+- 📁 Files Panel - Browse workspace files with file reading capability
 - 📝 Editor Panel - View currently open file with syntax highlighting
-- 🔄 Real-time updates via WebSocket
-- 🔍 Auto-discovers Kiro instances on ports 9000-9003
+- 📋 Tasks Panel - View and navigate Kiro spec task files
+- 🔄 Real-time updates via WebSocket with adaptive polling
+- 🔍 Auto-discovers Kiro instances on ports 9000-9003, 9222, 9229
 - 🎨 Preserves original Kiro styling
+- 🖱️ Click-through support for UI elements (tabs, buttons, toggles)
+- 📂 File link navigation from chat to editor
 
 ## Business Objectives
 - Enable seamless mobile monitoring of AI-assisted development sessions

@@ -12,6 +12,7 @@
 ┌─────────────────┐     CDP      ┌─────────────────┐
 │   Kiro IDE      │◄────────────►│  Bridge Server  │
 │ (port 9000-9003)│              │   (port 3000)   │
+│ (port 9222,9229)│              │                 │
 └─────────────────┘              └────────┬────────┘
                                           │
                                    HTTP + WebSocket
@@ -22,12 +23,27 @@
                                  └─────────────────┘
 ```
 
-**Components:**
-- **Discovery Service**: Scans ports 9000-9003 for Kiro instances every 10s
-- **CDP Client**: Connects to Kiro via WebSocket, captures DOM snapshots
-- **HTTP API**: REST endpoints for snapshots, cascades, and actions
-- **WebSocket Server**: Pushes real-time updates to mobile clients
-- **Static Server**: Serves mobile web interface
+**Server Components (Modular):**
+- **Discovery Service** (`server.js`): Scans ports 9000-9003, 9222, 9229 for Kiro instances
+- **CDP Service** (`services/cdp.js`): WebSocket connection, context management, RPC calls
+- **Snapshot Service** (`services/snapshot.js`): DOM capture for chat, editor, CSS
+- **Click Service** (`services/click.js`): UI element interaction via CDP
+- **Message Service** (`services/message.js`): Chat input injection
+- **API Routes** (`routes/api.js`): REST endpoints for mobile client
+- **WebSocket Server** (`server.js`): Real-time updates to mobile clients
+
+## Module Dependencies
+```
+server.js
+├── services/cdp.js        # CDP connection management
+├── services/snapshot.js   # DOM capture functions
+├── routes/api.js
+│   ├── services/message.js  # Chat injection
+│   └── services/click.js    # Element clicking
+└── utils/
+    ├── hash.js            # MD5 for change detection
+    └── network.js         # Local IP detection
+```
 
 ## Development Environment
 - Node.js 18+
@@ -40,7 +56,8 @@
 - Async/await for asynchronous operations
 - Descriptive function and variable names
 - JSDoc comments for public APIs
-- Single-file server architecture (server.js)
+- Modular architecture with clear separation of concerns
+- IIFE pattern for CDP expressions (null safety)
 
 ## Testing Strategy
 - Manual testing with Kiro IDE instances
@@ -52,12 +69,13 @@
 - Local development only (LAN-based tool)
 - `npm install` → `npm start`
 - Environment variable `PORT` for custom port
+- Published to npm as `kiro-mobile-bridge`
 
 ## Performance Requirements
 - Snapshot capture: < 500ms
 - WebSocket latency: < 100ms
-- Discovery cycle: 10 seconds
-- Snapshot polling: 3 seconds
+- Discovery cycle: 10s (active) → 30s (stable) - adaptive
+- Snapshot polling: 1s (active) → 3s (idle) - adaptive
 - Support multiple concurrent mobile clients
 
 ## Security Considerations

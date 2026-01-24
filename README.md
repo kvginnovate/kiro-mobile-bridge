@@ -96,9 +96,9 @@ Open the Network URL on your phone to monitor Kiro.
                                  └─────────────────┘
 ```
 
-1. **Discovery**: Server scans ports 9000-9003 every 10 seconds for Kiro instances
+1. **Discovery**: Server scans ports 9000-9003 for Kiro instances (adaptive: 10s → 30s when stable)
 2. **Connection**: Connects to Kiro via CDP WebSocket
-3. **Snapshots**: Captures chat HTML every 3 seconds, broadcasts changes
+3. **Snapshots**: Captures chat HTML with adaptive polling (1s active → 3s idle), broadcasts changes
 4. **Messages**: Injects text into Kiro's chat input via CDP
 
 ## Troubleshooting

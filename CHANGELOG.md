@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.0.8 (2026-01-24)
+- Updated README
+
+
 ## v1.0.7 (2026-01-23)
 - ci(release): Improve commit message handling in changelog generation
 

@@ -7,13 +7,27 @@ import { CDP_CALL_TIMEOUT, HTTP_TIMEOUT } from '../utils/constants.js';
 
 /**
  * Fetch JSON from a CDP endpoint
+ * Tries both 127.0.0.1 and localhost for cross-platform compatibility
  * @param {number} port - The port to fetch from
  * @param {string} path - The path to fetch (default: /json/list)
  * @returns {Promise<any>} - Parsed JSON response
  */
 export function fetchCDPTargets(port, path = '/json/list') {
+  // Try 127.0.0.1 first, then localhost as fallback
+  return fetchFromHost('127.0.0.1', port, path)
+    .catch(() => fetchFromHost('localhost', port, path));
+}
+
+/**
+ * Fetch JSON from a specific host
+ * @param {string} host - The host to connect to
+ * @param {number} port - The port to fetch from
+ * @param {string} path - The path to fetch
+ * @returns {Promise<any>} - Parsed JSON response
+ */
+function fetchFromHost(host, port, path) {
   return new Promise((resolve, reject) => {
-    const url = `http://127.0.0.1:${port}${path}`;
+    const url = `http://${host}:${port}${path}`;
     
     const req = http.get(url, { timeout: HTTP_TIMEOUT }, (res) => {
       let data = '';

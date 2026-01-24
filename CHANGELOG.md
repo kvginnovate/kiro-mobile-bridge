@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## v1.0.8 (2026-01-24)
+## v1.0.9 (2026-01-24)
 - chore: Remove unused import in click service
 
 ## v1.0.7 (2026-01-23)

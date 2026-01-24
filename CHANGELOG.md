@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.0.11 (2026-01-24)
+- chore: bump version to 1.0.10 [skip ci]
+
+
 ## v1.0.10 (2026-01-24)
 - chore: add version tag to server.js
 

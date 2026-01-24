@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.0.13 (2026-01-24)
+- docs: Add Linux firewall troubleshooting guide and improve server output
+- - Add comprehensive Linux firewall troubleshooting section to README with UFW and iptables examples
+- - Improve server startup output formatting with consistent separator line length
+- - Add State Management section header in server.js for better code organization
+- - Enhance documentation to help users resolve port 3000 connectivity issues on Linux systems
+
+
 ## v1.0.12 (2026-01-24)
 - chore(server): Remove version tag and clean up formatting
 

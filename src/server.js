@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 /**
  * Kiro Mobile Bridge Server
- * @version 1.0.10
- * 
  * A mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN.
  * Captures snapshots of the chat interface via CDP and lets you send messages remotely.
  */
@@ -40,11 +38,6 @@ const __dirname = dirname(__filename);
 // =============================================================================
 
 const PORT = process.env.PORT || 3000;
-
-// =============================================================================
-// State Management
-// =============================================================================
-
 const cascades = new Map(); // cascadeId -> { id, cdp, metadata, snapshot, css, snapshotHash, editor, editorHash }
 const mainWindowCDP = { connection: null, id: null };
 
@@ -366,7 +359,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   const localIP = getLocalIP();
   console.log('');
   console.log('Kiro Mobile Bridge');
-  console.log('─────────────────────');
+  console.log('────────────────────');
   console.log(`Local:   http://localhost:${PORT}`);
   console.log(`Network: http://${localIP}:${PORT}`);
   console.log('');

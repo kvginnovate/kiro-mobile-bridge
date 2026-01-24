@@ -362,7 +362,7 @@ wss.on('connection', (ws, req) => {
   ws.on('error', (err) => console.error(`[WebSocket] Error from ${clientIP}:`, err.message));
 });
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   const localIP = getLocalIP();
   console.log('');
   console.log('Kiro Mobile Bridge');

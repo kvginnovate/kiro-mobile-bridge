@@ -26,12 +26,7 @@ Start Kiro with the remote debugging port enabled:
 
 **Run Kiro with debugging port:**
 ```bash
-# Windows (from default install location)
-"%LOCALAPPDATA%\Programs\Kiro\Kiro.exe" --remote-debugging-port=9000
-# macOS
-/Applications/Kiro.app/Contents/MacOS/Kiro --remote-debugging-port=9000
-# Linux (installed)
-/opt/Kiro/kiro --remote-debugging-port=9000
+kiro --remote-debugging-port=9000
 ```
 
 ### 2. Run with npx (Recommended)

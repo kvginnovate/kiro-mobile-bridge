@@ -1149,15 +1149,19 @@
         const lines = data.content.split('\n');
         let html = '';
         
+        // Show info banner for partial content
         if (data.isPartial || data.note) {
-          html += `<div style="padding: 8px 12px; background: #2d2d30; color: #888; font-size: 11px; border-bottom: 1px solid #3c3c3c;">
-            <span class="codicon codicon-info" style="margin-right: 6px;"></span>${data.note || 'Showing visible lines only.'}
+          const noteText = data.note || 'Showing visible lines only. Use Explorer to open full file.';
+          html += `<div style="padding: 10px 12px; background: linear-gradient(135deg, #2d2d30 0%, #252526 100%); color: #a78bfa; font-size: 12px; border-bottom: 1px solid #3c3c3c; display: flex; align-items: center; gap: 8px;">
+            <span class="codicon codicon-warning" style="color: #f0b429;"></span>
+            <span>${noteText}</span>
           </div>`;
         }
         
         html += '<pre class="editor-code">';
         const startLineNum = data.startLine || 1;
         let startIdx = 0;
+        // Skip leading empty lines (max 3)
         while (startIdx < lines.length && lines[startIdx].trim() === '' && startIdx < 3) startIdx++;
         
         lines.slice(startIdx).forEach((line, idx) => {
@@ -1167,9 +1171,17 @@
         });
         html += '</pre>';
         
+        // Footer with line info
         const endLine = startLineNum + startIdx + lines.slice(startIdx).length - 1;
+        const lineInfo = data.lineCount 
+          ? `Lines ${startLineNum}-${endLine} of ${data.lineCount}` 
+          : `Lines ${startLineNum}-${endLine}`;
+        const fullFileIndicator = !data.isPartial && data.lineCount && endLine >= data.lineCount 
+          ? ' <span style="color: #4caf50;">✓ Complete file</span>' 
+          : '';
+        
         html += `<div style="padding: 6px 12px; background: #252526; color: #666; font-size: 11px; border-top: 1px solid #3c3c3c;">
-          Lines ${startLineNum}-${endLine}${data.lineCount ? ` of ${data.lineCount}` : ''}
+          ${lineInfo}${fullFileIndicator}
         </div>`;
         
         panels.editor.content.innerHTML = html;
@@ -2034,7 +2046,21 @@
     async function openFileInEditor(filePath) {
       if (!selectedCascadeId || !filePath) return;
       
-      showToast(`Opening ${filePath}...`, 1500);
+      // Clean the file path - remove extra whitespace, quotes, backticks, and common prefixes
+      let cleanPath = filePath.trim()
+        .replace(/^['"`]+|['"`]+$/g, '')  // Remove surrounding quotes
+        .replace(/^\s*#\s*/, '')           // Remove markdown header prefix
+        .replace(/^\s*[-*]\s*/, '')        // Remove list markers
+        .replace(/\s+/g, ' ')              // Normalize whitespace
+        .trim();
+      
+      // Extract just the file path if it contains extra text (e.g., "file.ts - some description")
+      const pathMatch = cleanPath.match(/^([^\s]+\.(ts|tsx|js|jsx|py|java|html|css|json|md|yaml|yml|xml|sql|go|rs|c|cpp|h|cs|rb|php|sh|vue|svelte))/i);
+      if (pathMatch) {
+        cleanPath = pathMatch[1];
+      }
+      
+      showToast(`Opening ${cleanPath}...`, 1500);
       
       // Switch to Editor tab
       const editorTab = document.querySelector('[data-panel="editor"]');
@@ -2052,25 +2078,30 @@
         const readResult = await fetch(`/readFile/${selectedCascadeId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filePath })
+          body: JSON.stringify({ filePath: cleanPath })
         });
         
         if (readResult.ok) {
           const data = await readResult.json();
           if (data.content) {
             renderEditorSnapshot(data);
-            showToast(`Opened ${data.fileName || filePath}`, 1500, true);
+            showToast(`Opened ${data.fileName || cleanPath}`, 1500, true);
             return;
           }
+        } else {
+          // Log the error for debugging
+          const errorData = await readResult.json().catch(() => ({}));
+          console.log('[OpenFile] Direct read failed:', errorData.error || readResult.status);
         }
         
-        // Fallback: Click file link in Kiro
+        // Fallback: Click file link in Kiro to open it there
         await fetch(`/click/${selectedCascadeId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tag: 'a', text: filePath, isFileLink: true, filePath })
+          body: JSON.stringify({ tag: 'a', text: cleanPath, isFileLink: true, filePath: cleanPath })
         });
         
+        // Wait for Kiro to open the file
         await new Promise(resolve => setTimeout(resolve, 800));
         
         const fetchEditor = async () => {
@@ -2078,7 +2109,11 @@
             const r = await fetch(`/editor/${selectedCascadeId}`);
             if (r.ok) {
               const data = await r.json();
-              if (data.content || data.html) { renderEditorSnapshot(data); showToast(`Opened ${data.fileName || filePath}`, 1500, true); return true; }
+              if (data.content || data.html) { 
+                renderEditorSnapshot(data); 
+                showToast(`Opened ${data.fileName || cleanPath}`, 1500, true); 
+                return true; 
+              }
             }
           } catch (e) {}
           return false;
@@ -2087,10 +2122,11 @@
         if (!await fetchEditor()) {
           await new Promise(resolve => setTimeout(resolve, 500));
           if (!await fetchEditor()) {
-            showEmptyState('editor', 'codicon-file-code', `Could not load ${filePath}.`);
+            showEmptyState('editor', 'codicon-file-code', `Could not load ${cleanPath}. Try opening it in Kiro first.`);
           }
         }
       } catch (e) {
+        console.error('[OpenFile] Error:', e);
         showToast('Failed to open file');
         showEmptyState('editor', 'codicon-file-code', 'Failed to load file.');
       }

@@ -285,28 +285,96 @@ export async function captureEditor(cdp) {
       }
     }
     
-    // Try Monaco API
+    // Method 1: Try VS Code/Kiro API (acquireVsCodeApi or global vscode)
     try {
-      const monacoEditors = targetDoc.querySelectorAll('.monaco-editor');
-      for (const editorEl of monacoEditors) {
-        const editorInstance = editorEl.__vscode_editor__ || editorEl._editor ||
-          (window.monaco && window.monaco.editor && window.monaco.editor.getEditors && window.monaco.editor.getEditors()[0]);
-        if (editorInstance && editorInstance.getModel) {
-          const model = editorInstance.getModel();
-          if (model) {
-            result.content = model.getValue();
-            result.lineCount = model.getLineCount();
-            result.language = model.getLanguageId ? model.getLanguageId() : '';
+      // Check for VS Code webview API
+      if (typeof acquireVsCodeApi === 'function') {
+        const vscode = acquireVsCodeApi();
+        if (vscode && vscode.getState) {
+          const state = vscode.getState();
+          if (state && state.content) {
+            result.content = state.content;
+            result.lineCount = state.content.split('\\n').length;
             result.hasContent = true;
-            break;
           }
         }
       }
     } catch(e) {
-      // Monaco API not available, continue
+      // VS Code API not available
     }
     
-    // Fallback: Extract from view-lines
+    // Method 2: Try Monaco API with multiple access patterns
+    if (!result.content) {
+      try {
+        const monacoEditors = targetDoc.querySelectorAll('.monaco-editor');
+        for (const editorEl of monacoEditors) {
+          // Try various ways to access the editor instance
+          let editorInstance = null;
+          
+          // Direct property access
+          editorInstance = editorEl.__vscode_editor__ || editorEl._editor;
+          
+          // Try global monaco
+          if (!editorInstance && window.monaco && window.monaco.editor) {
+            const editors = window.monaco.editor.getEditors ? window.monaco.editor.getEditors() : [];
+            if (editors.length > 0) editorInstance = editors[0];
+          }
+          
+          // Try to find editor via data attributes or parent elements
+          if (!editorInstance) {
+            const editorContainer = editorEl.closest('[data-uri]') || editorEl.closest('.editor-instance');
+            if (editorContainer && editorContainer._editor) {
+              editorInstance = editorContainer._editor;
+            }
+          }
+          
+          if (editorInstance && editorInstance.getModel) {
+            const model = editorInstance.getModel();
+            if (model) {
+              result.content = model.getValue();
+              result.lineCount = model.getLineCount();
+              result.language = model.getLanguageId ? model.getLanguageId() : '';
+              result.hasContent = true;
+              break;
+            }
+          }
+        }
+      } catch(e) {
+        // Monaco API not available, continue
+      }
+    }
+    
+    // Method 3: Try to get content from Monaco's internal model store
+    if (!result.content) {
+      try {
+        if (window.monaco && window.monaco.editor) {
+          const models = window.monaco.editor.getModels ? window.monaco.editor.getModels() : [];
+          // Find the model that matches the active file
+          for (const model of models) {
+            const uri = model.uri ? model.uri.toString() : '';
+            if (result.fileName && uri.includes(result.fileName)) {
+              result.content = model.getValue();
+              result.lineCount = model.getLineCount();
+              result.language = model.getLanguageId ? model.getLanguageId() : '';
+              result.hasContent = true;
+              break;
+            }
+          }
+          // If no match by filename, use the first model with content
+          if (!result.content && models.length > 0) {
+            const model = models[0];
+            result.content = model.getValue();
+            result.lineCount = model.getLineCount();
+            result.language = model.getLanguageId ? model.getLanguageId() : '';
+            result.hasContent = true;
+          }
+        }
+      } catch(e) {
+        // Model store not accessible
+      }
+    }
+    
+    // Method 4: Fallback - Extract from view-lines (visible lines only)
     if (!result.content) {
       const viewLines = targetDoc.querySelector('.monaco-editor .view-lines');
       if (viewLines) {
@@ -316,25 +384,62 @@ export async function captureEditor(cdp) {
           let minLineNum = Infinity, maxLineNum = 0;
           const lineMap = new Map();
           
+          // Get line height from first line for accurate line number calculation
+          let lineHeight = 19;
+          if (lines[0]) {
+            const firstLineTop = parseFloat(lines[0].style.top) || 0;
+            const secondLine = lines[1];
+            if (secondLine) {
+              const secondLineTop = parseFloat(secondLine.style.top) || 0;
+              if (secondLineTop > firstLineTop) {
+                lineHeight = secondLineTop - firstLineTop;
+              }
+            }
+          }
+          
           lines.forEach(line => {
             const top = parseFloat(line.style.top) || 0;
-            const lineNum = Math.round(top / 19) + 1;
+            const lineNum = Math.round(top / lineHeight) + 1;
             lineMap.set(lineNum, line.textContent || '');
             minLineNum = Math.min(minLineNum, lineNum);
             maxLineNum = Math.max(maxLineNum, lineNum);
           });
           
-          for (let i = minLineNum; i <= Math.min(maxLineNum, minLineNum + 500); i++) {
+          // Get total line count from scrollbar or line numbers if available
+          let totalLines = maxLineNum;
+          const lineNumbersContainer = targetDoc.querySelector('.monaco-editor .line-numbers');
+          if (lineNumbersContainer) {
+            const lastLineNum = lineNumbersContainer.querySelector('.line-numbers:last-child');
+            if (lastLineNum) {
+              const num = parseInt(lastLineNum.textContent, 10);
+              if (!isNaN(num) && num > totalLines) totalLines = num;
+            }
+          }
+          
+          // Also try to get total from editor's scrollable height
+          const scrollableElement = targetDoc.querySelector('.monaco-editor .monaco-scrollable-element');
+          if (scrollableElement) {
+            const scrollHeight = scrollableElement.scrollHeight;
+            const estimatedLines = Math.ceil(scrollHeight / lineHeight);
+            if (estimatedLines > totalLines) totalLines = estimatedLines;
+          }
+          
+          for (let i = minLineNum; i <= maxLineNum; i++) {
             codeContent += (lineMap.get(i) || '') + '\\n';
           }
           
           result.content = codeContent;
-          result.lineCount = maxLineNum;
+          result.lineCount = totalLines;
           result.startLine = minLineNum;
+          result.endLine = maxLineNum;
           result.hasContent = codeContent.trim().length > 0;
-          if (minLineNum > 1) {
-            result.isPartial = true;
-            result.note = 'Showing lines ' + minLineNum + '-' + maxLineNum + '. Scroll in Kiro to see other parts.';
+          
+          // Always mark as partial when using view-lines fallback
+          result.isPartial = true;
+          if (minLineNum > 1 || maxLineNum < totalLines) {
+            result.note = 'Showing lines ' + minLineNum + '-' + maxLineNum + ' of ' + totalLines + '. Use Explorer to open full file.';
+          } else {
+            result.note = 'Visible lines only. Use Explorer to open full file.';
           }
         }
       }

@@ -215,6 +215,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
     try {
       // Get workspace root
       const workspaceRoot = await getWorkspaceRoot(mainWindowCDP) || process.cwd();
+      console.log(`[ReadFile] Workspace root: ${workspaceRoot}`);
       
       // SECURITY: Validate path is within workspace root
       const pathValidation = validatePathWithinRoot(sanitizedPath, workspaceRoot);
@@ -222,19 +223,46 @@ export function createApiRouter(cascades, mainWindowCDP) {
       let content = null;
       let foundPath = null;
       
+      // Try 1: Direct path validation
       if (pathValidation.valid) {
-        // Try the validated path first
         try {
           content = await fs.readFile(pathValidation.resolvedPath, 'utf-8');
           foundPath = pathValidation.resolvedPath;
+          console.log(`[ReadFile] Found at validated path: ${foundPath}`);
         } catch (e) {
-          // File doesn't exist at validated path, try searching
+          // File doesn't exist at validated path, try other methods
         }
       }
       
-      // If not found, search within workspace only
+      // Try 2: Common path variations
+      if (!content) {
+        const pathVariations = [
+          sanitizedPath,
+          sanitizedPath.replace(/^\.\//, ''),  // Remove leading ./
+          sanitizedPath.replace(/^\//, ''),     // Remove leading /
+          `src/${sanitizedPath}`,               // Try in src/
+          `src/${sanitizedPath.replace(/^src\//, '')}`,
+        ];
+        
+        for (const variation of pathVariations) {
+          const varValidation = validatePathWithinRoot(variation, workspaceRoot);
+          if (varValidation.valid) {
+            try {
+              content = await fs.readFile(varValidation.resolvedPath, 'utf-8');
+              foundPath = varValidation.resolvedPath;
+              console.log(`[ReadFile] Found at variation: ${foundPath}`);
+              break;
+            } catch (e) {
+              // Continue to next variation
+            }
+          }
+        }
+      }
+      
+      // Try 3: Search by filename within workspace
       if (!content) {
         const fileName = path.basename(sanitizedPath);
+        console.log(`[ReadFile] Searching for filename: ${fileName}`);
         foundPath = await findFileRecursive(workspaceRoot, fileName, MAX_FILE_SEARCH_DEPTH);
         
         if (foundPath) {
@@ -242,6 +270,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
           const foundValidation = validatePathWithinRoot(foundPath, workspaceRoot);
           if (foundValidation.valid) {
             content = await fs.readFile(foundPath, 'utf-8');
+            console.log(`[ReadFile] Found via search: ${foundPath}`);
           } else {
             console.warn(`[ReadFile] Found file outside workspace: ${foundPath}`);
             foundPath = null;
@@ -249,7 +278,28 @@ export function createApiRouter(cascades, mainWindowCDP) {
         }
       }
       
+      // Try 4: Search with partial path matching
+      if (!content && sanitizedPath.includes('/')) {
+        const pathParts = sanitizedPath.split('/');
+        const fileName = pathParts[pathParts.length - 1];
+        const parentDir = pathParts[pathParts.length - 2];
+        
+        if (parentDir && fileName) {
+          console.log(`[ReadFile] Searching for ${parentDir}/${fileName}`);
+          foundPath = await findFileWithParent(workspaceRoot, parentDir, fileName, MAX_FILE_SEARCH_DEPTH);
+          
+          if (foundPath) {
+            const foundValidation = validatePathWithinRoot(foundPath, workspaceRoot);
+            if (foundValidation.valid) {
+              content = await fs.readFile(foundPath, 'utf-8');
+              console.log(`[ReadFile] Found via parent search: ${foundPath}`);
+            }
+          }
+        }
+      }
+      
       if (!content) {
+        console.log(`[ReadFile] File not found: ${sanitizedPath}`);
         return res.status(404).json({ error: 'File not found within workspace' });
       }
       
@@ -257,7 +307,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
       
       res.json({
         content,
-        fileName: path.basename(sanitizedPath),
+        fileName: path.basename(foundPath || sanitizedPath),
         fullPath: foundPath,
         language,
         lineCount: content.split('\n').length,
@@ -476,6 +526,56 @@ async function findFileRecursive(dir, fileName, maxDepth = MAX_FILE_SEARCH_DEPTH
           entry.name !== '.git') {
         const found = await findFileRecursive(
           path.join(dir, entry.name), 
+          fileName, 
+          maxDepth, 
+          currentDepth + 1
+        );
+        if (found) return found;
+      }
+    }
+  } catch (e) {
+    // Directory not accessible, skip
+  }
+  return null;
+}
+
+/**
+ * Find file with matching parent directory name
+ * Useful when path is like "services/snapshot.js" and we need to find the right one
+ * @param {string} dir - Directory to search
+ * @param {string} parentDirName - Expected parent directory name
+ * @param {string} fileName - File name to find
+ * @param {number} maxDepth - Maximum search depth
+ * @param {number} currentDepth - Current depth (internal)
+ * @returns {Promise<string|null>}
+ */
+async function findFileWithParent(dir, parentDirName, fileName, maxDepth = MAX_FILE_SEARCH_DEPTH, currentDepth = 0) {
+  if (currentDepth > maxDepth) return null;
+  
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    
+    // Check if current directory matches parent name and contains the file
+    const currentDirName = path.basename(dir);
+    if (currentDirName === parentDirName) {
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name === fileName) {
+          return path.join(dir, entry.name);
+        }
+      }
+    }
+    
+    // Recurse into directories
+    for (const entry of entries) {
+      if (entry.isDirectory() && 
+          (!entry.name.startsWith('.') || entry.name === '.kiro') &&
+          entry.name !== 'node_modules' && 
+          entry.name !== 'dist' &&
+          entry.name !== 'build' &&
+          entry.name !== '.git') {
+        const found = await findFileWithParent(
+          path.join(dir, entry.name), 
+          parentDirName,
           fileName, 
           maxDepth, 
           currentDepth + 1

@@ -214,9 +214,10 @@
     .empty-state p { font-size: 14px; max-width: 280px; }
     
     /* =============================================================================
-       Mobile Bridge Customizations - Hide Follow and Revert buttons in snackbar
+       Mobile Bridge Customizations - Hide Follow button in snackbar (keep "Looks good to me")
        ============================================================================= */
-    .kiro-snackbar-actions .kiro-button[data-variant="primary"] { display: none !important; }
+    /* Hide only the Follow button by targeting buttons containing "Follow" text - done via JS */
+    /* Note: "Looks good to me" and other action buttons should remain visible */
   </style>
 </head>
 <body>
@@ -1083,10 +1084,11 @@
     }
     
     function hideRevertButton() {
-      // Hide Revert button by finding buttons with "Revert" text in snackbar
+      // Hide Revert and Follow buttons by finding buttons with specific text in snackbar
+      // Note: "Looks good to me" and other action buttons should remain visible
       panels.chat.content.querySelectorAll('.kiro-snackbar button, .kiro-snackbar-actions button').forEach(btn => {
         const text = (btn.textContent || '').trim().toLowerCase();
-        if (text === 'revert') {
+        if (text === 'revert' || text === 'follow') {
           btn.style.display = 'none';
         }
       });

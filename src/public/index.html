@@ -1187,6 +1187,147 @@
            SCOPED TO #chatContent ONLY - do not affect Tasks/Editor panels
            ============================================================================= */
         
+        /* =============================================================================
+           SESSION TAB BAR STYLING - "New Session X" tab with action buttons
+           ============================================================================= */
+        
+        /* Session tabs container - horizontal layout */
+        #chatContent [class*="session-tabs"],
+        #chatContent [class*="sessionTabs"],
+        #chatContent [class*="SessionTabs"],
+        #chatContent [class*="chat-tabs"],
+        #chatContent [class*="chatTabs"],
+        #chatContent [class*="ChatTabs"] {
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          background: #1a1a2e !important;
+          border-bottom: 1px solid #3c3c3c !important;
+          padding: 0 !important;
+          gap: 0 !important;
+          min-height: 35px !important;
+        }
+        
+        /* Individual session tab - "New Session X" */
+        #chatContent [class*="session-tab"],
+        #chatContent [class*="sessionTab"],
+        #chatContent [class*="SessionTab"] {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          padding: 8px 12px !important;
+          background: #252542 !important;
+          border: none !important;
+          border-radius: 6px 6px 0 0 !important;
+          margin: 4px 4px 0 4px !important;
+          color: #fff !important;
+          font-size: 13px !important;
+          white-space: nowrap !important;
+        }
+        
+        /* Session tab close button (X) */
+        #chatContent [class*="session-tab"] button,
+        #chatContent [class*="sessionTab"] button,
+        #chatContent [class*="SessionTab"] button,
+        #chatContent [class*="session-tab"] [class*="close"],
+        #chatContent [class*="sessionTab"] [class*="close"] {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 2px !important;
+          margin-left: 4px !important;
+          background: transparent !important;
+          border: none !important;
+          color: #888 !important;
+          cursor: pointer !important;
+        }
+        
+        /* Session action buttons container (+ 📋 🔄 ×) */
+        #chatContent [class*="session-actions"],
+        #chatContent [class*="sessionActions"],
+        #chatContent [class*="SessionActions"],
+        #chatContent [class*="tab-actions"],
+        #chatContent [class*="tabActions"],
+        #chatContent [class*="TabActions"] {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 4px !important;
+          margin-left: auto !important;
+          padding: 4px 8px !important;
+        }
+        
+        /* Individual action buttons */
+        #chatContent [class*="session-actions"] button,
+        #chatContent [class*="sessionActions"] button,
+        #chatContent [class*="tab-actions"] button,
+        #chatContent [class*="tabActions"] button {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 28px !important;
+          height: 28px !important;
+          padding: 4px !important;
+          background: transparent !important;
+          border: none !important;
+          border-radius: 4px !important;
+          color: #888 !important;
+          cursor: pointer !important;
+        }
+        
+        #chatContent [class*="session-actions"] button:hover,
+        #chatContent [class*="sessionActions"] button:hover,
+        #chatContent [class*="tab-actions"] button:hover,
+        #chatContent [class*="tabActions"] button:hover {
+          background: rgba(255,255,255,0.1) !important;
+          color: #fff !important;
+        }
+        
+        /* =============================================================================
+           TASK STATUS BAR - "Current tasks" / "Tasks in queue" section
+           ============================================================================= */
+        
+        /* Task status container - horizontal layout */
+        #chatContent [class*="task-status"],
+        #chatContent [class*="taskStatus"],
+        #chatContent [class*="TaskStatus"],
+        #chatContent [class*="agent-status"],
+        #chatContent [class*="agentStatus"],
+        #chatContent [class*="AgentStatus"] {
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          gap: 16px !important;
+          padding: 8px 12px !important;
+          background: #1e1e1e !important;
+          border-bottom: 1px solid #3c3c3c !important;
+          font-size: 12px !important;
+          color: #888 !important;
+        }
+        
+        /* Task status items - inline */
+        #chatContent [class*="task-status"] > *,
+        #chatContent [class*="taskStatus"] > *,
+        #chatContent [class*="agent-status"] > *,
+        #chatContent [class*="agentStatus"] > * {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          white-space: nowrap !important;
+        }
+        
+        /* Task count labels */
+        #chatContent [class*="task-count"],
+        #chatContent [class*="taskCount"],
+        #chatContent [class*="TaskCount"],
+        #chatContent [class*="queue-count"],
+        #chatContent [class*="queueCount"] {
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 4px !important;
+          color: #888 !important;
+          font-size: 12px !important;
+        }
+        
         /* Force ALL backgrounds to dark theme - SCOPED */
         #chatContent *, #chatContent *::before, #chatContent *::after {
           --vscode-editor-background: #1e1e1e !important;

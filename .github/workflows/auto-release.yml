@@ -82,32 +82,52 @@ jobs:
       - name: Update CHANGELOG
         run: |
           DATE=$(date +%Y-%m-%d)
-          VERSION="${{ steps.bump.outputs.version }}"
+          COMMIT_MSG="${{ steps.commit_info.outputs.message }}"
           
-          # Create new changelog entry
-          TEMP_FILE=$(mktemp)
-          echo "# Changelog" > $TEMP_FILE
-          echo "" >> $TEMP_FILE
-          echo "All notable changes to this project will be documented in this file." >> $TEMP_FILE
-          echo "" >> $TEMP_FILE
-          echo "## v$VERSION ($DATE)" >> $TEMP_FILE
-          
-          # Use heredoc to safely handle commit messages with special characters (apostrophes, quotes, etc.)
-          while IFS= read -r line; do
-            if [ -n "$line" ]; then
-              echo "- $line" >> $TEMP_FILE
+          # Check if today's date section already exists
+          if grep -q "## $DATE" CHANGELOG.md 2>/dev/null; then
+            # Add to existing date section - insert after the date header
+            TEMP_FILE=$(mktemp)
+            awk -v date="## $DATE" -v msg="$COMMIT_MSG" '
+              $0 == date { print; getline; print; 
+                split(msg, lines, "\n");
+                for (i in lines) {
+                  if (lines[i] != "") print "- " lines[i]
+                }
+                next
+              }
+              { print }
+            ' CHANGELOG.md > "$TEMP_FILE"
+            mv "$TEMP_FILE" CHANGELOG.md
+          else
+            # Create new date section
+            TEMP_FILE=$(mktemp)
+            {
+              echo "# Changelog"
+              echo ""
+              echo "All notable changes to this project will be documented in this file."
+              echo ""
+              echo "## $DATE"
+              echo ""
+              echo "$COMMIT_MSG" | while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "- $line"
+                fi
+              done
+              echo ""
+            } > "$TEMP_FILE"
+            
+            # Append existing changelog entries (skip header lines)
+            if [ -f CHANGELOG.md ]; then
+              tail -n +5 CHANGELOG.md >> "$TEMP_FILE"
             fi
-          done << 'COMMIT_MSG'
-          ${{ steps.commit_info.outputs.message }}
-          COMMIT_MSG
-          
-          echo "" >> $TEMP_FILE
-          
-          # Append existing changelog (skip header) if it exists
-          if [ -f CHANGELOG.md ]; then
-            tail -n +4 CHANGELOG.md >> $TEMP_FILE
+            
+            mv "$TEMP_FILE" CHANGELOG.md
           fi
-          mv $TEMP_FILE CHANGELOG.md
+          
+          # Debug: show first 30 lines
+          echo "=== CHANGELOG Preview ==="
+          head -30 CHANGELOG.md
 
       - name: Commit version bump
         run: |

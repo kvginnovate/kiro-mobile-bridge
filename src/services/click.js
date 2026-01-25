@@ -302,6 +302,194 @@ function buildClickScript(clickInfo) {
     }
     
     // =========================================================================
+    // Dialog Choice Buttons (spec workflow options, modal choices)
+    // =========================================================================
+    if (info.isDialogChoice && !element) {
+      const searchText = (info.text || '').trim().toLowerCase();
+      
+      // Strategy 1: Find clickable divs/buttons in snackbar body with matching text
+      const dialogSelectors = [
+        '.kiro-snackbar-body > div',
+        '.kiro-snackbar-body [class*="choice"]',
+        '.kiro-snackbar-body [class*="option"]',
+        '.kiro-snackbar [class*="choice"]',
+        '.kiro-snackbar [class*="option"]',
+        '[class*="dialog"] [class*="choice"]',
+        '[class*="dialog"] [class*="option"]',
+        '[class*="modal"] [class*="choice"]',
+        '[class*="modal"] [class*="option"]',
+        '[role="dialog"] button',
+        '[role="dialog"] [role="button"]',
+        '[role="alertdialog"] button',
+        '[role="alertdialog"] [role="button"]'
+      ];
+      
+      for (const sel of dialogSelectors) {
+        try {
+          const items = targetDoc.querySelectorAll(sel);
+          for (const item of items) {
+            if (!isVisible(item)) continue;
+            const itemText = (item.textContent || '').trim().toLowerCase();
+            // Match if text contains search text or vice versa (partial match)
+            if (searchText && (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30)))) {
+              element = item;
+              matchMethod = 'dialog-choice-selector';
+              break;
+            }
+          }
+          if (element) break;
+        } catch(e) {}
+      }
+      
+      // Strategy 2: Find any clickable element in snackbar body with matching text
+      if (!element && searchText) {
+        const snackbarBody = targetDoc.querySelector('.kiro-snackbar-body');
+        if (snackbarBody) {
+          const allClickables = snackbarBody.querySelectorAll('div, button, [role="button"], [tabindex="0"], [class*="cursor-pointer"]');
+          for (const item of allClickables) {
+            if (!isVisible(item)) continue;
+            // Skip if it has too many children (container element)
+            if (item.children.length > 10) continue;
+            const itemText = (item.textContent || '').trim().toLowerCase();
+            if (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30))) {
+              element = item;
+              matchMethod = 'dialog-choice-snackbar-body';
+              break;
+            }
+          }
+        }
+      }
+      
+      // Strategy 3: Find by cursor pointer style in dialog/snackbar areas
+      if (!element && searchText) {
+        const dialogContainers = targetDoc.querySelectorAll('.kiro-snackbar, [role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"]');
+        for (const container of dialogContainers) {
+          if (!isVisible(container)) continue;
+          const allElements = container.querySelectorAll('*');
+          for (const item of allElements) {
+            if (!isVisible(item)) continue;
+            if (item.children.length > 10) continue;
+            const computedStyle = window.getComputedStyle(item);
+            const isClickable = computedStyle.cursor === 'pointer' || item.getAttribute('tabindex') === '0';
+            if (!isClickable) continue;
+            const itemText = (item.textContent || '').trim().toLowerCase();
+            if (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30))) {
+              element = item;
+              matchMethod = 'dialog-choice-cursor-pointer';
+              break;
+            }
+          }
+          if (element) break;
+        }
+      }
+    }
+    
+    // =========================================================================
+    // Tool Action Buttons (edit, cancel, approve, run buttons in tool panels)
+    // =========================================================================
+    if (info.isToolActionButton && !element) {
+      const searchAction = (info.actionType || info.ariaLabel || info.text || '').trim().toLowerCase();
+      
+      // Map common action names to codicon classes
+      const actionToIconMap = {
+        'edit': ['codicon-edit', 'codicon-pencil'],
+        'cancel': ['codicon-x', 'codicon-close', 'codicon-chrome-close'],
+        'approve': ['codicon-check', 'codicon-pass', 'codicon-check-all'],
+        'run': ['codicon-play', 'codicon-run', 'codicon-debug-start'],
+        'stop': ['codicon-debug-stop', 'codicon-stop'],
+        'retry': ['codicon-refresh', 'codicon-sync'],
+        'trust': ['codicon-shield', 'codicon-verified'],
+        'accept': ['codicon-check', 'codicon-pass']
+      };
+      
+      // Strategy 1: Find by aria-label
+      if (searchAction) {
+        const ariaButtons = targetDoc.querySelectorAll('button[aria-label], [role="button"][aria-label]');
+        for (const btn of ariaButtons) {
+          if (!isVisible(btn)) continue;
+          const btnAriaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+          if (btnAriaLabel.includes(searchAction) || searchAction.includes(btnAriaLabel)) {
+            element = btn;
+            matchMethod = 'tool-action-aria';
+            break;
+          }
+        }
+      }
+      
+      // Strategy 2: Find by codicon class
+      if (!element && searchAction) {
+        const iconClasses = actionToIconMap[searchAction] || [];
+        for (const iconClass of iconClasses) {
+          const icons = targetDoc.querySelectorAll('.' + iconClass);
+          for (const icon of icons) {
+            if (!isVisible(icon)) continue;
+            // Get the clickable parent (button or role=button)
+            const clickableParent = icon.closest('button, [role="button"], [tabindex="0"]');
+            if (clickableParent && isVisible(clickableParent)) {
+              element = clickableParent;
+              matchMethod = 'tool-action-icon-' + iconClass;
+              break;
+            }
+          }
+          if (element) break;
+        }
+      }
+      
+      // Strategy 3: Find icon buttons in tool/command panels by position
+      if (!element && searchAction) {
+        // Look for button groups in tool panels
+        const toolPanelSelectors = [
+          '[class*="tool-action"]',
+          '[class*="toolAction"]',
+          '[class*="command-action"]',
+          '[class*="background-process"]',
+          '[class*="backgroundProcess"]',
+          '[class*="tool-panel"]',
+          '[class*="action-bar"]',
+          '[class*="actionBar"]'
+        ];
+        
+        for (const sel of toolPanelSelectors) {
+          try {
+            const panels = targetDoc.querySelectorAll(sel);
+            for (const panel of panels) {
+              if (!isVisible(panel)) continue;
+              const buttons = panel.querySelectorAll('button, [role="button"]');
+              for (const btn of buttons) {
+                if (!isVisible(btn)) continue;
+                const btnAriaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+                const btnTitle = (btn.getAttribute('title') || '').toLowerCase();
+                const hasMatchingIcon = actionToIconMap[searchAction]?.some(cls => btn.querySelector('.' + cls));
+                
+                if (btnAriaLabel.includes(searchAction) || btnTitle.includes(searchAction) || hasMatchingIcon) {
+                  element = btn;
+                  matchMethod = 'tool-action-panel';
+                  break;
+                }
+              }
+              if (element) break;
+            }
+            if (element) break;
+          } catch(e) {}
+        }
+      }
+      
+      // Strategy 4: Find any visible icon button with matching codicon
+      if (!element && searchAction && actionToIconMap[searchAction]) {
+        const allButtons = targetDoc.querySelectorAll('button, [role="button"]');
+        for (const btn of allButtons) {
+          if (!isVisible(btn)) continue;
+          const hasMatchingIcon = actionToIconMap[searchAction].some(cls => btn.querySelector('.' + cls));
+          if (hasMatchingIcon) {
+            element = btn;
+            matchMethod = 'tool-action-global-icon';
+            break;
+          }
+        }
+      }
+    }
+    
+    // =========================================================================
     // Close Button
     // =========================================================================
     if (isCloseButton && !element) {
@@ -436,17 +624,49 @@ function buildClickScript(clickInfo) {
     // =========================================================================
     if (info.text && info.text.trim() && !element) {
       const searchText = info.text.trim();
-      const allElements = targetDoc.querySelectorAll('button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="listitem"], a, [tabindex="0"], [class*="cursor-pointer"]');
+      const searchTextLower = searchText.toLowerCase();
+      
+      // Extended selectors to include dialog/snackbar elements
+      const allElements = targetDoc.querySelectorAll('button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="listitem"], a, [tabindex="0"], [class*="cursor-pointer"], .kiro-snackbar-body > div, [class*="choice"], [class*="option"], [class*="action"]');
+      
       for (const el of allElements) {
+        if (!isVisible(el)) continue;
         if (!isCloseButton) {
           const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
           if (ariaLabel.includes('close')) continue;
         }
         const elText = (el.textContent || '').trim();
-        if (elText === searchText || elText.includes(searchText) || (elText.length >= 10 && searchText.includes(elText))) {
+        const elTextLower = elText.toLowerCase();
+        
+        // Exact match or contains match
+        if (elText === searchText || elTextLower === searchTextLower || 
+            elText.includes(searchText) || elTextLower.includes(searchTextLower) ||
+            (elText.length >= 10 && searchText.includes(elText)) ||
+            (elTextLower.length >= 10 && searchTextLower.includes(elTextLower))) {
           element = el;
           matchMethod = 'text-content';
           break;
+        }
+      }
+      
+      // If still not found, try a broader search in snackbar/dialog areas
+      if (!element) {
+        const containers = targetDoc.querySelectorAll('.kiro-snackbar, [role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"]');
+        for (const container of containers) {
+          if (!isVisible(container)) continue;
+          const clickables = container.querySelectorAll('div, button, span, [tabindex]');
+          for (const el of clickables) {
+            if (!isVisible(el)) continue;
+            if (el.children.length > 10) continue;
+            const elText = (el.textContent || '').trim();
+            const elTextLower = elText.toLowerCase();
+            if (elTextLower.includes(searchTextLower) || searchTextLower.includes(elTextLower.substring(0, 30))) {
+              element = el;
+              matchMethod = 'text-content-dialog';
+              break;
+            }
+          }
+          if (element) break;
         }
       }
     }

@@ -1676,6 +1676,190 @@
         } catch(e) {}
       });
       
+      // Dialog choice elements (spec workflow options, modal choices)
+      // These are clickable divs inside snackbar body that represent user choices
+      const dialogChoiceSelectors = [
+        '.kiro-snackbar-body > div',
+        '.kiro-snackbar-body [class*="choice"]',
+        '.kiro-snackbar-body [class*="option"]',
+        '.kiro-snackbar [class*="choice"]',
+        '.kiro-snackbar [class*="option"]',
+        '[class*="dialog-choice"]',
+        '[class*="dialogChoice"]',
+        '[role="dialog"] [role="button"]',
+        '[role="alertdialog"] [role="button"]'
+      ];
+      dialogChoiceSelectors.forEach(sel => {
+        try {
+          content.querySelectorAll(sel).forEach(item => {
+            // Skip if already has handler
+            if (item.onclick) return;
+            // Skip buttons (handled by notification selectors)
+            if (item.tagName === 'BUTTON') return;
+            // Skip if it's a container with too many children
+            if (item.children.length > 10) return;
+            // Skip if no meaningful text
+            const itemText = (item.textContent || '').trim();
+            if (itemText.length < 5) return;
+            // Skip if it looks like a header/title (short text, no description)
+            if (itemText.length < 20 && !item.querySelector('*')) return;
+            
+            // Check if it looks clickable (has cursor pointer or specific classes)
+            const computedStyle = window.getComputedStyle(item);
+            const hasPointer = computedStyle.cursor === 'pointer';
+            const hasClickableClass = item.className && (
+              item.className.includes('choice') ||
+              item.className.includes('option') ||
+              item.className.includes('clickable') ||
+              item.className.includes('selectable') ||
+              item.className.includes('action')
+            );
+            const hasTabIndex = item.getAttribute('tabindex') === '0';
+            
+            // Only make clickable if it appears to be interactive
+            if (hasPointer || hasClickableClass || hasTabIndex || item.closest('.kiro-snackbar-body')) {
+              item.style.cursor = 'pointer';
+              item.onclick = async (e) => {
+                e.preventDefault(); e.stopPropagation();
+                
+                // Extract the main title/text (first line or first child text)
+                let choiceText = itemText.substring(0, 100);
+                const firstChild = item.querySelector('div, span, p');
+                if (firstChild) {
+                  const firstText = (firstChild.textContent || '').trim();
+                  if (firstText.length > 10 && firstText.length < 100) {
+                    choiceText = firstText;
+                  }
+                }
+                
+                const clickInfo = {
+                  tag: item.tagName?.toLowerCase() || 'div',
+                  text: choiceText,
+                  ariaLabel: item.getAttribute('aria-label') || '',
+                  role: item.getAttribute('role') || '',
+                  className: item.className || '',
+                  isDialogChoice: true
+                };
+                console.log('[Click] Dialog choice:', clickInfo.text.substring(0, 50));
+                await sendClickToKiro(clickInfo);
+                // Refresh after clicking dialog choice
+                setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+                return false;
+              };
+            }
+          });
+        } catch(e) {}
+      });
+      
+      // Tool action buttons (edit, cancel, approve, run in tool/command panels)
+      // These are icon buttons with codicons like edit, x, check, play
+      const toolActionSelectors = [
+        '[class*="tool-action"] button',
+        '[class*="toolAction"] button',
+        '[class*="action-bar"] button',
+        '[class*="actionBar"] button',
+        '[class*="command"] button[aria-label]',
+        '[class*="background"] button[aria-label]',
+        'button .codicon-edit',
+        'button .codicon-check',
+        'button .codicon-x',
+        'button .codicon-play',
+        'button .codicon-close',
+        'button .codicon-pass',
+        'button .codicon-run',
+        'button .codicon-refresh',
+        'button .codicon-stop'
+      ];
+      
+      // Also find icon buttons by their codicon children
+      const iconButtonPatterns = [
+        { icon: 'codicon-edit', action: 'edit' },
+        { icon: 'codicon-pencil', action: 'edit' },
+        { icon: 'codicon-x', action: 'cancel' },
+        { icon: 'codicon-close', action: 'cancel' },
+        { icon: 'codicon-chrome-close', action: 'cancel' },
+        { icon: 'codicon-check', action: 'approve' },
+        { icon: 'codicon-pass', action: 'approve' },
+        { icon: 'codicon-check-all', action: 'approve' },
+        { icon: 'codicon-play', action: 'run' },
+        { icon: 'codicon-run', action: 'run' },
+        { icon: 'codicon-debug-start', action: 'run' },
+        { icon: 'codicon-stop', action: 'stop' },
+        { icon: 'codicon-debug-stop', action: 'stop' },
+        { icon: 'codicon-refresh', action: 'retry' },
+        { icon: 'codicon-sync', action: 'retry' }
+      ];
+      
+      // Find all buttons with these icons
+      iconButtonPatterns.forEach(({ icon, action }) => {
+        try {
+          content.querySelectorAll('.' + icon).forEach(iconEl => {
+            // Find the parent button
+            const btn = iconEl.closest('button, [role="button"]');
+            if (!btn || btn.onclick) return;
+            
+            // Skip if it's in a tab (handled separately)
+            if (btn.closest('[role="tab"]')) return;
+            
+            btn.style.cursor = 'pointer';
+            btn.onclick = async (e) => {
+              e.preventDefault(); e.stopPropagation();
+              
+              const ariaLabel = btn.getAttribute('aria-label') || '';
+              const title = btn.getAttribute('title') || '';
+              
+              const clickInfo = {
+                tag: 'button',
+                text: ariaLabel || title || action,
+                ariaLabel: ariaLabel,
+                role: btn.getAttribute('role') || 'button',
+                className: btn.className || '',
+                actionType: action,
+                isToolActionButton: true,
+                isIconButton: true
+              };
+              console.log('[Click] Tool action button:', action, ariaLabel || title);
+              await sendClickToKiro(clickInfo);
+              // Refresh after clicking tool action
+              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+              return false;
+            };
+          });
+        } catch(e) {}
+      });
+      
+      // Also handle buttons with aria-labels that indicate actions
+      const actionAriaLabels = ['edit', 'cancel', 'approve', 'run', 'stop', 'retry', 'trust', 'accept', 'reject', 'allow', 'deny'];
+      content.querySelectorAll('button[aria-label], [role="button"][aria-label]').forEach(btn => {
+        if (btn.onclick) return;
+        if (btn.closest('[role="tab"]')) return;
+        
+        const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+        const matchedAction = actionAriaLabels.find(action => ariaLabel.includes(action));
+        
+        if (matchedAction) {
+          btn.style.cursor = 'pointer';
+          btn.onclick = async (e) => {
+            e.preventDefault(); e.stopPropagation();
+            
+            const clickInfo = {
+              tag: 'button',
+              text: btn.getAttribute('aria-label') || matchedAction,
+              ariaLabel: btn.getAttribute('aria-label') || '',
+              role: btn.getAttribute('role') || 'button',
+              className: btn.className || '',
+              actionType: matchedAction,
+              isToolActionButton: true,
+              isIconButton: !btn.textContent?.trim()
+            };
+            console.log('[Click] Tool action (aria):', matchedAction);
+            await sendClickToKiro(clickInfo);
+            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+            return false;
+          };
+        }
+      });
+      
       // Tabs
       content.querySelectorAll('[role="tab"]').forEach(tab => {
         const closeBtn = tab.querySelector('[aria-label="close"], [class*="close"]');

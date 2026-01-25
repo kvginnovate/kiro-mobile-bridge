@@ -97,7 +97,8 @@ export function sanitizeClickInfo(clickInfo) {
     { name: 'tabLabel', maxLength: 100 },
     { name: 'parentTabLabel', maxLength: 100 },
     { name: 'filePath', maxLength: 500 },
-    { name: 'toggleId', maxLength: 100 }
+    { name: 'toggleId', maxLength: 100 },
+    { name: 'actionType', maxLength: 50 }
   ];
   
   for (const { name, maxLength } of stringProps) {
@@ -113,7 +114,8 @@ export function sanitizeClickInfo(clickInfo) {
   // Boolean properties
   const boolProps = [
     'isTab', 'isCloseButton', 'isToggle', 'isModelSelector', 'isModelOption',
-    'isSendButton', 'isFileLink', 'isNotificationButton', 'isIconButton', 'isHistoryItem'
+    'isSendButton', 'isFileLink', 'isNotificationButton', 'isIconButton', 'isHistoryItem',
+    'isDialogChoice', 'isToolActionButton'
   ];
   
   for (const name of boolProps) {

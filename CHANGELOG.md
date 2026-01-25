@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.0.15 (2026-01-25)
+- ci: allow manual trigger for auto-release workflow
+
+
 ## v1.0.14 (2026-01-24)
 - chore: bump version to 1.0.13 [skip ci]
 

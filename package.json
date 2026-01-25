@@ -1,6 +1,6 @@
 {
   "name": "kiro-mobile-bridge",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "A simple mobile web interface for monitoring Kiro IDE agent sessions from your phone over LAN",
   "type": "module",
   "main": "src/server.js",

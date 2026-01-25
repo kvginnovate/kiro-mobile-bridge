@@ -23,6 +23,11 @@
     }
     .app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
     
+    /* CRITICAL: Protect codicon font from any overrides */
+    .codicon, .codicon::before, [class*="codicon"], [class^="codicon-"] {
+      font-family: codicon !important;
+    }
+    
     /* =============================================================================
        Navigation Bar
        ============================================================================= */
@@ -94,11 +99,11 @@
     .editor-search-nav, .editor-search-close { color: #888; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
     .editor-search-nav:hover, .editor-search-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
     .editor-content { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: #1e1e1e; }
-    .editor-code { margin: 0; padding: 8px 0; font-family: Consolas, 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #d4d4d4; background: #1e1e1e; }
+    .editor-code { margin: 0; padding: 8px 0; font-family: Consolas, 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #d4d4d4; background: #1e1e1e; min-width: max-content; }
     .editor-line { display: flex; min-height: 18px; }
     .editor-line:hover { background: rgba(255,255,255,0.04); }
-    .editor-line-num { width: 50px; min-width: 50px; text-align: right; padding-right: 16px; color: #858585; user-select: none; flex-shrink: 0; font-size: 12px; }
-    .editor-line-code { flex: 1; padding-right: 12px; white-space: pre; overflow-x: auto; tab-size: 2; }
+    .editor-line-num { width: 50px; min-width: 50px; text-align: right; padding-right: 16px; color: #858585; user-select: none; flex-shrink: 0; font-size: 12px; position: sticky; left: 0; background: #1e1e1e; z-index: 1; }
+    .editor-line-code { flex: 1; padding-right: 12px; white-space: pre; tab-size: 2; }
     .search-highlight { background: #ffd500; color: #000; border-radius: 2px; padding: 0 1px; }
     .search-highlight.current { background: #ff6b00; color: #fff; outline: 2px solid #ff6b00; }
     
@@ -214,10 +219,49 @@
     .empty-state p { font-size: 14px; max-width: 280px; }
     
     /* =============================================================================
-       Mobile Bridge Customizations - Hide Follow button in snackbar (keep "Looks good to me")
+       Mobile Bridge Customizations - Hide buttons that don't work well on mobile
        ============================================================================= */
-    /* Hide only the Follow button by targeting buttons containing "Follow" text - done via JS */
-    /* Note: "Looks good to me" and other action buttons should remain visible */
+    /* Hide the Trust button (shield icon) - clicking it opens a dialog that's hard to use on mobile */
+    button:has(.codicon-shield), 
+    button:has(.codicon-verified),
+    button:has(.codicon-shield-check),
+    [aria-label*="trust" i],
+    [aria-label*="Trust" i],
+    [title*="trust" i],
+    [title*="Trust" i] {
+      display: none !important;
+    }
+    
+    /* Hide "changes accepted" notification elements */
+    /* Hide expand arrow */
+    [class*="change"] .codicon-chevron-right,
+    [class*="change"] .codicon-chevron-down,
+    [class*="Change"] .codicon-chevron-right,
+    [class*="Change"] .codicon-chevron-down,
+    [class*="accepted"] .codicon-chevron-right,
+    [class*="accepted"] .codicon-chevron-down {
+      display: none !important;
+    }
+    
+    /* Hide "View all" link/button */
+    a:has-text("View all"),
+    button:has-text("View all"),
+    [class*="view-all"],
+    [class*="viewAll"] {
+      display: none !important;
+    }
+    
+    /* Hide file chips in changes notification */
+    [class*="change"] [class*="file-chip"],
+    [class*="change"] [class*="fileChip"],
+    [class*="Change"] [class*="file-chip"],
+    [class*="Change"] [class*="fileChip"],
+    [class*="accepted"] [class*="file"],
+    [class*="Accepted"] [class*="file"] {
+      display: none !important;
+    }
+    
+    /* Also hide via JS for browsers that don't support :has() */
   </style>
 </head>
 <body>
@@ -415,7 +459,7 @@
         const panel = data.panel || 'chat';
         if (!isTypingInKiroInput && panel === activePanel && !isRendering) {
           if (updateDebounceTimer) clearTimeout(updateDebounceTimer);
-          updateDebounceTimer = setTimeout(() => fetchPanelContent(panel, data.cascadeId, true), 500);
+          updateDebounceTimer = setTimeout(() => fetchPanelContent(panel, data.cascadeId, true), 200);
         }
       }
     }
@@ -471,7 +515,7 @@
           renderChatSnapshot(snapshot);
         }
       } catch (e) {
-        if (!navigationPending) showToast('Failed to load chat');
+        // Silently fail - don't show error toasts
       }
     }
     
@@ -670,32 +714,51 @@
     // =============================================================================
     function getBaseStyles() {
       return `<style>
+        /* FIXED THEME - Override all Kiro theme variables to prevent adaptive colors */
         :root, body, #root, .app { 
           font-family: "Segoe WPC", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, "Droid Sans", sans-serif !important; 
           font-size: 13px;
-          --vscode-editor-background: #211d25;
-          --vscode-editor-foreground: #ffffff;
-          --vscode-foreground: #ffffff;
-          --vscode-background: #19161d;
-          --color-text-primary: #ffffff;
-          --color-text-secondary: rgba(255, 255, 255, 0.8);
-          --color-text-tertiary: rgba(255, 255, 255, 0.6);
-          --color-border-primary: #4a464f;
-          --vscode-toggleSwitch-onForeground: #ffffff;
-          --vscode-toggleSwitch-onBackground: #8141e6;
-          --vscode-toggleSwitch-offForeground: #ffffff;
-          --vscode-toggleSwitch-offBackground: #28242e;
-          --vscode-chatTab-foreground: #c1bec6;
-          --vscode-chatTab-background: transparent;
-          --vscode-button-tertiaryForeground: #c1bec6;
-          --vscode-button-tertiaryBackground: transparent;
-          --vscode-button-tertiaryHoverBackground: rgba(255, 255, 255, 0.1);
-          --vscode-button-submitBackground: #7138cc;
-          --vscode-button-submitHoverBackground: #8e47ff;
-          --vscode-input-border: #4a464f;
-          --vscode-chatMessage-background: rgba(255, 255, 255, 0.1);
-          --vscode-agentInProgressIcon-foreground: #7138cc;
-          --vscode-agentAcceptedIcon-foreground: rgba(128, 255, 181, 0.75);
+          --vscode-editor-background: #1e1e1e !important;
+          --vscode-editor-foreground: #ffffff !important;
+          --vscode-foreground: #ffffff !important;
+          --vscode-background: #1e1e1e !important;
+          --vscode-sideBar-background: #1e1e1e !important;
+          --vscode-panel-background: #1e1e1e !important;
+          --vscode-tab-activeBackground: #1e1e1e !important;
+          --vscode-tab-inactiveBackground: #2d2d30 !important;
+          --vscode-tab-activeForeground: #ffffff !important;
+          --vscode-tab-inactiveForeground: #888888 !important;
+          --vscode-tab-border: #3c3c3c !important;
+          --vscode-editorGroupHeader-tabsBackground: #1e1e1e !important;
+          --color-text-primary: #ffffff !important;
+          --color-text-secondary: rgba(255, 255, 255, 0.8) !important;
+          --color-text-tertiary: rgba(255, 255, 255, 0.6) !important;
+          --color-border-primary: #3c3c3c !important;
+          --color-bg-primary: #1e1e1e !important;
+          --color-bg-secondary: #1e1e1e !important;
+          --color-bg-tertiary: #1e1e1e !important;
+          --vscode-toggleSwitch-onForeground: #ffffff !important;
+          --vscode-toggleSwitch-onBackground: #8141e6 !important;
+          --vscode-toggleSwitch-offForeground: #ffffff !important;
+          --vscode-toggleSwitch-offBackground: #28242e !important;
+          --vscode-chatTab-foreground: #c1bec6 !important;
+          --vscode-chatTab-background: transparent !important;
+          --vscode-button-tertiaryForeground: #c1bec6 !important;
+          --vscode-button-tertiaryBackground: transparent !important;
+          --vscode-button-tertiaryHoverBackground: rgba(255, 255, 255, 0.1) !important;
+          --vscode-button-submitBackground: #7138cc !important;
+          --vscode-button-submitHoverBackground: #8e47ff !important;
+          --vscode-input-border: #3c3c3c !important;
+          --vscode-input-background: #1e1e1e !important;
+          --vscode-input-foreground: #ffffff !important;
+          --vscode-chatMessage-background: rgba(255, 255, 255, 0.1) !important;
+          --vscode-agentInProgressIcon-foreground: #7138cc !important;
+          --vscode-agentAcceptedIcon-foreground: rgba(128, 255, 181, 0.75) !important;
+        }
+        
+        /* Preserve codicon font for icons */
+        .codicon, [class*="codicon"], [class^="codicon-"] {
+          font-family: codicon !important;
         }
         
         /* Force solid background for all content */
@@ -704,34 +767,98 @@
           background-color: #1e1e1e !important;
         }
         
-        /* Keep input elements visible and interactive */
-        [contenteditable="true"], [data-lexical-editor="true"], .ProseMirror, textarea {
+        /* FIXED THEME: Force ALL panel headers and tab areas to fixed dark colors - SCOPED */
+        #chatContent [class*="header"], #chatContent [class*="Header"],
+        #chatContent [class*="panel-header"], #chatContent [class*="panelHeader"], #chatContent [class*="PanelHeader"],
+        #chatContent [class*="sidebar-header"], #chatContent [class*="sidebarHeader"], #chatContent [class*="SidebarHeader"],
+        #chatContent [class*="view-header"], #chatContent [class*="viewHeader"], #chatContent [class*="ViewHeader"] {
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+          border-color: #3c3c3c !important;
+        }
+        
+        /* FIXED THEME: Force Kiro's tab bar to use fixed dark colors - SCOPED */
+        #chatContent [class*="tab-bar"], #chatContent [class*="tabBar"], #chatContent [class*="TabBar"],
+        #chatContent [class*="tabs-container"], #chatContent [class*="tabsContainer"], #chatContent [class*="TabsContainer"],
+        #chatContent [class*="tabs-header"], #chatContent [class*="tabsHeader"], #chatContent [class*="TabsHeader"],
+        #chatContent [class*="session-tabs"], #chatContent [class*="sessionTabs"], #chatContent [class*="SessionTabs"],
+        #chatContent [class*="chat-tabs"], #chatContent [class*="chatTabs"], #chatContent [class*="ChatTabs"],
+        #chatContent [class*="panel-tabs"], #chatContent [class*="panelTabs"], #chatContent [class*="PanelTabs"],
+        #chatContent [role="tablist"],
+        #chatContent [class*="tab-bar"][style], #chatContent [class*="tabBar"][style], #chatContent [class*="TabBar"][style] {
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+          border-bottom: 1px solid #3c3c3c !important;
+          border-color: #3c3c3c !important;
+        }
+        
+        /* FIXED THEME: Force Kiro's tabs to use fixed colors - SCOPED */
+        #chatContent [role="tab"], #chatContent [class*="tab-item"], #chatContent [class*="tabItem"], #chatContent [class*="TabItem"],
+        #chatContent [class*="session-tab"], #chatContent [class*="sessionTab"], #chatContent [class*="SessionTab"],
+        #chatContent [class*="panel-tab"], #chatContent [class*="panelTab"], #chatContent [class*="PanelTab"],
+        #chatContent [role="tab"][style], #chatContent [class*="tab"][style] {
+          background: transparent !important;
+          background-color: transparent !important;
+          color: #888888 !important;
+          border: none !important;
+          border-color: transparent !important;
+        }
+        
+        #chatContent [role="tab"][aria-selected="true"], #chatContent [role="tab"].active,
+        #chatContent [class*="tab-item"].active, #chatContent [class*="tabItem"].active,
+        #chatContent [class*="session-tab"].active, #chatContent [class*="sessionTab"].active,
+        #chatContent [class*="panel-tab"].active, #chatContent [class*="panelTab"].active,
+        #chatContent [class*="tab"][class*="active"], #chatContent [class*="Tab"][class*="active"],
+        #chatContent [class*="tab"][class*="selected"], #chatContent [class*="Tab"][class*="selected"],
+        #chatContent [role="tab"][aria-selected="true"][style], #chatContent [class*="tab"][class*="active"][style] {
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+          color: #ffffff !important;
+          border-bottom: 2px solid #7138cc !important;
+        }
+        
+        /* FIXED THEME: Force sidebar and action bar backgrounds - SCOPED */
+        #chatContent [class*="sidebar"], #chatContent [class*="Sidebar"], #chatContent [class*="SideBar"],
+        #chatContent [class*="action-bar"], #chatContent [class*="actionBar"], #chatContent [class*="ActionBar"],
+        #chatContent [class*="activity-bar"], #chatContent [class*="activityBar"], #chatContent [class*="ActivityBar"],
+        #chatContent [class*="sidebar"][style], #chatContent [class*="Sidebar"][style] {
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+        }
+        
+        /* NUCLEAR OPTION: Override ANY element with background style in tab/header areas - SCOPED */
+        #chatContent [class*="tab"] *, #chatContent [class*="Tab"] *, #chatContent [class*="header"] *, #chatContent [class*="Header"] * {
+          background-color: inherit !important;
+        }
+        
+        /* Keep input elements visible and interactive - SCOPED */
+        #chatContent [contenteditable="true"], #chatContent [data-lexical-editor="true"], #chatContent .ProseMirror, #chatContent textarea {
           display: block !important;
           visibility: visible !important;
           opacity: 1 !important;
           pointer-events: auto !important;
         }
         
-        /* Hide tooltips, popovers, and overlay elements */
+        /* Hide tooltips, popovers, and overlay elements - SCOPED */
         /* IMPORTANT: Do NOT hide model-related elements - use negative lookahead patterns */
-        [role="tooltip"], [data-tooltip],
-        [class*="tooltip"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]),
-        [class*="Tooltip"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]),
-        [class*="popover"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]):not([role="listbox"]):not([role="menu"]),
-        [class*="Popover"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]):not([role="listbox"]):not([role="menu"]),
-        [class*="overlay"]:not(button):not([role="button"]):not([class*="dropdown"]):not([class*="model"]):not([class*="Model"]),
-        [class*="Overlay"]:not(button):not([role="button"]):not([class*="dropdown"]):not([class*="model"]):not([class*="Model"]) {
+        #chatContent [role="tooltip"], #chatContent [data-tooltip],
+        #chatContent [class*="tooltip"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]),
+        #chatContent [class*="Tooltip"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]),
+        #chatContent [class*="popover"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]):not([role="listbox"]):not([role="menu"]),
+        #chatContent [class*="Popover"]:not(button):not([role="button"]):not([class*="model"]):not([class*="Model"]):not([role="listbox"]):not([role="menu"]),
+        #chatContent [class*="overlay"]:not(button):not([role="button"]):not([class*="dropdown"]):not([class*="model"]):not([class*="Model"]),
+        #chatContent [class*="Overlay"]:not(button):not([role="button"]):not([class*="dropdown"]):not([class*="model"]):not([class*="Model"]) {
           display: none !important;
           visibility: hidden !important;
           opacity: 0 !important;
           pointer-events: none !important;
         }
         
-        /* Model selector dropdown */
-        [class*="dropdown-menu"], [class*="dropdownMenu"], [class*="DropdownMenu"],
-        [class*="dropdown-content"], [class*="dropdownContent"], [class*="DropdownContent"],
-        [class*="model-list"], [class*="modelList"], [class*="ModelList"],
-        [role="listbox"], [role="menu"] {
+        /* Model selector dropdown - SCOPED */
+        #chatContent [class*="dropdown-menu"], #chatContent [class*="dropdownMenu"], #chatContent [class*="DropdownMenu"],
+        #chatContent [class*="dropdown-content"], #chatContent [class*="dropdownContent"], #chatContent [class*="DropdownContent"],
+        #chatContent [class*="model-list"], #chatContent [class*="modelList"], #chatContent [class*="ModelList"],
+        #chatContent [role="listbox"], #chatContent [role="menu"] {
           display: block !important;
           visibility: visible !important;
           opacity: 1 !important;
@@ -745,11 +872,11 @@
           position: absolute !important;
         }
         
-        /* Dropdown menu items */
-        [class*="dropdown-item"], [class*="dropdownItem"], [class*="DropdownItem"],
-        [class*="model-option"], [class*="modelOption"], [class*="ModelOption"],
-        .kiro-dropdown-item,
-        [role="option"], [role="menuitem"] {
+        /* Dropdown menu items - SCOPED */
+        #chatContent [class*="dropdown-item"], #chatContent [class*="dropdownItem"], #chatContent [class*="DropdownItem"],
+        #chatContent [class*="model-option"], #chatContent [class*="modelOption"], #chatContent [class*="ModelOption"],
+        #chatContent .kiro-dropdown-item,
+        #chatContent [role="option"], #chatContent [role="menuitem"] {
           display: flex !important;
           visibility: visible !important;
           opacity: 1 !important;
@@ -760,39 +887,39 @@
           color: #cccccc !important;
         }
         
-        [class*="dropdown-item"]:hover, [class*="dropdownItem"]:hover,
-        .kiro-dropdown-item:hover,
-        [role="option"]:hover, [role="menuitem"]:hover {
+        #chatContent [class*="dropdown-item"]:hover, #chatContent [class*="dropdownItem"]:hover,
+        #chatContent .kiro-dropdown-item:hover,
+        #chatContent [role="option"]:hover, #chatContent [role="menuitem"]:hover {
           background: rgba(255, 255, 255, 0.1) !important;
         }
         
-        /* Hide model descriptions in dropdown - keep only name and credit */
-        .kiro-dropdown-item [class*="description"],
-        .kiro-dropdown-item [class*="Description"],
-        .kiro-dropdown-item [class*="subtitle"],
-        .kiro-dropdown-item [class*="Subtitle"],
-        .kiro-dropdown-item > div:last-child:not(:first-child),
-        .kiro-dropdown-menu [class*="description"],
-        .kiro-dropdown-menu [class*="Description"],
-        [class*="dropdown-item"] [class*="description"],
-        [class*="dropdown-item"] [class*="Description"],
-        [role="option"] [class*="description"],
-        [role="option"] [class*="Description"] {
+        /* Hide model descriptions in dropdown - keep only name and credit - SCOPED */
+        #chatContent .kiro-dropdown-item [class*="description"],
+        #chatContent .kiro-dropdown-item [class*="Description"],
+        #chatContent .kiro-dropdown-item [class*="subtitle"],
+        #chatContent .kiro-dropdown-item [class*="Subtitle"],
+        #chatContent .kiro-dropdown-item > div:last-child:not(:first-child),
+        #chatContent .kiro-dropdown-menu [class*="description"],
+        #chatContent .kiro-dropdown-menu [class*="Description"],
+        #chatContent [class*="dropdown-item"] [class*="description"],
+        #chatContent [class*="dropdown-item"] [class*="Description"],
+        #chatContent [role="option"] [class*="description"],
+        #chatContent [role="option"] [class*="Description"] {
           display: none !important;
         }
         
-        /* Compact model dropdown items */
-        .kiro-dropdown-item,
-        .kiro-dropdown-menu > div {
+        /* Compact model dropdown items - SCOPED */
+        #chatContent .kiro-dropdown-item,
+        #chatContent .kiro-dropdown-menu > div {
           padding: 8px 12px !important;
           min-height: auto !important;
         }
         
-        /* Model selector button */
-        [class*="model-selector"], [class*="modelSelector"], [class*="ModelSelector"],
-        [class*="model-dropdown"], [class*="modelDropdown"], [class*="ModelDropdown"],
-        button[class*="dropdown"], [role="button"][class*="dropdown"],
-        [class*="select-model"], [class*="selectModel"] {
+        /* Model selector button - FIXED THEME - SCOPED */
+        #chatContent [class*="model-selector"], #chatContent [class*="modelSelector"], #chatContent [class*="ModelSelector"],
+        #chatContent [class*="model-dropdown"], #chatContent [class*="modelDropdown"], #chatContent [class*="ModelDropdown"],
+        #chatContent button[class*="dropdown"], #chatContent [role="button"][class*="dropdown"],
+        #chatContent [class*="select-model"], #chatContent [class*="selectModel"] {
           display: inline-flex !important;
           visibility: visible !important;
           opacity: 1 !important;
@@ -803,48 +930,55 @@
           background: transparent !important;
           border: none !important;
           border-radius: 4px !important;
-          color: var(--vscode-foreground, #c1bec6) !important;
+          color: #c1bec6 !important;
           font-size: 12px !important;
           cursor: pointer !important;
         }
         
-        [class*="model-selector"]:hover, [class*="modelSelector"]:hover,
-        button[class*="dropdown"]:hover {
+        #chatContent [class*="model-selector"]:hover, #chatContent [class*="modelSelector"]:hover,
+        #chatContent button[class*="dropdown"]:hover {
           background: rgba(255, 255, 255, 0.1) !important;
         }
         
-        /* Reset positioning */
-        #root, .app, [class*="cascade"], [class*="Cascade"] {
+        /* Reset positioning - SCOPED */
+        #chatContent #root, #chatContent .app, #chatContent [class*="cascade"], #chatContent [class*="Cascade"] {
           position: relative !important;
         }
         
-        [style*="position: fixed"], [style*="position:fixed"] {
+        #chatContent [style*="position: fixed"], #chatContent [style*="position:fixed"] {
           position: absolute !important;
         }
         
-        * { font-family: inherit; }
-        code, pre, .monaco-editor { font-family: Menlo, Monaco, "Courier New", monospace !important; }
+        /* Scoped font inheritance - only for chat content, NOT global */
+        #chatContent, #chatContent > * { font-family: inherit; }
         
-        /* Icon sizes */
-        svg[viewBox="0 0 24 24"] { width: 16px !important; height: 16px !important; }
-        svg[viewBox="0 0 16 16"] { width: 14px !important; height: 14px !important; }
-        svg { color: inherit; max-width: 20px !important; max-height: 20px !important; }
-        svg path, svg rect { fill: currentColor; }
-        svg[fill="none"] path { fill: none; }
-        svg circle[stroke] { fill: none !important; }
-        svg circle:not([stroke]) { fill: currentColor; }
+        /* CRITICAL: Preserve codicon font for ALL icons on the page */
+        .codicon, [class*="codicon"], [class^="codicon-"] {
+          font-family: codicon !important;
+        }
         
-        /* Context window progress circle */
-        svg[class*="context"], svg[class*="progress"], [class*="context"] svg {
+        #chatContent code, #chatContent pre, #chatContent .monaco-editor { font-family: Menlo, Monaco, "Courier New", monospace !important; }
+        
+        /* Icon sizes - SCOPED to #chatContent only */
+        #chatContent svg[viewBox="0 0 24 24"] { width: 16px !important; height: 16px !important; }
+        #chatContent svg[viewBox="0 0 16 16"] { width: 14px !important; height: 14px !important; }
+        #chatContent svg { color: inherit; max-width: 20px !important; max-height: 20px !important; }
+        #chatContent svg path, #chatContent svg rect { fill: currentColor; }
+        #chatContent svg[fill="none"] path { fill: none; }
+        #chatContent svg circle[stroke] { fill: none !important; }
+        #chatContent svg circle:not([stroke]) { fill: currentColor; }
+        
+        /* Context window progress circle - SCOPED */
+        #chatContent svg[class*="context"], #chatContent svg[class*="progress"], #chatContent [class*="context"] svg {
           overflow: visible !important;
         }
-        svg circle[stroke-dasharray] {
+        #chatContent svg circle[stroke-dasharray] {
           fill: none !important;
           stroke-linecap: round !important;
         }
-        [class*="context-window"], [class*="contextWindow"], [class*="ContextWindow"],
-        [class*="context-indicator"], [class*="contextIndicator"], [class*="ContextIndicator"],
-        [class*="token-usage"], [class*="tokenUsage"], [class*="TokenUsage"] {
+        #chatContent [class*="context-window"], #chatContent [class*="contextWindow"], #chatContent [class*="ContextWindow"],
+        #chatContent [class*="context-indicator"], #chatContent [class*="contextIndicator"], #chatContent [class*="ContextIndicator"],
+        #chatContent [class*="token-usage"], #chatContent [class*="tokenUsage"], #chatContent [class*="TokenUsage"] {
           display: inline-flex !important;
           visibility: visible !important;
           opacity: 1 !important;
@@ -855,8 +989,8 @@
           position: relative !important;
           flex-shrink: 0 !important;
         }
-        [class*="context-window"]::before, [class*="contextWindow"]::before, [class*="ContextWindow"]::before,
-        [class*="context-indicator"]::before, [class*="contextIndicator"]::before {
+        #chatContent [class*="context-window"]::before, #chatContent [class*="contextWindow"]::before, #chatContent [class*="ContextWindow"]::before,
+        #chatContent [class*="context-indicator"]::before, #chatContent [class*="contextIndicator"]::before {
           content: '' !important;
           position: absolute !important;
           top: 2px !important;
@@ -868,44 +1002,45 @@
           box-sizing: border-box !important;
           z-index: 0 !important;
         }
-        [class*="context-window"] svg, [class*="contextWindow"] svg, [class*="ContextWindow"] svg,
-        [class*="context-indicator"] svg, [class*="contextIndicator"] svg {
+        #chatContent [class*="context-window"] svg, #chatContent [class*="contextWindow"] svg, #chatContent [class*="ContextWindow"] svg,
+        #chatContent [class*="context-indicator"] svg, #chatContent [class*="contextIndicator"] svg {
           width: 16px !important;
           height: 16px !important;
           transform: rotate(-90deg) !important;
           position: relative !important;
           z-index: 1 !important;
         }
-        [class*="context-window"] svg circle, [class*="contextWindow"] svg circle, [class*="ContextWindow"] svg circle,
-        [class*="context-indicator"] svg circle, [class*="contextIndicator"] svg circle {
+        #chatContent [class*="context-window"] svg circle, #chatContent [class*="contextWindow"] svg circle, #chatContent [class*="ContextWindow"] svg circle,
+        #chatContent [class*="context-indicator"] svg circle, #chatContent [class*="contextIndicator"] svg circle {
           fill: none !important;
           stroke-width: 2 !important;
           stroke-linecap: round !important;
           stroke: #4ade80 !important;
         }
-        [class*="context"] svg circle, [class*="Context"] svg circle {
+        #chatContent [class*="context"] svg circle, #chatContent [class*="Context"] svg circle {
           display: block !important;
           visibility: visible !important;
         }
         
-        /* Chat input toolbar area */
-        [class*="chat-input"], [class*="chatInput"], [class*="ChatInput"],
-        [class*="input-area"], [class*="inputArea"], [class*="InputArea"],
-        [class*="message-input"], [class*="messageInput"], [class*="MessageInput"],
-        [class*="composer"], [class*="Composer"] {
+        /* Chat input toolbar area - FIXED THEME - SCOPED */
+        #chatContent [class*="chat-input"], #chatContent [class*="chatInput"], #chatContent [class*="ChatInput"],
+        #chatContent [class*="input-area"], #chatContent [class*="inputArea"], #chatContent [class*="InputArea"],
+        #chatContent [class*="message-input"], #chatContent [class*="messageInput"], #chatContent [class*="MessageInput"],
+        #chatContent [class*="composer"], #chatContent [class*="Composer"] {
           display: flex !important;
           visibility: visible !important;
           flex-direction: column !important;
           gap: 8px !important;
           padding: 8px 12px !important;
-          background: var(--vscode-editor-background, #1e1e1e) !important;
-          border-top: 1px solid var(--color-border-primary, #4a464f) !important;
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+          border-top: 1px solid #3c3c3c !important;
         }
         
-        /* Input toolbar row */
-        [class*="input-toolbar"], [class*="inputToolbar"], [class*="InputToolbar"],
-        [class*="chat-toolbar"], [class*="chatToolbar"], [class*="ChatToolbar"],
-        [class*="composer-toolbar"], [class*="composerToolbar"] {
+        /* Input toolbar row - SCOPED */
+        #chatContent [class*="input-toolbar"], #chatContent [class*="inputToolbar"], #chatContent [class*="InputToolbar"],
+        #chatContent [class*="chat-toolbar"], #chatContent [class*="chatToolbar"], #chatContent [class*="ChatToolbar"],
+        #chatContent [class*="composer-toolbar"], #chatContent [class*="composerToolbar"] {
           display: flex !important;
           visibility: visible !important;
           align-items: center !important;
@@ -913,10 +1048,10 @@
           flex-wrap: wrap !important;
         }
         
-        /* Context button (# symbol) */
-        [class*="context-button"], [class*="contextButton"], [class*="ContextButton"],
-        button[aria-label*="context"], button[aria-label*="Context"],
-        [class*="hash-button"], [class*="hashButton"] {
+        /* Context button (# symbol) - FIXED THEME - SCOPED */
+        #chatContent [class*="context-button"], #chatContent [class*="contextButton"], #chatContent [class*="ContextButton"],
+        #chatContent button[aria-label*="context"], #chatContent button[aria-label*="Context"],
+        #chatContent [class*="hash-button"], #chatContent [class*="hashButton"] {
           display: inline-flex !important;
           visibility: visible !important;
           align-items: center !important;
@@ -927,32 +1062,32 @@
           background: transparent !important;
           border: none !important;
           border-radius: 4px !important;
-          color: var(--vscode-foreground, #c1bec6) !important;
+          color: #c1bec6 !important;
           font-size: 16px !important;
           font-weight: 600 !important;
           cursor: pointer !important;
         }
         
-        [class*="context-button"]:hover, [class*="contextButton"]:hover,
-        button[aria-label*="context"]:hover {
+        #chatContent [class*="context-button"]:hover, #chatContent [class*="contextButton"]:hover,
+        #chatContent button[aria-label*="context"]:hover {
           background: rgba(255, 255, 255, 0.1) !important;
         }
         
-        /* Message text flow - inline elements */
-        [class*="message"] p, [class*="Message"] p, [class*="chat"] p, [class*="Chat"] p {
+        /* Message text flow - inline elements - SCOPED */
+        #chatContent [class*="message"] p, #chatContent [class*="Message"] p, #chatContent [class*="chat"] p, #chatContent [class*="Chat"] p {
           display: block !important;
         }
         
-        [class*="message"] a, [class*="Message"] a, [class*="message"] code, [class*="Message"] code,
-        [class*="message"] span, [class*="Message"] span, [class*="chat"] a, [class*="Chat"] a,
-        [class*="chat"] code, [class*="Chat"] code, [class*="file-link"], [class*="FileLink"],
-        [class*="inline"], code:not(pre code) {
+        #chatContent [class*="message"] a, #chatContent [class*="Message"] a, #chatContent [class*="message"] code, #chatContent [class*="Message"] code,
+        #chatContent [class*="message"] span, #chatContent [class*="Message"] span, #chatContent [class*="chat"] a, #chatContent [class*="Chat"] a,
+        #chatContent [class*="chat"] code, #chatContent [class*="Chat"] code, #chatContent [class*="file-link"], #chatContent [class*="FileLink"],
+        #chatContent [class*="inline"], #chatContent code:not(pre code) {
           display: inline !important;
           vertical-align: baseline !important;
         }
         
-        /* Inline code styling */
-        code:not(pre code) {
+        /* Inline code styling - SCOPED */
+        #chatContent code:not(pre code) {
           background: rgba(255, 255, 255, 0.1) !important;
           padding: 2px 6px !important;
           border-radius: 3px !important;
@@ -960,10 +1095,10 @@
           font-size: 12px !important;
         }
         
-        /* File badges/chips */
-        [class*="file-badge"], [class*="FileBadge"], [class*="file-chip"], [class*="FileChip"],
-        [class*="deleted"], [class*="Deleted"], [class*="created"], [class*="Created"],
-        [class*="modified"], [class*="Modified"] {
+        /* File badges/chips - SCOPED */
+        #chatContent [class*="file-badge"], #chatContent [class*="FileBadge"], #chatContent [class*="file-chip"], #chatContent [class*="FileChip"],
+        #chatContent [class*="deleted"], #chatContent [class*="Deleted"], #chatContent [class*="created"], #chatContent [class*="Created"],
+        #chatContent [class*="modified"], #chatContent [class*="Modified"] {
           display: inline-flex !important;
           align-items: center !important;
           gap: 4px !important;
@@ -975,19 +1110,19 @@
           vertical-align: middle !important;
         }
         
-        /* Bullet lists */
-        ul li, ol li { display: list-item !important; }
-        ul li > *, ol li > * { display: inline !important; }
-        ul li > p, ol li > p { display: inline !important; margin: 0 !important; }
+        /* Bullet lists - SCOPED */
+        #chatContent ul li, #chatContent ol li { display: list-item !important; }
+        #chatContent ul li > *, #chatContent ol li > * { display: inline !important; }
+        #chatContent ul li > p, #chatContent ol li > p { display: inline !important; margin: 0 !important; }
         
-        [role="switch"], [class*="toggle"] {
+        #chatContent [role="switch"], #chatContent [class*="toggle"] {
           overflow: visible !important;
           min-width: 36px !important;
           flex-shrink: 0 !important;
         }
         
-        /* Toggle switch styling */
-        .kiro-toggle-switch {
+        /* Toggle switch styling - FIXED THEME - SCOPED */
+        #chatContent .kiro-toggle-switch {
           display: flex !important;
           align-items: center !important;
           gap: 4px !important;
@@ -995,17 +1130,17 @@
           border-radius: 6px !important;
           border: none !important;
         }
-        .kiro-toggle-switch > input[type="checkbox"] {
+        #chatContent .kiro-toggle-switch > input[type="checkbox"] {
           appearance: none !important;
           width: 36px !important;
           height: 18px !important;
           border-radius: 9px !important;
-          background-color: var(--vscode-toggleSwitch-offBackground) !important;
-          border: 1px solid var(--vscode-input-border) !important;
+          background-color: #28242e !important;
+          border: 1px solid #3c3c3c !important;
           cursor: pointer !important;
           position: relative !important;
         }
-        .kiro-toggle-switch > input[type="checkbox"]::after {
+        #chatContent .kiro-toggle-switch > input[type="checkbox"]::after {
           content: "" !important;
           position: absolute !important;
           top: 50% !important;
@@ -1017,11 +1152,112 @@
           background-color: #fff !important;
           transition: left 0.2s !important;
         }
-        .kiro-toggle-switch > input[type="checkbox"]:checked {
-          background-color: var(--vscode-toggleSwitch-onBackground) !important;
+        /* Support both :checked pseudo-class AND aria-checked attribute - SCOPED */
+        #chatContent .kiro-toggle-switch > input[type="checkbox"]:checked,
+        #chatContent .kiro-toggle-switch > input[type="checkbox"][aria-checked="true"],
+        #chatContent .kiro-toggle-switch > input[type="checkbox"][checked] {
+          background-color: #8141e6 !important;
         }
-        .kiro-toggle-switch > input[type="checkbox"]:checked::after {
+        #chatContent .kiro-toggle-switch > input[type="checkbox"]:checked::after,
+        #chatContent .kiro-toggle-switch > input[type="checkbox"][aria-checked="true"]::after,
+        #chatContent .kiro-toggle-switch > input[type="checkbox"][checked]::after {
           left: 18px !important;
+        }
+        /* Also support role="switch" elements - SCOPED */
+        #chatContent [role="switch"] {
+          cursor: pointer !important;
+        }
+        #chatContent [role="switch"][aria-checked="true"],
+        #chatContent [role="switch"][data-state="checked"] {
+          background-color: #8141e6 !important;
+        }
+        #chatContent [role="switch"][aria-checked="false"],
+        #chatContent [role="switch"][data-state="unchecked"] {
+          background-color: #28242e !important;
+        }
+      </style>`;
+    }
+    
+    // Post-override styles - applied AFTER Kiro's CSS to force fixed dark theme
+    // IMPORTANT: All selectors are scoped to #chatContent to avoid affecting other panels
+    function getPostOverrideStyles() {
+      return `<style>
+        /* =============================================================================
+           POST-OVERRIDE: Force fixed dark theme AFTER Kiro's CSS
+           SCOPED TO #chatContent ONLY - do not affect Tasks/Editor panels
+           ============================================================================= */
+        
+        /* Force ALL backgrounds to dark theme - SCOPED */
+        #chatContent *, #chatContent *::before, #chatContent *::after {
+          --vscode-editor-background: #1e1e1e !important;
+          --vscode-sideBar-background: #1e1e1e !important;
+          --vscode-panel-background: #1e1e1e !important;
+          --vscode-tab-activeBackground: #1e1e1e !important;
+          --vscode-tab-inactiveBackground: #1e1e1e !important;
+          --vscode-editorGroupHeader-tabsBackground: #1e1e1e !important;
+          --color-bg-primary: #1e1e1e !important;
+          --color-bg-secondary: #1e1e1e !important;
+          --color-border-primary: #3c3c3c !important;
+        }
+        
+        /* Force background on elements inside chatContent */
+        #chatContent, 
+        #chatContent > body, 
+        #chatContent > #root, 
+        #chatContent div, 
+        #chatContent section, 
+        #chatContent header, 
+        #chatContent nav, 
+        #chatContent aside, 
+        #chatContent main, 
+        #chatContent article {
+          background-color: #1e1e1e !important;
+        }
+        
+        /* Tab bar areas - scoped */
+        #chatContent [class*="tab"], 
+        #chatContent [class*="Tab"], 
+        #chatContent [role="tablist"], 
+        #chatContent [role="tab"] {
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+          border-color: #3c3c3c !important;
+        }
+        
+        /* Active/selected tabs - scoped */
+        #chatContent [class*="tab"][class*="active"], 
+        #chatContent [class*="Tab"][class*="active"],
+        #chatContent [class*="tab"][class*="selected"], 
+        #chatContent [class*="Tab"][class*="selected"],
+        #chatContent [role="tab"][aria-selected="true"] {
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+          color: #ffffff !important;
+        }
+        
+        /* Headers and panels - scoped */
+        #chatContent [class*="header"], 
+        #chatContent [class*="Header"], 
+        #chatContent [class*="panel"], 
+        #chatContent [class*="Panel"] {
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+        }
+        
+        /* Chat input area - scoped */
+        #chatContent [class*="input"], 
+        #chatContent [class*="Input"], 
+        #chatContent [class*="composer"], 
+        #chatContent [class*="Composer"] {
+          background: #1e1e1e !important;
+          background-color: #1e1e1e !important;
+          border-color: #3c3c3c !important;
+        }
+        
+        /* Preserve codicon fonts - scoped */
+        #chatContent .codicon, 
+        #chatContent [class*="codicon"] {
+          font-family: codicon !important;
         }
       </style>`;
     }
@@ -1039,10 +1275,12 @@
       
       let html = getBaseStyles();
       if (currentStyles) html += `<style>${currentStyles}</style>`;
+      // CRITICAL: Add post-override styles AFTER Kiro's CSS to force fixed theme
+      html += getPostOverrideStyles();
       html += snapshot.html || '';
       
       panels.chat.content.innerHTML = html;
-      panels.chat.container.style.background = snapshot.bodyBg || '#1e1e1e';
+      panels.chat.container.style.background = '#1e1e1e'; // Force fixed background, ignore snapshot.bodyBg
       hideLoading('chat');
       
       removePlaceholderText();
@@ -1090,6 +1328,103 @@
         const text = (btn.textContent || '').trim().toLowerCase();
         if (text === 'revert' || text === 'follow') {
           btn.style.display = 'none';
+        }
+      });
+      
+      // Hide Trust buttons (shield icon) - these open dialogs that are hard to use on mobile
+      panels.chat.content.querySelectorAll('button').forEach(btn => {
+        const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+        const title = (btn.getAttribute('title') || '').toLowerCase();
+        const hasShieldIcon = btn.querySelector('.codicon-shield, .codicon-verified, .codicon-shield-check, [class*="shield"]');
+        
+        if (hasShieldIcon || ariaLabel.includes('trust') || title.includes('trust')) {
+          btn.style.display = 'none';
+        }
+      });
+      
+      // Hide Restore buttons - clicking wrong checkpoint is too risky on mobile
+      panels.chat.content.querySelectorAll('button, [role="button"], span, div, a').forEach(el => {
+        const text = (el.textContent || '').trim().toLowerCase();
+        const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
+        
+        if (text === 'restore' || ariaLabel === 'restore') {
+          el.style.display = 'none';
+        }
+      });
+      
+      // Hide hashtag button (context menu) - not useful on mobile
+      panels.chat.content.querySelectorAll('button, [role="button"]').forEach(el => {
+        const text = (el.textContent || '').trim();
+        const hasHashIcon = el.querySelector('[class*="hash"], .codicon-symbol-key');
+        if (text === '#' || hasHashIcon) {
+          el.style.display = 'none';
+          el.style.pointerEvents = 'none';
+          el.onclick = (e) => { e.preventDefault(); e.stopPropagation(); return false; };
+        }
+      });
+      
+      // Hide "changes accepted" expand arrow and "View all" button
+      panels.chat.content.querySelectorAll('*').forEach(el => {
+        const text = (el.textContent || '').trim().toLowerCase();
+        
+        // Hide "View all" links/buttons
+        if (text === 'view all') {
+          el.style.display = 'none';
+        }
+        
+        // Hide expand/collapse arrows (chevrons) near "changes accepted"
+        if (el.classList && (el.classList.contains('codicon-chevron-right') || 
+            el.classList.contains('codicon-chevron-down') ||
+            el.classList.contains('codicon-chevron-up'))) {
+          const parent = el.closest('[class*="change"], [class*="Change"], [class*="accepted"], [class*="Accepted"]');
+          if (parent || (el.parentElement && el.parentElement.textContent.toLowerCase().includes('change'))) {
+            el.style.display = 'none';
+          }
+        }
+      });
+      
+      // Hide the entire "changes accepted" notification bar with file list
+      panels.chat.content.querySelectorAll('[class*="snackbar"], [class*="Snackbar"], [class*="notification"], [class*="Notification"]').forEach(el => {
+        const text = (el.textContent || '').toLowerCase();
+        if (text.includes('changes accepted') || text.includes('change accepted')) {
+          el.style.display = 'none';
+        }
+      });
+      
+      // Also hide file chips/badges that show changed files (like "snapshot.js")
+      panels.chat.content.querySelectorAll('[class*="file-chip"], [class*="fileChip"], [class*="file-badge"], [class*="fileBadge"]').forEach(el => {
+        const parent = el.closest('[class*="change"], [class*="Change"], [class*="accepted"], [class*="Accepted"]');
+        if (parent) {
+          el.style.display = 'none';
+        }
+      });
+      
+      // Hide message action buttons (copy, undo, redo icons on right side of messages)
+      panels.chat.content.querySelectorAll('[class*="action"], [class*="Action"]').forEach(el => {
+        const hasCopyIcon = el.querySelector('.codicon-copy, .codicon-clippy, [class*="copy"]');
+        const hasUndoIcon = el.querySelector('.codicon-discard, .codicon-undo, [class*="undo"]');
+        const hasRedoIcon = el.querySelector('.codicon-redo, [class*="redo"]');
+        const hasMoreIcon = el.querySelector('.codicon-ellipsis, .codicon-more, [class*="more"]');
+        
+        if (hasCopyIcon || hasUndoIcon || hasRedoIcon || hasMoreIcon) {
+          el.style.display = 'none';
+        }
+      });
+      
+      // Also hide standalone copy/undo buttons
+      panels.chat.content.querySelectorAll('button, [role="button"]').forEach(btn => {
+        const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+        const title = (btn.getAttribute('title') || '').toLowerCase();
+        const hasCopyIcon = btn.querySelector('.codicon-copy, .codicon-clippy');
+        const hasUndoIcon = btn.querySelector('.codicon-discard, .codicon-undo');
+        
+        if (ariaLabel === 'copy' || ariaLabel === 'undo' || ariaLabel === 'redo' ||
+            title === 'copy' || title === 'undo' || title === 'redo' ||
+            hasCopyIcon || hasUndoIcon) {
+          const inToolbar = btn.closest('[class*="toolbar"], [class*="Toolbar"]');
+          if (!inToolbar) {
+            btn.style.display = 'none';
+          }
         }
       });
     }
@@ -1508,6 +1843,266 @@
     function makeInteractive() {
       const content = panels.chat.content;
       
+      // =======================================================================
+      // GLOBAL CLICK HANDLER - Makes entire chat snapshot clickable
+      // =======================================================================
+      // Remove any existing global handler first
+      if (content._globalClickHandler) {
+        content.removeEventListener('click', content._globalClickHandler);
+      }
+      
+      content._globalClickHandler = async (e) => {
+        // Find the actual clicked element
+        let target = e.target;
+        
+        // Skip if clicking on input fields
+        if (target.matches('[contenteditable="true"], textarea, input, [data-lexical-editor="true"], .ProseMirror, .tiptap')) {
+          return;
+        }
+        
+        // Skip if clicking inside input containers
+        if (target.closest('[contenteditable="true"], textarea, [data-lexical-editor="true"], .ProseMirror, .tiptap')) {
+          return;
+        }
+        
+        // Find the best clickable element (bubble up to find buttons, links, etc.)
+        let clickableEl = target;
+        const clickableSelectors = 'button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], a, [tabindex="0"], [onclick]';
+        
+        // Check if target or any parent is clickable
+        if (!target.matches(clickableSelectors)) {
+          const closestClickable = target.closest(clickableSelectors);
+          if (closestClickable && content.contains(closestClickable)) {
+            clickableEl = closestClickable;
+          }
+        }
+        
+        // Get element info for the click
+        const elementText = (clickableEl.textContent || '').trim().substring(0, 150);
+        const ariaLabel = clickableEl.getAttribute('aria-label') || '';
+        const role = clickableEl.getAttribute('role') || '';
+        const tag = clickableEl.tagName?.toLowerCase() || 'div';
+        const className = clickableEl.className || '';
+        
+        // Check if this is an icon button (has codicon child)
+        const hasIcon = clickableEl.querySelector('[class*="codicon"]') || 
+                        (typeof className === 'string' && className.includes('codicon'));
+        
+        // Skip if no meaningful content to click (but allow icon buttons and buttons with aria-label)
+        if (!elementText && !ariaLabel && !hasIcon && tag === 'div' && !role) {
+          return;
+        }
+        
+        // For icon-only buttons, use aria-label as text
+        const effectiveText = elementText || ariaLabel;
+        
+        // Determine click type based on context
+        let clickInfo = {
+          tag: tag,
+          text: effectiveText,
+          ariaLabel: ariaLabel,
+          role: role,
+          className: typeof className === 'string' ? className.substring(0, 200) : ''
+        };
+        
+        // Add specific flags based on element characteristics
+        if (role === 'tab') clickInfo.isTab = true;
+        if (role === 'switch' || className.includes('toggle')) clickInfo.isToggle = true;
+        if (ariaLabel.toLowerCase() === 'close' || className.includes('close')) clickInfo.isCloseButton = true;
+        
+        // Check for file links
+        const fileExtensions = /\.(ts|tsx|js|jsx|py|java|html|css|json|md|yaml|yml|xml|sql|go|rs|c|cpp|h|cs|rb|php|sh|vue|svelte)$/i;
+        if (fileExtensions.test(elementText)) {
+          clickInfo.isFileLink = true;
+          clickInfo.filePath = elementText;
+        }
+        
+        // Check for command trust options - more comprehensive detection
+        const lowerText = elementText.toLowerCase();
+        const isCommandTrust = lowerText.includes('full command') || 
+                               lowerText.includes('partial') || 
+                               lowerText.includes('base npm') || 
+                               lowerText.includes('base ') ||
+                               lowerText.includes('trust') ||
+                               (lowerText.includes('command') && (lowerText.includes('allow') || lowerText.includes('run')));
+        
+        // Also check if we're in a command trust context (snackbar with trust-related content)
+        const inSnackbar = clickableEl.closest('.kiro-snackbar, [class*="snackbar"]');
+        const snackbarHasTrustContent = inSnackbar && (
+          inSnackbar.textContent.toLowerCase().includes('trust') ||
+          inSnackbar.textContent.toLowerCase().includes('command') ||
+          inSnackbar.textContent.toLowerCase().includes('allow')
+        );
+        
+        if (isCommandTrust || (snackbarHasTrustContent && lowerText.length < 100)) {
+          clickInfo.isCommandTrustOption = true;
+        }
+        
+        // Check for action buttons (play, edit, cancel, etc.) - enhanced detection
+        const hasPlayIcon = clickableEl.querySelector('.codicon-play, .codicon-run, .codicon-debug-start, .codicon-triangle-right');
+        const hasEditIcon = clickableEl.querySelector('.codicon-edit, .codicon-pencil');
+        const hasCancelIcon = clickableEl.querySelector('.codicon-x, .codicon-close, .codicon-chrome-close');
+        const hasCheckIcon = clickableEl.querySelector('.codicon-check, .codicon-pass, .codicon-check-all');
+        const hasStopIcon = clickableEl.querySelector('.codicon-debug-stop, .codicon-stop');
+        
+        // Also check aria-label for action type (important for icon-only buttons)
+        const ariaLabelLower = ariaLabel.toLowerCase();
+        const isRunByAria = ariaLabelLower.includes('run') || ariaLabelLower.includes('play') || ariaLabelLower.includes('execute');
+        const isEditByAria = ariaLabelLower.includes('edit') || ariaLabelLower.includes('modify');
+        const isCancelByAria = ariaLabelLower.includes('cancel') || ariaLabelLower.includes('reject') || ariaLabelLower.includes('deny');
+        const isApproveByAria = ariaLabelLower.includes('approve') || ariaLabelLower.includes('accept') || ariaLabelLower.includes('allow');
+        const isStopByAria = ariaLabelLower.includes('stop') || ariaLabelLower.includes('terminate');
+        
+        // Also check for colored buttons (green play button)
+        const btnStyle = window.getComputedStyle(clickableEl);
+        const bgColor = btnStyle.backgroundColor || '';
+        const isGreenButton = bgColor.includes('rgb(34, 197') || bgColor.includes('rgb(0, 128') || 
+                              bgColor.includes('rgb(22, 163') || bgColor.includes('green');
+        
+        // Detect action type from icons OR aria-label
+        if (hasPlayIcon || isRunByAria || (isGreenButton && tag === 'button')) { 
+          clickInfo.isCommandPanelAction = true; 
+          clickInfo.actionType = 'run'; 
+        }
+        else if (hasEditIcon || isEditByAria) { 
+          clickInfo.isCommandPanelAction = true; 
+          clickInfo.actionType = 'edit'; 
+        }
+        else if ((hasCancelIcon || isCancelByAria) && !clickInfo.isCloseButton) { 
+          clickInfo.isCommandPanelAction = true; 
+          clickInfo.actionType = 'cancel'; 
+        }
+        else if (hasCheckIcon || isApproveByAria) { 
+          clickInfo.isCommandPanelAction = true; 
+          clickInfo.actionType = 'approve'; 
+        }
+        else if (hasStopIcon || isStopByAria) { 
+          clickInfo.isCommandPanelAction = true; 
+          clickInfo.actionType = 'stop'; 
+        }
+        
+        // Check if in snackbar/notification area
+        if (clickableEl.closest('.kiro-snackbar, [class*="snackbar"], [class*="notification"]')) {
+          if (!clickInfo.isCommandTrustOption && !clickInfo.isCommandPanelAction) {
+            clickInfo.isNotificationButton = true;
+          }
+        }
+        
+        // Check if in dialog or welcome/onboarding screen
+        if (clickableEl.closest('[role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"], [class*="welcome"], [class*="Welcome"], [class*="onboarding"], [class*="Onboarding"], [class*="build"], [class*="Build"], [class*="choice"], [class*="Choice"]')) {
+          clickInfo.isDialogChoice = true;
+        }
+        
+        // Also check if the element itself looks like a choice card (has title + description structure)
+        const hasChoiceStructure = clickableEl.children.length >= 1 && 
+          clickableEl.children.length <= 5 &&
+          (clickableEl.querySelector('h1, h2, h3, h4, h5, h6, [class*="title"], [class*="Title"]') ||
+           clickableEl.querySelector('p, [class*="description"], [class*="Description"]'));
+        
+        if (hasChoiceStructure && !clickInfo.isDialogChoice) {
+          // Check if it looks clickable
+          const style = window.getComputedStyle(clickableEl);
+          if (style.cursor === 'pointer' || clickableEl.getAttribute('tabindex') === '0' || 
+              clickableEl.getAttribute('role') === 'button' || tag === 'button') {
+            clickInfo.isDialogChoice = true;
+          }
+        }
+        
+        // =======================================================================
+        // ELEMENT INDEX - For distinguishing between multiple elements with same text
+        // This is critical for buttons like "Restore" that appear on each message
+        // =======================================================================
+        if (effectiveText && tag) {
+          // For "Restore" specifically, search ALL clickable elements, not just buttons
+          const searchText = effectiveText.toLowerCase().trim();
+          // Use standard selector based on tag
+          const selector = tag === 'button' ? 'button, [role="button"]' : 
+                          tag === 'a' ? 'a, [role="link"]' : 
+                          `${tag}, [role="button"], button`;
+          
+          const allSimilar = content.querySelectorAll(selector);
+          const matchingElements = [];
+          
+          for (const el of allSimilar) {
+            const elText = (el.textContent || '').trim();
+            const elAriaLabel = el.getAttribute('aria-label') || '';
+            
+            // Match elements with same text OR same aria-label (case-insensitive)
+            const textMatches = elText.toLowerCase() === searchText ||
+                (elText.length > 0 && elText.toLowerCase().includes(searchText)) ||
+                (searchText.length > 0 && searchText.includes(elText.toLowerCase()));
+            
+            const ariaMatches = elAriaLabel && 
+                elAriaLabel.toLowerCase() === searchText;
+            
+            if (textMatches || ariaMatches) {
+              matchingElements.push(el);
+            }
+          }
+          
+          // Find the index of the clicked element among matching elements
+          let elementIndex = matchingElements.indexOf(clickableEl);
+          
+          // If direct reference match fails, try finding by position/attributes
+          if (elementIndex < 0 && matchingElements.length > 1) {
+            // Try to find by comparing element properties
+            for (let i = 0; i < matchingElements.length; i++) {
+              const el = matchingElements[i];
+              if (el.isSameNode && el.isSameNode(clickableEl)) {
+                elementIndex = i;
+                break;
+              }
+              // Compare by bounding rect as fallback
+              const clickedRect = clickableEl.getBoundingClientRect();
+              const elRect = el.getBoundingClientRect();
+              if (Math.abs(clickedRect.top - elRect.top) < 5 && 
+                  Math.abs(clickedRect.left - elRect.left) < 5) {
+                elementIndex = i;
+                break;
+              }
+            }
+          }
+          
+          if (elementIndex >= 0 && matchingElements.length > 1) {
+            clickInfo.elementIndex = elementIndex;
+            clickInfo.totalMatches = matchingElements.length;
+          } else if (matchingElements.length > 1) {
+            // FALLBACK: Use visual position (top to bottom order)
+            const sortedByPosition = [...matchingElements].sort((a, b) => {
+              const rectA = a.getBoundingClientRect();
+              const rectB = b.getBoundingClientRect();
+              return rectA.top - rectB.top;
+            });
+            
+            const clickedRect = clickableEl.getBoundingClientRect();
+            for (let i = 0; i < sortedByPosition.length; i++) {
+              const elRect = sortedByPosition[i].getBoundingClientRect();
+              if (Math.abs(clickedRect.top - elRect.top) < 10 && 
+                  Math.abs(clickedRect.left - elRect.left) < 10) {
+                clickInfo.elementIndex = i;
+                clickInfo.totalMatches = matchingElements.length;
+                break;
+              }
+            }
+          }
+        }
+        
+        console.log('[GlobalClick]', clickInfo.text?.substring(0, 40) || clickInfo.ariaLabel || tag);
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        await sendClickToKiro(clickInfo);
+        
+        // Refresh snapshot after click
+        setTimeout(() => fetchChatSnapshot(selectedCascadeId), 400);
+      };
+      
+      content.addEventListener('click', content._globalClickHandler);
+      
+      // =======================================================================
+      // INPUT FIELDS - Special handling for text input
+      // =======================================================================
       // Input fields
       const inputSelectors = ['[data-lexical-editor="true"]', '[contenteditable="true"]', 'textarea', '.ProseMirror', '.tiptap'];
       inputSelectors.forEach(selector => {
@@ -1607,25 +2202,32 @@
         if (btn.querySelector('.codicon-arrow-up, .codicon-send')) attachSendHandler(btn);
       });
       
-      // Toggle switches
+      // Toggle switches - send click to Kiro and let snapshot refresh show actual state
       content.querySelectorAll('[role="switch"], input[type="checkbox"][role="switch"]').forEach(toggle => {
         const wrapper = toggle.closest('.kiro-toggle-switch') || toggle;
         wrapper.style.cursor = 'pointer';
         wrapper.onclick = async (e) => {
           e.preventDefault(); e.stopPropagation();
           const label = wrapper.querySelector('label');
-          await sendClickToKiro({ tag: 'div', text: label ? label.textContent.trim() : 'toggle', role: 'switch', isToggle: true });
-          // Refresh snapshot after toggle to show updated state
-          // Use longer delay (800ms) to allow server polling to capture the change
-          // Then refresh again at 1500ms to ensure we have the latest state
-          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 800);
-          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 1500);
+          const toggleLabel = label ? label.textContent.trim() : 'toggle';
+          
+          console.log('[Toggle] Clicked:', toggleLabel);
+          
+          // Send click to Kiro - don't try to predict the new state
+          // Just let the snapshot refresh show the actual state from Kiro
+          await sendClickToKiro({ tag: 'div', text: toggleLabel, role: 'switch', isToggle: true });
+          
+          // Refresh snapshot after toggle to get actual Kiro state
+          // Use 600ms delay to allow Kiro to process the toggle
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 600);
+          
           return false;
         };
       });
       
       // Notification banner buttons (View all, X) in snackbar and agent-outcome
       // Note: Revert and Follow buttons are hidden
+      // IMPORTANT: This handler must detect command panel actions and set appropriate flags
       const notificationSelectors = [
         '.kiro-snackbar button',
         '.kiro-snackbar-actions button',
@@ -1649,12 +2251,54 @@
               // Identify the button - for icon buttons use aria-label or detect close icon
               let buttonText = (btn.textContent || '').trim().substring(0, 50);
               const ariaLabel = btn.getAttribute('aria-label') || '';
+              const ariaLabelLower = ariaLabel.toLowerCase();
               const isIconButton = btn.classList.contains('kiro-icon-button');
               const hasCloseIcon = btn.querySelector('.codicon-close, .codicon-x, [class*="close"]');
+              
+              // Detect command panel action icons
+              const hasPlayIcon = btn.querySelector('.codicon-play, .codicon-run, .codicon-debug-start, .codicon-triangle-right');
+              const hasEditIcon = btn.querySelector('.codicon-edit, .codicon-pencil');
+              const hasCancelIcon = btn.querySelector('.codicon-x, .codicon-close, .codicon-chrome-close');
+              const hasApproveIcon = btn.querySelector('.codicon-check, .codicon-pass, .codicon-check-all');
+              const hasStopIcon = btn.querySelector('.codicon-debug-stop, .codicon-stop');
+              
+              // Detect action type from aria-label
+              const isRunByAria = ariaLabelLower.includes('run') || ariaLabelLower.includes('play') || ariaLabelLower.includes('execute');
+              const isEditByAria = ariaLabelLower.includes('edit');
+              const isCancelByAria = ariaLabelLower.includes('cancel') || ariaLabelLower.includes('reject');
+              const isApproveByAria = ariaLabelLower.includes('approve') || ariaLabelLower.includes('accept') || ariaLabelLower.includes('allow');
+              const isStopByAria = ariaLabelLower.includes('stop') || ariaLabelLower.includes('terminate');
+              
+              // Detect action type from button text
+              const btnTextLower = buttonText.toLowerCase();
+              const isAcceptByText = btnTextLower.includes('accept') || btnTextLower.includes('approve') || btnTextLower.includes('allow');
+              const isRunByText = btnTextLower.includes('run') || btnTextLower.includes('execute');
+              const isCancelByText = btnTextLower.includes('cancel') || btnTextLower.includes('reject') || btnTextLower.includes('deny');
               
               // For X/close icon buttons with no text
               if (!buttonText && (isIconButton || hasCloseIcon)) {
                 buttonText = ariaLabel || 'dismiss';
+              }
+              
+              // Determine if this is a command panel action
+              let actionType = '';
+              let isCommandPanelAction = false;
+              
+              if (hasPlayIcon || isRunByAria || isRunByText) {
+                actionType = 'run';
+                isCommandPanelAction = true;
+              } else if (hasEditIcon || isEditByAria) {
+                actionType = 'edit';
+                isCommandPanelAction = true;
+              } else if (hasApproveIcon || isApproveByAria || isAcceptByText) {
+                actionType = 'approve';
+                isCommandPanelAction = true;
+              } else if ((hasCancelIcon && !hasCloseIcon) || isCancelByAria || isCancelByText) {
+                actionType = 'cancel';
+                isCommandPanelAction = true;
+              } else if (hasStopIcon || isStopByAria) {
+                actionType = 'stop';
+                isCommandPanelAction = true;
               }
               
               const clickInfo = {
@@ -1663,10 +2307,19 @@
                 ariaLabel: ariaLabel,
                 role: btn.getAttribute('role') || 'button',
                 className: btn.className || '',
-                isNotificationButton: true,
                 isIconButton: isIconButton || !buttonText
               };
-              console.log('[Click] Notification button:', clickInfo.text || clickInfo.ariaLabel || 'icon-button');
+              
+              // Set appropriate flags based on detection
+              if (isCommandPanelAction) {
+                clickInfo.isCommandPanelAction = true;
+                clickInfo.actionType = actionType;
+                console.log('[Click] Command action in notification area:', actionType, buttonText || ariaLabel);
+              } else {
+                clickInfo.isNotificationButton = true;
+                console.log('[Click] Notification button:', clickInfo.text || clickInfo.ariaLabel || 'icon-button');
+              }
+              
               await sendClickToKiro(clickInfo);
               // Refresh after clicking notification buttons
               setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
@@ -1676,8 +2329,57 @@
         } catch(e) {}
       });
       
-      // Dialog choice elements (spec workflow options, modal choices)
-      // These are clickable divs inside snackbar body that represent user choices
+      // Command trust dialog options - REMOVED (trust button is now hidden on mobile)
+      
+      // Command panel action buttons (play/run button in command header)
+      // The green play button in command dialogs
+      content.querySelectorAll('.kiro-snackbar button, .kiro-snackbar-header button, [class*="command"] button').forEach(btn => {
+        if (btn.onclick) return;
+        
+        const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+        const title = (btn.getAttribute('title') || '').toLowerCase();
+        const hasPlayIcon = btn.querySelector('.codicon-play, .codicon-run, .codicon-debug-start, .codicon-triangle-right');
+        const hasEditIcon = btn.querySelector('.codicon-edit, .codicon-pencil');
+        const hasCancelIcon = btn.querySelector('.codicon-x, .codicon-close, .codicon-chrome-close');
+        const hasApproveIcon = btn.querySelector('.codicon-check, .codicon-pass');
+        
+        // Determine action type
+        let actionType = '';
+        if (hasPlayIcon || ariaLabel.includes('run') || ariaLabel.includes('play') || title.includes('run')) {
+          actionType = 'run';
+        } else if (hasEditIcon || ariaLabel.includes('edit')) {
+          actionType = 'edit';
+        } else if (hasCancelIcon || ariaLabel.includes('cancel') || ariaLabel.includes('close')) {
+          actionType = 'cancel';
+        } else if (hasApproveIcon || ariaLabel.includes('approve') || ariaLabel.includes('accept')) {
+          actionType = 'approve';
+        }
+        
+        if (actionType) {
+          btn.style.cursor = 'pointer';
+          btn.onclick = async (e) => {
+            e.preventDefault(); e.stopPropagation();
+            
+            const clickInfo = {
+              tag: 'button',
+              text: btn.getAttribute('aria-label') || btn.getAttribute('title') || actionType,
+              ariaLabel: btn.getAttribute('aria-label') || '',
+              role: btn.getAttribute('role') || 'button',
+              className: btn.className || '',
+              actionType: actionType,
+              isCommandPanelAction: true,
+              isIconButton: !btn.textContent?.trim()
+            };
+            console.log('[Click] Command panel action:', actionType);
+            await sendClickToKiro(clickInfo);
+            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+            return false;
+          };
+        }
+      });
+      
+      // Dialog choice elements (spec workflow options, modal choices, welcome screens)
+      // These are clickable divs inside snackbar body or welcome screens that represent user choices
       const dialogChoiceSelectors = [
         '.kiro-snackbar-body > div',
         '.kiro-snackbar-body [class*="choice"]',
@@ -1687,7 +2389,27 @@
         '[class*="dialog-choice"]',
         '[class*="dialogChoice"]',
         '[role="dialog"] [role="button"]',
-        '[role="alertdialog"] [role="button"]'
+        '[role="alertdialog"] [role="button"]',
+        // Welcome/onboarding screen selectors
+        '[class*="welcome"] [class*="choice"]',
+        '[class*="welcome"] [class*="option"]',
+        '[class*="Welcome"] [class*="Choice"]',
+        '[class*="Welcome"] [class*="Option"]',
+        '[class*="onboarding"] [class*="choice"]',
+        '[class*="Onboarding"] [class*="Choice"]',
+        '[class*="build"] [class*="choice"]',
+        '[class*="Build"] [class*="Choice"]',
+        // Direct choice/option cards
+        '[class*="choice-card"]',
+        '[class*="choiceCard"]',
+        '[class*="ChoiceCard"]',
+        '[class*="option-card"]',
+        '[class*="optionCard"]',
+        // Vibe/Spec specific
+        '[class*="vibe"]',
+        '[class*="Vibe"]',
+        '[class*="spec"]',
+        '[class*="Spec"]'
       ];
       dialogChoiceSelectors.forEach(sel => {
         try {
@@ -2184,9 +2906,9 @@
         });
         const result = await r.json();
         if (result.success) showToast('Sent!', 1500, true);
-        else showToast(result.error || 'Failed to send');
+        // Silently fail - don't show error toasts for CDP/connection issues
       } catch (e) {
-        showToast('Failed to send');
+        // Silently fail
       } finally {
         pendingMessage = false;
       }

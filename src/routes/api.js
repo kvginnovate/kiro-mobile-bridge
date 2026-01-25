@@ -194,6 +194,306 @@ export function createApiRouter(cascades, mainWindowCDP) {
     }
   });
   
+  // GET /debug-toggle/:id - Debug toggle/switch structure in detail
+  router.get('/debug-toggle/:id', async (req, res) => {
+    const cascade = cascades.get(req.params.id);
+    if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
+    if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
+    
+    const script = `(function() {
+      let targetDoc = document;
+      const activeFrame = document.getElementById('active-frame');
+      if (activeFrame && activeFrame.contentDocument) targetDoc = activeFrame.contentDocument;
+      
+      const results = {
+        toggles: [],
+        switchRoles: []
+      };
+      
+      // Find all toggle-like elements
+      const toggleSelectors = [
+        '.kiro-toggle-switch',
+        '[role="switch"]',
+        'input[type="checkbox"]',
+        '[class*="toggle"]',
+        '[class*="Toggle"]',
+        '[class*="switch"]',
+        '[class*="Switch"]'
+      ];
+      
+      for (const sel of toggleSelectors) {
+        try {
+          const elements = targetDoc.querySelectorAll(sel);
+          elements.forEach(el => {
+            if (el.offsetParent === null) return;
+            
+            const label = el.querySelector('label') || el.closest('[class*="toggle"]')?.querySelector('label');
+            const input = el.querySelector('input[type="checkbox"]') || (el.type === 'checkbox' ? el : null);
+            const parent = el.parentElement;
+            
+            const toggleInfo = {
+              selector: sel,
+              tag: el.tagName,
+              className: (el.className || '').substring(0, 150),
+              role: el.getAttribute('role'),
+              ariaChecked: el.getAttribute('aria-checked'),
+              dataState: el.getAttribute('data-state'),
+              labelText: label ? label.textContent.trim() : '',
+              inputChecked: input ? input.checked : null,
+              inputAriaChecked: input ? input.getAttribute('aria-checked') : null,
+              cursor: window.getComputedStyle(el).cursor,
+              parentTag: parent?.tagName,
+              parentClass: (parent?.className || '').substring(0, 80)
+            };
+            
+            // Check if this is the Autopilot toggle
+            if (toggleInfo.labelText.toLowerCase().includes('autopilot')) {
+              toggleInfo.isAutopilot = true;
+            }
+            
+            results.toggles.push(toggleInfo);
+          });
+        } catch(e) {}
+      }
+      
+      // Deduplicate by removing entries with same labelText
+      const seen = new Set();
+      results.toggles = results.toggles.filter(t => {
+        if (!t.labelText) return true;
+        if (seen.has(t.labelText)) return false;
+        seen.add(t.labelText);
+        return true;
+      });
+      
+      return results;
+    })()`;
+    
+    try {
+      const result = await cascade.cdp.call('Runtime.evaluate', {
+        expression: script,
+        contextId: cascade.cdp.rootContextId,
+        returnByValue: true
+      });
+      
+      const data = result.result?.value;
+      console.log('[Debug Toggle] Structure:', JSON.stringify(data, null, 2));
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // GET /debug-welcome/:id - Debug welcome/onboarding screen structure
+  router.get('/debug-welcome/:id', async (req, res) => {
+    const cascade = cascades.get(req.params.id);
+    if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
+    if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
+    
+    const script = `(function() {
+      let targetDoc = document;
+      const activeFrame = document.getElementById('active-frame');
+      if (activeFrame && activeFrame.contentDocument) targetDoc = activeFrame.contentDocument;
+      
+      const results = {
+        vibeElements: [],
+        specElements: [],
+        clickableCards: [],
+        allTextMatches: []
+      };
+      
+      // Find elements containing "Vibe" or "Spec" text
+      const allElements = targetDoc.querySelectorAll('*');
+      for (const el of allElements) {
+        if (el.offsetParent === null) continue;
+        const text = (el.textContent || '').trim();
+        const directText = el.childNodes.length === 1 && el.childNodes[0].nodeType === 3 
+          ? el.childNodes[0].textContent.trim() : '';
+        
+        if (text.toLowerCase().includes('vibe') && text.length < 500) {
+          const computedStyle = window.getComputedStyle(el);
+          results.vibeElements.push({
+            tag: el.tagName,
+            className: (el.className || '').substring(0, 150),
+            text: text.substring(0, 200),
+            directText: directText.substring(0, 100),
+            cursor: computedStyle.cursor,
+            role: el.getAttribute('role'),
+            tabindex: el.getAttribute('tabindex'),
+            childCount: el.children.length,
+            parentTag: el.parentElement?.tagName,
+            parentClass: (el.parentElement?.className || '').substring(0, 100)
+          });
+        }
+        
+        if (text.toLowerCase().includes('spec') && text.length < 500 && !text.toLowerCase().includes('inspect')) {
+          const computedStyle = window.getComputedStyle(el);
+          results.specElements.push({
+            tag: el.tagName,
+            className: (el.className || '').substring(0, 150),
+            text: text.substring(0, 200),
+            directText: directText.substring(0, 100),
+            cursor: computedStyle.cursor,
+            role: el.getAttribute('role'),
+            tabindex: el.getAttribute('tabindex'),
+            childCount: el.children.length,
+            parentTag: el.parentElement?.tagName,
+            parentClass: (el.parentElement?.className || '').substring(0, 100)
+          });
+        }
+      }
+      
+      // Find clickable card-like elements
+      const cardSelectors = [
+        '[class*="card"]', '[class*="Card"]',
+        '[class*="choice"]', '[class*="Choice"]',
+        '[class*="option"]', '[class*="Option"]',
+        '[role="button"]', '[tabindex="0"]'
+      ];
+      
+      for (const sel of cardSelectors) {
+        try {
+          const cards = targetDoc.querySelectorAll(sel);
+          for (const card of cards) {
+            if (card.offsetParent === null) continue;
+            const text = (card.textContent || '').trim();
+            if (text.length < 10 || text.length > 500) continue;
+            
+            const computedStyle = window.getComputedStyle(card);
+            results.clickableCards.push({
+              selector: sel,
+              tag: card.tagName,
+              className: (card.className || '').substring(0, 150),
+              text: text.substring(0, 200),
+              cursor: computedStyle.cursor,
+              role: card.getAttribute('role'),
+              tabindex: card.getAttribute('tabindex'),
+              childCount: card.children.length
+            });
+          }
+        } catch(e) {}
+      }
+      
+      return results;
+    })()`;
+    
+    try {
+      const result = await cascade.cdp.call('Runtime.evaluate', {
+        expression: script,
+        contextId: cascade.cdp.rootContextId,
+        returnByValue: true
+      });
+      
+      const data = result.result?.value;
+      console.log('[Debug Welcome] Structure:', JSON.stringify(data, null, 2));
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // GET /debug-snackbar/:id - Debug snackbar/command trust dialog structure
+  router.get('/debug-snackbar/:id', async (req, res) => {
+    const cascade = cascades.get(req.params.id);
+    if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
+    if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
+    
+    const script = `(function() {
+      let targetDoc = document;
+      const activeFrame = document.getElementById('active-frame');
+      if (activeFrame && activeFrame.contentDocument) targetDoc = activeFrame.contentDocument;
+      
+      const results = {
+        snackbars: [],
+        clickableElements: [],
+        buttons: []
+      };
+      
+      // Find all snackbars
+      const snackbarSelectors = ['.kiro-snackbar', '[class*="snackbar"]', '[class*="notification"]', '[class*="toast"]'];
+      for (const sel of snackbarSelectors) {
+        try {
+          const snackbars = targetDoc.querySelectorAll(sel);
+          snackbars.forEach(snackbar => {
+            if (snackbar.offsetParent === null) return;
+            
+            const snackbarInfo = {
+              selector: sel,
+              className: (snackbar.className || '').substring(0, 150),
+              text: (snackbar.textContent || '').substring(0, 500),
+              children: []
+            };
+            
+            // Find all clickable children
+            const clickables = snackbar.querySelectorAll('button, [role="button"], [tabindex="0"], div');
+            clickables.forEach(el => {
+              if (el.offsetParent === null) return;
+              if (el.children.length > 10) return;
+              
+              const elText = (el.textContent || '').trim();
+              if (elText.length < 3 || elText.length > 200) return;
+              
+              const computedStyle = window.getComputedStyle(el);
+              snackbarInfo.children.push({
+                tag: el.tagName,
+                text: elText.substring(0, 100),
+                className: (el.className || '').substring(0, 80),
+                cursor: computedStyle.cursor,
+                bgColor: computedStyle.backgroundColor,
+                role: el.getAttribute('role'),
+                tabindex: el.getAttribute('tabindex'),
+                hasOnclick: !!el.onclick
+              });
+            });
+            
+            results.snackbars.push(snackbarInfo);
+          });
+        } catch(e) {}
+      }
+      
+      // Find all buttons in the page
+      const allButtons = targetDoc.querySelectorAll('button, [role="button"]');
+      allButtons.forEach(btn => {
+        if (btn.offsetParent === null) return;
+        const btnText = (btn.textContent || '').trim();
+        const ariaLabel = btn.getAttribute('aria-label') || '';
+        
+        // Check for action icons
+        const hasPlayIcon = btn.querySelector('.codicon-play, .codicon-run');
+        const hasEditIcon = btn.querySelector('.codicon-edit');
+        const hasCheckIcon = btn.querySelector('.codicon-check');
+        
+        if (hasPlayIcon || hasEditIcon || hasCheckIcon || ariaLabel || btnText) {
+          const computedStyle = window.getComputedStyle(btn);
+          results.buttons.push({
+            text: btnText.substring(0, 50),
+            ariaLabel: ariaLabel,
+            className: (btn.className || '').substring(0, 80),
+            bgColor: computedStyle.backgroundColor,
+            hasPlayIcon: !!hasPlayIcon,
+            hasEditIcon: !!hasEditIcon,
+            hasCheckIcon: !!hasCheckIcon
+          });
+        }
+      });
+      
+      return results;
+    })()`;
+    
+    try {
+      const result = await cascade.cdp.call('Runtime.evaluate', {
+        expression: script,
+        contextId: cascade.cdp.rootContextId,
+        returnByValue: true
+      });
+      
+      const data = result.result?.value;
+      console.log('[Debug Snackbar] Structure:', JSON.stringify(data, null, 2));
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
   // POST /readFile/:id - Read file from filesystem
   router.post('/readFile/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);

@@ -329,6 +329,15 @@ function broadcastCascadeList() {
 
 const app = express();
 app.use(express.json({ limit: '1mb' })); // Limit request body size
+
+// Disable caching for development - ensures latest code is always served
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 app.use(express.static(join(__dirname, 'public')));
 
 // Mount API routes

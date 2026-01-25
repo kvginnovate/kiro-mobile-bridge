@@ -98,7 +98,8 @@ export function sanitizeClickInfo(clickInfo) {
     { name: 'parentTabLabel', maxLength: 100 },
     { name: 'filePath', maxLength: 500 },
     { name: 'toggleId', maxLength: 100 },
-    { name: 'actionType', maxLength: 50 }
+    { name: 'actionType', maxLength: 50 },
+    { name: 'parentMessageContext', maxLength: 150 }
   ];
   
   for (const { name, maxLength } of stringProps) {
@@ -115,12 +116,25 @@ export function sanitizeClickInfo(clickInfo) {
   const boolProps = [
     'isTab', 'isCloseButton', 'isToggle', 'isModelSelector', 'isModelOption',
     'isSendButton', 'isFileLink', 'isNotificationButton', 'isIconButton', 'isHistoryItem',
-    'isDialogChoice', 'isToolActionButton'
+    'isDialogChoice', 'isToolActionButton', 'isCommandPanelAction', 'isCommandTrustOption',
+    'isMessageActionButton'
   ];
   
   for (const name of boolProps) {
     if (clickInfo[name] !== undefined) {
       sanitized[name] = Boolean(clickInfo[name]);
+    }
+  }
+  
+  // Number properties (for element indexing)
+  const numberProps = ['elementIndex', 'totalMatches'];
+  
+  for (const name of numberProps) {
+    if (clickInfo[name] !== undefined) {
+      const num = parseInt(clickInfo[name], 10);
+      if (!isNaN(num) && num >= 0 && num < 1000) {
+        sanitized[name] = num;
+      }
     }
   }
   

@@ -1,7 +1,6 @@
 /**
  * Snapshot capture service - captures DOM snapshots from Kiro via CDP
  */
-import { getLanguageFromExtension } from '../utils/constants.js';
 
 /**
  * Capture chat metadata (title, active state)
@@ -164,6 +163,36 @@ export async function captureSnapshot(cdp) {
     
     const clone = targetBody.cloneNode(true);
     
+    // CRITICAL: Sync checkbox checked PROPERTY to ATTRIBUTE before serialization
+    // cloneNode doesn't copy JS properties, only HTML attributes
+    // So we need to explicitly set the checked attribute based on the property
+    const originalCheckboxes = targetBody.querySelectorAll('input[type="checkbox"]');
+    const clonedCheckboxes = clone.querySelectorAll('input[type="checkbox"]');
+    originalCheckboxes.forEach((orig, i) => {
+      if (clonedCheckboxes[i]) {
+        if (orig.checked) {
+          clonedCheckboxes[i].setAttribute('checked', 'checked');
+        } else {
+          clonedCheckboxes[i].removeAttribute('checked');
+        }
+        // Also sync aria-checked for accessibility
+        clonedCheckboxes[i].setAttribute('aria-checked', orig.checked ? 'true' : 'false');
+      }
+    });
+    
+    // Also sync role="switch" elements that might not be checkboxes
+    const originalSwitches = targetBody.querySelectorAll('[role="switch"]');
+    const clonedSwitches = clone.querySelectorAll('[role="switch"]');
+    originalSwitches.forEach((orig, i) => {
+      if (clonedSwitches[i]) {
+        const isChecked = orig.getAttribute('aria-checked') === 'true' || 
+                          orig.getAttribute('data-state') === 'checked' ||
+                          orig.checked === true;
+        clonedSwitches[i].setAttribute('aria-checked', isChecked ? 'true' : 'false');
+        clonedSwitches[i].setAttribute('data-state', isChecked ? 'checked' : 'unchecked');
+      }
+    });
+    
     // Capture any portal/overlay content that might be outside the body
     // Radix UI and similar libraries render dropdowns in portals at document root
     const portals = targetDoc.querySelectorAll('[data-radix-portal], [data-radix-popper-content-wrapper], [class*="portal"], [class*="Portal"]');
@@ -270,6 +299,37 @@ export async function captureEditor(cdp) {
     if (activeFrame && activeFrame.contentDocument) targetDoc = activeFrame.contentDocument;
     
     const result = { html: '', fileName: '', language: '', content: '', lineCount: 0, hasContent: false };
+    
+    // CRITICAL: First check if there's an active editor tab
+    // If no active tab exists, return early with hasContent: false
+    let hasActiveEditorTab = false;
+    const editorTabSelectors = [
+      '.tab.active',
+      '[role="tab"][aria-selected="true"]',
+      '.tabs-container .tab.active',
+      '.editor-group-container .tab.active'
+    ];
+    
+    for (const selector of editorTabSelectors) {
+      try {
+        const activeTab = targetDoc.querySelector(selector);
+        if (activeTab && activeTab.offsetParent !== null) {
+          // Verify it's actually an editor tab (not a panel tab)
+          const tabText = (activeTab.textContent || '').trim();
+          // Editor tabs typically have file extensions or are in editor area
+          const isEditorTab = activeTab.closest('.editor-group-container, .tabs-container, [class*="editor"]');
+          if (isEditorTab && tabText.length > 0) {
+            hasActiveEditorTab = true;
+            break;
+          }
+        }
+      } catch(e) {}
+    }
+    
+    // If no active editor tab, return empty result
+    if (!hasActiveEditorTab) {
+      return result;
+    }
     
     // Get active tab / file name
     const tabSelectors = ['.tab.active .label-name', '.tab.active', '[role="tab"][aria-selected="true"]'];

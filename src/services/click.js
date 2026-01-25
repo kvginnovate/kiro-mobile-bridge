@@ -40,6 +40,102 @@ function buildClickScript(clickInfo) {
     const isToggle = info.isToggle || info.role === 'switch';
     const isModelSelector = info.isModelSelector;
     const isModelOption = info.isModelOption;
+    const isMessageActionButton = info.isMessageActionButton && info.parentMessageContext;
+    
+    // =========================================================================
+    // Message Action Buttons (Restore, Copy, Retry - per-message buttons)
+    // Uses parent message context to find the right button
+    // =========================================================================
+    if (isMessageActionButton && !element) {
+      // Use ariaLabel if available, otherwise fall back to text content
+      const searchLabel = (info.ariaLabel || info.text || '').toLowerCase().trim();
+      const messageContext = (info.parentMessageContext || '').toLowerCase();
+      
+      // Find all message containers
+      const messageSelectors = [
+        '[class*="message"]',
+        '[class*="Message"]', 
+        '[class*="chat-turn"]',
+        '[class*="chatTurn"]',
+        '[class*="conversation-item"]',
+        '[class*="turn"]',
+        '[data-message-id]',
+        '[data-turn-id]'
+      ];
+      
+      let targetMessage = null;
+      
+      // Strategy 1: Find message by context text match
+      for (const sel of messageSelectors) {
+        try {
+          const messages = targetDoc.querySelectorAll(sel);
+          for (const msg of messages) {
+            if (!isVisible(msg)) continue;
+            const msgText = (msg.textContent || '').toLowerCase();
+            // Check if this message contains our context snippet
+            if (messageContext && msgText.includes(messageContext.substring(0, 30))) {
+              targetMessage = msg;
+              break;
+            }
+          }
+          if (targetMessage) break;
+        } catch(e) {}
+      }
+      
+      // Strategy 2: If no exact match, try partial matching with first 20 chars
+      if (!targetMessage && messageContext.length > 20) {
+        const shortContext = messageContext.substring(0, 20);
+        for (const sel of messageSelectors) {
+          try {
+            const messages = targetDoc.querySelectorAll(sel);
+            for (const msg of messages) {
+              if (!isVisible(msg)) continue;
+              const msgText = (msg.textContent || '').toLowerCase();
+              if (msgText.includes(shortContext)) {
+                targetMessage = msg;
+                break;
+              }
+            }
+            if (targetMessage) break;
+          } catch(e) {}
+        }
+      }
+      
+      // Now find the button within the target message
+      if (targetMessage) {
+        // Look for button with matching aria-label within this message
+        const buttons = targetMessage.querySelectorAll('button, [role="button"]');
+        for (const btn of buttons) {
+          if (!isVisible(btn)) continue;
+          const btnAriaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+          if (searchLabel && btnAriaLabel && (btnAriaLabel === searchLabel || btnAriaLabel.includes(searchLabel))) {
+            element = btn;
+            matchMethod = 'message-action-context-match';
+            break;
+          }
+        }
+        
+        // Fallback: find by text content
+        if (!element) {
+          for (const btn of buttons) {
+            if (!isVisible(btn)) continue;
+            const btnText = (btn.textContent || '').trim().toLowerCase();
+            if (searchLabel && (btnText === searchLabel || btnText.includes(searchLabel))) {
+              element = btn;
+              matchMethod = 'message-action-text-match';
+              break;
+            }
+          }
+        }
+      }
+      
+      // If still not found, log for debugging
+      if (!element && targetMessage) {
+        matchMethod = 'message-found-button-not-found';
+      } else if (!targetMessage) {
+        matchMethod = 'message-not-found';
+      }
+    }
     
     // =========================================================================
     // Model Selector Button Click
@@ -302,12 +398,12 @@ function buildClickScript(clickInfo) {
     }
     
     // =========================================================================
-    // Dialog Choice Buttons (spec workflow options, modal choices)
+    // Dialog Choice Buttons (spec workflow options, modal choices, welcome screens)
     // =========================================================================
     if (info.isDialogChoice && !element) {
       const searchText = (info.text || '').trim().toLowerCase();
       
-      // Strategy 1: Find clickable divs/buttons in snackbar body with matching text
+      // Strategy 1: Find clickable divs/buttons in snackbar body or welcome screens with matching text
       const dialogSelectors = [
         '.kiro-snackbar-body > div',
         '.kiro-snackbar-body [class*="choice"]',
@@ -321,7 +417,30 @@ function buildClickScript(clickInfo) {
         '[role="dialog"] button',
         '[role="dialog"] [role="button"]',
         '[role="alertdialog"] button',
-        '[role="alertdialog"] [role="button"]'
+        '[role="alertdialog"] [role="button"]',
+        // Welcome/onboarding screen selectors
+        '[class*="welcome"] [class*="choice"]',
+        '[class*="welcome"] [class*="option"]',
+        '[class*="Welcome"] [class*="Choice"]',
+        '[class*="Welcome"] [class*="Option"]',
+        '[class*="onboarding"] [class*="choice"]',
+        '[class*="onboarding"] [class*="option"]',
+        '[class*="Onboarding"] [class*="Choice"]',
+        '[class*="build"] [class*="choice"]',
+        '[class*="build"] [class*="option"]',
+        '[class*="Build"] [class*="Choice"]',
+        // Direct choice/option cards
+        '[class*="choice-card"]',
+        '[class*="choiceCard"]',
+        '[class*="ChoiceCard"]',
+        '[class*="option-card"]',
+        '[class*="optionCard"]',
+        '[class*="OptionCard"]',
+        // Vibe/Spec specific (common Kiro patterns)
+        '[class*="vibe"]',
+        '[class*="Vibe"]',
+        '[class*="spec"]',
+        '[class*="Spec"]'
       ];
       
       for (const sel of dialogSelectors) {
@@ -341,8 +460,9 @@ function buildClickScript(clickInfo) {
         } catch(e) {}
       }
       
-      // Strategy 2: Find any clickable element in snackbar body with matching text
+      // Strategy 2: Find any clickable element in snackbar body or welcome screens with matching text
       if (!element && searchText) {
+        // Try snackbar body first
         const snackbarBody = targetDoc.querySelector('.kiro-snackbar-body');
         if (snackbarBody) {
           const allClickables = snackbarBody.querySelectorAll('div, button, [role="button"], [tabindex="0"], [class*="cursor-pointer"]');
@@ -358,11 +478,31 @@ function buildClickScript(clickInfo) {
             }
           }
         }
+        
+        // Try welcome/onboarding screens
+        if (!element) {
+          const welcomeContainers = targetDoc.querySelectorAll('[class*="welcome"], [class*="Welcome"], [class*="onboarding"], [class*="Onboarding"], [class*="build"], [class*="Build"]');
+          for (const container of welcomeContainers) {
+            if (!isVisible(container)) continue;
+            const allClickables = container.querySelectorAll('div, button, [role="button"], [tabindex="0"], [class*="cursor-pointer"], [class*="choice"], [class*="option"], [class*="card"]');
+            for (const item of allClickables) {
+              if (!isVisible(item)) continue;
+              if (item.children.length > 10) continue;
+              const itemText = (item.textContent || '').trim().toLowerCase();
+              if (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30))) {
+                element = item;
+                matchMethod = 'dialog-choice-welcome-screen';
+                break;
+              }
+            }
+            if (element) break;
+          }
+        }
       }
       
-      // Strategy 3: Find by cursor pointer style in dialog/snackbar areas
+      // Strategy 3: Find by cursor pointer style in dialog/snackbar/welcome areas
       if (!element && searchText) {
-        const dialogContainers = targetDoc.querySelectorAll('.kiro-snackbar, [role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"]');
+        const dialogContainers = targetDoc.querySelectorAll('.kiro-snackbar, [role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"], [class*="welcome"], [class*="Welcome"], [class*="onboarding"], [class*="Onboarding"], [class*="build"], [class*="Build"]');
         for (const container of dialogContainers) {
           if (!isVisible(container)) continue;
           const allElements = container.querySelectorAll('*');
@@ -380,6 +520,45 @@ function buildClickScript(clickInfo) {
             }
           }
           if (element) break;
+        }
+      }
+      
+      // Strategy 4: Search entire document for clickable cards with matching text (last resort for welcome screens)
+      if (!element && searchText) {
+        // Look for card-like elements anywhere in the document
+        const cardSelectors = [
+          '[class*="card"]',
+          '[class*="Card"]',
+          '[class*="choice"]',
+          '[class*="Choice"]',
+          '[class*="option"]',
+          '[class*="Option"]',
+          '[class*="vibe"]',
+          '[class*="Vibe"]',
+          '[class*="spec"]',
+          '[class*="Spec"]'
+        ];
+        
+        for (const sel of cardSelectors) {
+          try {
+            const cards = targetDoc.querySelectorAll(sel);
+            for (const card of cards) {
+              if (!isVisible(card)) continue;
+              if (card.children.length > 15) continue;
+              const cardText = (card.textContent || '').trim().toLowerCase();
+              if (cardText.includes(searchText) || searchText.includes(cardText.substring(0, 30))) {
+                // Verify it's clickable
+                const computedStyle = window.getComputedStyle(card);
+                if (computedStyle.cursor === 'pointer' || card.getAttribute('tabindex') === '0' ||
+                    card.tagName === 'BUTTON' || card.getAttribute('role') === 'button') {
+                  element = card;
+                  matchMethod = 'dialog-choice-card-fallback';
+                  break;
+                }
+              }
+            }
+            if (element) break;
+          } catch(e) {}
         }
       }
     }
@@ -567,9 +746,31 @@ function buildClickScript(clickInfo) {
       try {
         const escapedLabel = info.ariaLabel.replace(/"/g, '\\\\"');
         const candidates = targetDoc.querySelectorAll('[aria-label="' + escapedLabel + '"]');
+        const targetIndex = typeof info.elementIndex === 'number' ? info.elementIndex : -1;
+        
+        // Collect all visible matching elements
+        const matchingElements = [];
         for (const c of candidates) {
+          if (!isVisible(c)) continue;
           const label = (c.getAttribute('aria-label') || '').toLowerCase();
-          if (!label.includes('close')) { element = c; matchMethod = 'aria-label'; break; }
+          if (!label.includes('close')) {
+            matchingElements.push(c);
+          }
+        }
+        
+        // Use index-based selection if provided and multiple matches exist
+        if (targetIndex >= 0 && matchingElements.length > 1) {
+          if (targetIndex < matchingElements.length) {
+            element = matchingElements[targetIndex];
+            matchMethod = 'aria-label-indexed-' + targetIndex + '-of-' + matchingElements.length;
+          } else {
+            // Index out of bounds, fall back to last element
+            element = matchingElements[matchingElements.length - 1];
+            matchMethod = 'aria-label-indexed-fallback';
+          }
+        } else if (matchingElements.length > 0) {
+          element = matchingElements[0];
+          matchMethod = 'aria-label';
         }
       } catch(e) {}
     }
@@ -625,9 +826,13 @@ function buildClickScript(clickInfo) {
     if (info.text && info.text.trim() && !element) {
       const searchText = info.text.trim();
       const searchTextLower = searchText.toLowerCase();
+      const targetIndex = typeof info.elementIndex === 'number' ? info.elementIndex : -1;
       
-      // Extended selectors to include dialog/snackbar elements
-      const allElements = targetDoc.querySelectorAll('button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="listitem"], a, [tabindex="0"], [class*="cursor-pointer"], .kiro-snackbar-body > div, [class*="choice"], [class*="option"], [class*="action"]');
+      // Extended selectors to include dialog/snackbar elements AND generic divs with cursor pointer
+      const allElements = targetDoc.querySelectorAll('button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="listitem"], a, [tabindex="0"], [class*="cursor-pointer"], .kiro-snackbar-body > div, [class*="choice"], [class*="option"], [class*="action"], [class*="card"], [class*="Card"]');
+      
+      // Collect ALL matching elements first (for index-based selection)
+      const matchingElements = [];
       
       for (const el of allElements) {
         if (!isVisible(el)) continue;
@@ -643,30 +848,295 @@ function buildClickScript(clickInfo) {
             elText.includes(searchText) || elTextLower.includes(searchTextLower) ||
             (elText.length >= 10 && searchText.includes(elText)) ||
             (elTextLower.length >= 10 && searchTextLower.includes(elTextLower))) {
-          element = el;
-          matchMethod = 'text-content';
-          break;
+          matchingElements.push(el);
         }
       }
       
-      // If still not found, try a broader search in snackbar/dialog areas
+      // Sort matching elements to prefer clickable ones (cursor: pointer)
+      if (matchingElements.length > 1) {
+        matchingElements.sort((a, b) => {
+          const aStyle = window.getComputedStyle(a);
+          const bStyle = window.getComputedStyle(b);
+          const aClickable = aStyle.cursor === 'pointer' || a.getAttribute('tabindex') === '0' || a.getAttribute('role') === 'button';
+          const bClickable = bStyle.cursor === 'pointer' || b.getAttribute('tabindex') === '0' || b.getAttribute('role') === 'button';
+          if (aClickable && !bClickable) return -1;
+          if (!aClickable && bClickable) return 1;
+          // Prefer elements with fewer children (more specific)
+          return a.children.length - b.children.length;
+        });
+      }
+      
+      // If we have an index and multiple matches, use the indexed element
+      if (targetIndex >= 0 && matchingElements.length > 1) {
+        if (targetIndex < matchingElements.length) {
+          element = matchingElements[targetIndex];
+          matchMethod = 'text-content-indexed-' + targetIndex + '-of-' + matchingElements.length;
+        } else {
+          // Index out of bounds, fall back to last element
+          element = matchingElements[matchingElements.length - 1];
+          matchMethod = 'text-content-indexed-fallback';
+        }
+      } else if (matchingElements.length > 0) {
+        // No index provided or only one match, use first match (now sorted by clickability)
+        element = matchingElements[0];
+        matchMethod = 'text-content';
+      }
+      
+      // If still not found, try a broader search in snackbar/dialog/welcome areas
       if (!element) {
-        const containers = targetDoc.querySelectorAll('.kiro-snackbar, [role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"]');
+        const containers = targetDoc.querySelectorAll('.kiro-snackbar, [role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"], [class*="welcome"], [class*="Welcome"], [class*="build"], [class*="Build"]');
         for (const container of containers) {
           if (!isVisible(container)) continue;
           const clickables = container.querySelectorAll('div, button, span, [tabindex]');
+          const dialogMatches = [];
+          
           for (const el of clickables) {
             if (!isVisible(el)) continue;
             if (el.children.length > 10) continue;
             const elText = (el.textContent || '').trim();
             const elTextLower = elText.toLowerCase();
             if (elTextLower.includes(searchTextLower) || searchTextLower.includes(elTextLower.substring(0, 30))) {
-              element = el;
+              dialogMatches.push(el);
+            }
+          }
+          
+          if (dialogMatches.length > 0) {
+            if (targetIndex >= 0 && targetIndex < dialogMatches.length) {
+              element = dialogMatches[targetIndex];
+              matchMethod = 'text-content-dialog-indexed';
+            } else {
+              element = dialogMatches[0];
               matchMethod = 'text-content-dialog';
+            }
+            break;
+          }
+        }
+      }
+    }
+    
+    // =========================================================================
+    // Command Trust Dialog Buttons (Full command, Partial, Base options)
+    // =========================================================================
+    if (info.isCommandTrustOption && !element) {
+      const searchText = (info.text || '').trim().toLowerCase();
+      
+      // Strategy: Find ANY div with matching text - these are clickable trust options
+      if (searchText) {
+        const allDivs = targetDoc.querySelectorAll('div');
+        for (const div of allDivs) {
+          if (!isVisible(div)) continue;
+          if (div.children.length > 25) continue;
+          
+          const divText = (div.textContent || '').trim().toLowerCase();
+          if (divText.length < 5 || divText.length > 300) continue;
+          
+          // Match by keywords: full command, base
+          const hasFullMatch = searchText.includes('full') && divText.includes('full');
+          const hasBaseMatch = searchText.includes('base') && divText.includes('base');
+          const hasDirectMatch = divText.startsWith(searchText.substring(0, 15)) || 
+                                  searchText.startsWith(divText.substring(0, 15));
+          
+          if (hasFullMatch || hasBaseMatch || hasDirectMatch) {
+            element = div;
+            matchMethod = 'command-trust-div';
+            break;
+          }
+        }
+      }
+    }
+    
+    // =========================================================================
+    // Command Panel Action Buttons (play/run, edit, cancel, approve)
+    // =========================================================================
+    if (info.isCommandPanelAction && !element) {
+      const searchAction = (info.actionType || '').trim().toLowerCase();
+      const searchText = (info.text || '').trim().toLowerCase();
+      const searchAriaLabel = (info.ariaLabel || '').trim().toLowerCase();
+      
+      // Map actions to codicon classes
+      const commandActionIcons = {
+        'run': ['codicon-play', 'codicon-run', 'codicon-debug-start', 'codicon-triangle-right'],
+        'play': ['codicon-play', 'codicon-run', 'codicon-debug-start', 'codicon-triangle-right'],
+        'edit': ['codicon-edit', 'codicon-pencil'],
+        'cancel': ['codicon-x', 'codicon-close', 'codicon-chrome-close'],
+        'approve': ['codicon-check', 'codicon-pass'],
+        'stop': ['codicon-debug-stop', 'codicon-stop', 'codicon-primitive-square']
+      };
+      
+      // Strategy 1: Find by aria-label match (most reliable for icon buttons)
+      if (searchAriaLabel) {
+        const allButtons = targetDoc.querySelectorAll('button, [role="button"]');
+        for (const btn of allButtons) {
+          if (!isVisible(btn)) continue;
+          const btnAriaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+          const btnTitle = (btn.getAttribute('title') || '').toLowerCase();
+          // Exact or partial match on aria-label
+          if ((btnAriaLabel && (btnAriaLabel === searchAriaLabel || btnAriaLabel.includes(searchAriaLabel) || searchAriaLabel.includes(btnAriaLabel))) ||
+              (btnTitle && (btnTitle === searchAriaLabel || btnTitle.includes(searchAriaLabel) || searchAriaLabel.includes(btnTitle)))) {
+            element = btn;
+            matchMethod = 'command-panel-aria-exact';
+            break;
+          }
+        }
+      }
+      
+      // Strategy 2: Find by action type aria-label keywords
+      if (!element && searchAction) {
+        const actionKeywords = {
+          'run': ['run', 'play', 'execute', 'start'],
+          'edit': ['edit', 'modify', 'change'],
+          'cancel': ['cancel', 'reject', 'deny', 'dismiss'],
+          'approve': ['approve', 'accept', 'allow', 'confirm'],
+          'stop': ['stop', 'terminate', 'kill', 'abort']
+        };
+        const keywords = actionKeywords[searchAction] || [searchAction];
+        
+        const allButtons = targetDoc.querySelectorAll('button, [role="button"]');
+        for (const btn of allButtons) {
+          if (!isVisible(btn)) continue;
+          const btnAriaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
+          const btnTitle = (btn.getAttribute('title') || '').toLowerCase();
+          
+          for (const keyword of keywords) {
+            if (btnAriaLabel.includes(keyword) || btnTitle.includes(keyword)) {
+              element = btn;
+              matchMethod = 'command-panel-action-keyword-' + keyword;
               break;
             }
           }
           if (element) break;
+        }
+      }
+      
+      // Strategy 3: Find by codicon icon
+      if (!element && searchAction && commandActionIcons[searchAction]) {
+        for (const iconClass of commandActionIcons[searchAction]) {
+          const icons = targetDoc.querySelectorAll('.' + iconClass);
+          for (const icon of icons) {
+            if (!isVisible(icon)) continue;
+            const clickableParent = icon.closest('button, [role="button"], [tabindex="0"]');
+            if (clickableParent && isVisible(clickableParent)) {
+              element = clickableParent;
+              matchMethod = 'command-panel-icon-' + iconClass;
+              break;
+            }
+          }
+          if (element) break;
+        }
+      }
+      
+      // Strategy 4: Find green/colored play button (often has specific styling)
+      if (!element && (searchAction === 'run' || searchAction === 'play')) {
+        const allButtons = targetDoc.querySelectorAll('button, [role="button"]');
+        for (const btn of allButtons) {
+          if (!isVisible(btn)) continue;
+          // Check for play icon inside
+          if (btn.querySelector('.codicon-play, .codicon-run, .codicon-debug-start, .codicon-triangle-right, [class*="play"], [class*="run"]')) {
+            element = btn;
+            matchMethod = 'command-panel-play-icon';
+            break;
+          }
+          // Check for green color (common for run buttons)
+          const computedStyle = window.getComputedStyle(btn);
+          const bgColor = computedStyle.backgroundColor;
+          if (bgColor && (bgColor.includes('rgb(0, 128') || bgColor.includes('rgb(34, 197') || bgColor.includes('rgb(22, 163') || bgColor.includes('green'))) {
+            element = btn;
+            matchMethod = 'command-panel-green-button';
+            break;
+          }
+        }
+      }
+    }
+    
+    // =========================================================================
+    // UNIVERSAL FALLBACK - Last resort for any clickable element
+    // This handles cases where specific handlers fail to find the element
+    // =========================================================================
+    if (!element && info.text && info.text.trim()) {
+      const searchText = info.text.trim();
+      const searchTextLower = searchText.toLowerCase();
+      const searchWords = searchTextLower.split(/\\s+/).filter(w => w.length > 2);
+      
+      // Strategy 1: Find ANY visible element with matching text
+      const allElements = targetDoc.querySelectorAll('*');
+      let bestMatch = null;
+      let bestScore = 0;
+      
+      for (const el of allElements) {
+        if (!isVisible(el)) continue;
+        // Skip containers with many children (likely wrapper divs)
+        if (el.children.length > 12) continue;
+        // Skip very small elements
+        const rect = el.getBoundingClientRect();
+        if (rect.width < 20 || rect.height < 15) continue;
+        
+        const elText = (el.textContent || '').trim();
+        const elTextLower = elText.toLowerCase();
+        
+        // Skip if text is too long (likely a container)
+        if (elText.length > 300) continue;
+        
+        // Calculate match score
+        let score = 0;
+        
+        // Exact match
+        if (elTextLower === searchTextLower) score = 100;
+        // Contains full search text
+        else if (elTextLower.includes(searchTextLower)) score = 80;
+        // Search text contains element text
+        else if (searchTextLower.includes(elTextLower) && elText.length > 3) score = 70;
+        // Word matching
+        else {
+          const matchedWords = searchWords.filter(w => elTextLower.includes(w));
+          if (matchedWords.length > 0) {
+            score = 30 + (matchedWords.length / searchWords.length) * 40;
+          }
+        }
+        
+        // Boost score for clickable elements
+        const computedStyle = window.getComputedStyle(el);
+        if (computedStyle.cursor === 'pointer') score += 15;
+        if (el.tagName === 'BUTTON') score += 20;
+        if (el.getAttribute('role') === 'button') score += 15;
+        if (el.getAttribute('tabindex') === '0') score += 10;
+        if (el.onclick) score += 10;
+        
+        // Boost for elements in snackbar/dialog
+        if (el.closest('.kiro-snackbar, [role="dialog"], [class*="modal"]')) score += 10;
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = el;
+        }
+      }
+      
+      // Use best match if score is good enough
+      if (bestMatch && bestScore >= 40) {
+        element = bestMatch;
+        matchMethod = 'universal-fallback-score-' + bestScore;
+      }
+      
+      // Strategy 2: If still no match, try clicking at coordinates of text
+      if (!element) {
+        // Find element containing the text using TreeWalker
+        const walker = document.createTreeWalker(
+          targetDoc.body,
+          NodeFilter.SHOW_TEXT,
+          null,
+          false
+        );
+        
+        let node;
+        while (node = walker.nextNode()) {
+          const nodeText = (node.textContent || '').trim().toLowerCase();
+          if (nodeText.includes(searchTextLower) || searchTextLower.includes(nodeText.substring(0, 20))) {
+            const parent = node.parentElement;
+            if (parent && isVisible(parent)) {
+              element = parent;
+              matchMethod = 'universal-text-walker';
+              break;
+            }
+          }
         }
       }
     }
@@ -683,8 +1153,15 @@ function buildClickScript(clickInfo) {
       ariaHaspopup: element.getAttribute('aria-haspopup'),
       ariaExpanded: element.getAttribute('aria-expanded'),
       dataState: element.getAttribute('data-state'),
-      textContent: (element.textContent || '').substring(0, 50)
+      textContent: (element.textContent || '').substring(0, 50),
+      cursor: window.getComputedStyle(element).cursor,
+      childCount: element.children.length,
+      parentTag: element.parentElement?.tagName,
+      parentClass: (element.parentElement?.className || '').substring(0, 80)
     };
+    
+    // Log detailed element info for debugging
+    console.log('[Click] Found element:', elementInfo.tag, 'class:', elementInfo.className.substring(0, 50), 'cursor:', elementInfo.cursor, 'children:', elementInfo.childCount);
     
     try {
       element.click();
@@ -722,6 +1199,19 @@ function buildClickScript(clickInfo) {
  * @returns {Promise<{success: boolean, matchMethod?: string, error?: string}>}
  */
 export async function clickElement(cdp, clickInfo) {
+  // Log click attempt with relevant flags
+  const flags = [];
+  if (clickInfo.isCommandTrustOption) flags.push('CommandTrust');
+  if (clickInfo.isCommandPanelAction) flags.push('CommandAction:' + (clickInfo.actionType || '?'));
+  if (clickInfo.isToolActionButton) flags.push('ToolAction:' + (clickInfo.actionType || '?'));
+  if (clickInfo.isNotificationButton) flags.push('Notification');
+  if (clickInfo.isDialogChoice) flags.push('DialogChoice');
+  if (clickInfo.isMessageActionButton) flags.push('MessageAction');
+  if (clickInfo.parentMessageContext) flags.push('Context:' + clickInfo.parentMessageContext.substring(0, 20) + '...');
+  if (typeof clickInfo.elementIndex === 'number') flags.push(`Index:${clickInfo.elementIndex}/${clickInfo.totalMatches || '?'}`);
+  
+  console.log(`[Click] Attempting: "${(clickInfo.text || clickInfo.ariaLabel || 'unknown').substring(0, 40)}" [${flags.join(', ') || 'generic'}]`);
+  
   const script = buildClickScript(clickInfo);
   
   try {
@@ -734,17 +1224,20 @@ export async function clickElement(cdp, clickInfo) {
     const elementInfo = result.result?.value;
     
     if (!elementInfo?.found) {
-      console.log('[Click] Element not found:', clickInfo.ariaLabel || clickInfo.text || 'unknown');
+      console.log('[Click] Element not found:', clickInfo.text?.substring(0, 30) || clickInfo.ariaLabel || 'unknown');
       return { success: false, error: 'Element not found' };
     }
     
     if (elementInfo.clicked) {
+      console.log(`[Click] Success via: ${elementInfo.matchMethod}`);
       return { 
         success: true, 
         matchMethod: elementInfo.matchMethod,
-        needsRetry: elementInfo.needsRetry 
+        needsRetry: elementInfo.needsRetry,
+        elementInfo: elementInfo.elementInfo
       };
     }
+    console.log('[Click] Found but click failed:', elementInfo.error);
     return { success: false, error: elementInfo.error || 'Click failed' };
   } catch (err) {
     console.error('[Click] CDP error:', err.message);

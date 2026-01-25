@@ -24,7 +24,7 @@ A lightweight mobile interface that lets you monitor and control Kiro IDE agent 
 
 Start Kiro with the remote debugging port enabled:
 
-**Run Kiro with debugging port:**
+**Run Kiro with debugging port on terminal:**
 ```bash
 kiro --remote-debugging-port=9000
 ```

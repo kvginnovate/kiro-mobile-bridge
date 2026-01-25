@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-01-25
 
+- chore: bump version to 1.0.15 [skip ci]
 - fix: Improve file handling and editor snapshot capture
 - Enhance file path cleaning in openFileInEditor() to handle quotes, markdown headers, and list markers
 - Improve editor info banner styling with gradient background and warning icon

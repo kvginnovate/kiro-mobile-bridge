@@ -13,7 +13,7 @@ function buildClickScript(clickInfo) {
   // Escape the clickInfo for safe inclusion in the script
   const safeClickInfo = JSON.stringify(clickInfo);
   const modelNamesJson = JSON.stringify(MODEL_NAMES);
-  
+
   return `(function() {
     let targetDoc = document;
     const activeFrame = document.getElementById('active-frame');
@@ -30,6 +30,52 @@ function buildClickScript(clickInfo) {
       const lowerText = text.toLowerCase();
       for (const m of modelNames) {
         if (lowerText.includes(m)) return m;
+      }
+      return null;
+    };
+    
+    // CRITICAL: Find React fiber and check for onClick handler
+    const getReactFiber = (el) => {
+      for (const key of Object.keys(el)) {
+        if (key.startsWith('__reactFiber$') || key.startsWith('__reactInternalInstance$')) {
+          return el[key];
+        }
+      }
+      return null;
+    };
+    
+    const hasReactOnClick = (el) => {
+      const fiber = getReactFiber(el);
+      if (!fiber) return false;
+      // Check memoizedProps for onClick
+      const props = fiber.memoizedProps || fiber.pendingProps || {};
+      return !!(props.onClick || props.onPointerDown || props.onMouseDown || props.onPress);
+    };
+    
+    // Find the element with actual React onClick handler (walk up tree)
+    const findClickableAncestor = (el, maxDepth = 5) => {
+      let current = el;
+      let depth = 0;
+      while (current && depth < maxDepth) {
+        if (hasReactOnClick(current)) {
+          console.log('[Click] Found React onClick on ancestor at depth', depth, current.tagName);
+          return current;
+        }
+        current = current.parentElement;
+        depth++;
+      }
+      return null;
+    };
+    
+    // Find innermost clickable child
+    const findClickableChild = (el) => {
+      // Check children for React onClick
+      const children = el.querySelectorAll('*');
+      for (const child of children) {
+        if (hasReactOnClick(child) && isVisible(child)) {
+          console.log('[Click] Found React onClick on child:', child.tagName);
+          return child;
+        }
       }
       return null;
     };
@@ -312,6 +358,183 @@ function buildClickScript(clickInfo) {
     }
     
     // =========================================================================
+    // SMART DETECTION: Long text in snackbar = Dialog Choice, not Notification
+    // If text is > 30 chars and we're in a snackbar, treat as dialog choice
+    // =========================================================================
+    const searchTextForSmartDetect = (info.text || '').trim();
+    if (info.isNotificationButton && searchTextForSmartDetect.length > 30 && !info.isDialogChoice) {
+      // This is likely a dialog choice card, not a simple notification button
+      info.isDialogChoice = true;
+      info.isNotificationButton = false;
+      console.log('[Click] Smart detect: Long text in notification area, treating as dialog choice');
+    }
+    
+    // =========================================================================
+    // Dialog Choice Buttons (spec workflow options, modal choices, welcome screens)
+    // MOVED BEFORE Notification handler for priority
+    // =========================================================================
+    if (info.isDialogChoice && !element) {
+      const searchText = (info.text || '').trim().toLowerCase();
+      
+      // Strategy 1: Find clickable divs/buttons in snackbar body or welcome screens with matching text
+      const dialogSelectors = [
+        '.kiro-snackbar-body > div',
+        '.kiro-snackbar-body [class*="choice"]',
+        '.kiro-snackbar-body [class*="option"]',
+        '.kiro-snackbar [class*="choice"]',
+        '.kiro-snackbar [class*="option"]',
+        '[class*="dialog"] [class*="choice"]',
+        '[class*="dialog"] [class*="option"]',
+        '[class*="modal"] [class*="choice"]',
+        '[class*="modal"] [class*="option"]',
+        '[role="dialog"] button',
+        '[role="dialog"] [role="button"]',
+        '[role="alertdialog"] button',
+        '[role="alertdialog"] [role="button"]',
+        // Welcome/onboarding screen selectors
+        '[class*="welcome"] [class*="choice"]',
+        '[class*="welcome"] [class*="option"]',
+        '[class*="Welcome"] [class*="Choice"]',
+        '[class*="Welcome"] [class*="Option"]',
+        '[class*="onboarding"] [class*="choice"]',
+        '[class*="onboarding"] [class*="option"]',
+        '[class*="Onboarding"] [class*="Choice"]',
+        '[class*="build"] [class*="choice"]',
+        '[class*="build"] [class*="option"]',
+        '[class*="Build"] [class*="Choice"]',
+        // Direct choice/option cards
+        '[class*="choice-card"]',
+        '[class*="choiceCard"]',
+        '[class*="ChoiceCard"]',
+        '[class*="option-card"]',
+        '[class*="optionCard"]',
+        '[class*="OptionCard"]',
+        // Vibe/Spec specific (common Kiro patterns)
+        '[class*="vibe"]',
+        '[class*="Vibe"]',
+        '[class*="spec"]',
+        '[class*="Spec"]'
+      ];
+      
+      // DEBUG: Log what we're searching for
+      console.log('[Click Debug] Searching for dialog choice:', searchText.substring(0, 50));
+      
+      for (const sel of dialogSelectors) {
+        try {
+          const items = targetDoc.querySelectorAll(sel);
+          for (const item of items) {
+            if (!isVisible(item)) continue;
+            const itemText = (item.textContent || '').trim().toLowerCase();
+            // Match if text contains search text or vice versa (partial match)
+            if (searchText && (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30)))) {
+              element = item;
+              matchMethod = 'dialog-choice-selector';
+              
+              // DEBUG: Log detailed info about the found element
+              console.log('[Click Debug] Found via selector:', sel);
+              console.log('[Click Debug] Element tag:', item.tagName, 'class:', (item.className || '').substring(0, 80));
+              console.log('[Click Debug] Element text:', itemText.substring(0, 60));
+              
+              // Check for React fiber
+              let hasReactFiber = false;
+              for (const key of Object.keys(item)) {
+                if (key.startsWith('__reactFiber') || key.startsWith('__reactInternalInstance')) {
+                  hasReactFiber = true;
+                  console.log('[Click Debug] Has React fiber:', key);
+                  break;
+                }
+              }
+              if (!hasReactFiber) console.log('[Click Debug] NO React fiber found on element!');
+              
+              // Check parent for React fiber
+              if (!hasReactFiber && item.parentElement) {
+                for (const key of Object.keys(item.parentElement)) {
+                  if (key.startsWith('__reactFiber') || key.startsWith('__reactInternalInstance')) {
+                    console.log('[Click Debug] Parent has React fiber:', key);
+                    break;
+                  }
+                }
+              }
+              
+              break;
+            }
+          }
+          if (element) break;
+        } catch(e) {}
+      }
+      
+      // Strategy 2: Find any clickable element in snackbar body with matching text
+      if (!element && searchText) {
+        const snackbarBody = targetDoc.querySelector('.kiro-snackbar-body');
+        if (snackbarBody) {
+          console.log('[Click Debug] Searching in snackbar-body');
+          const allClickables = snackbarBody.querySelectorAll('div, button, [role="button"], [tabindex="0"], [class*="cursor-pointer"]');
+          for (const item of allClickables) {
+            if (!isVisible(item)) continue;
+            if (item.children.length > 10) continue;
+            const itemText = (item.textContent || '').trim().toLowerCase();
+            if (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30))) {
+              element = item;
+              matchMethod = 'dialog-choice-snackbar-body';
+              console.log('[Click Debug] Found in snackbar-body:', item.tagName, (item.className || '').substring(0, 60));
+              break;
+            }
+          }
+        }
+      }
+      
+      // Strategy 3: Find by cursor pointer style in snackbar/dialog areas
+      if (!element && searchText) {
+        const dialogContainers = targetDoc.querySelectorAll('.kiro-snackbar, [role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"], [class*="welcome"], [class*="Welcome"]');
+        console.log('[Click Debug] Found', dialogContainers.length, 'dialog/snackbar containers');
+        for (const container of dialogContainers) {
+          if (!isVisible(container)) continue;
+          console.log('[Click Debug] Checking container:', container.className?.substring(0, 60));
+          const allElements = container.querySelectorAll('*');
+          for (const item of allElements) {
+            if (!isVisible(item)) continue;
+            if (item.children.length > 10) continue;
+            const computedStyle = window.getComputedStyle(item);
+            const isClickable = computedStyle.cursor === 'pointer' || item.getAttribute('tabindex') === '0';
+            if (!isClickable) continue;
+            const itemText = (item.textContent || '').trim().toLowerCase();
+            if (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30))) {
+              element = item;
+              matchMethod = 'dialog-choice-cursor-pointer';
+              console.log('[Click Debug] Found via cursor-pointer:', item.tagName, (item.className || '').substring(0, 60));
+              break;
+            }
+          }
+          if (element) break;
+        }
+      }
+      
+      // Strategy 4: Search for clickable cards anywhere
+      if (!element && searchText) {
+        const cardSelectors = ['[class*="card"]', '[class*="Card"]', '[class*="choice"]', '[class*="Choice"]', '[class*="option"]', '[class*="Option"]'];
+        for (const sel of cardSelectors) {
+          try {
+            const cards = targetDoc.querySelectorAll(sel);
+            for (const card of cards) {
+              if (!isVisible(card)) continue;
+              if (card.children.length > 15) continue;
+              const cardText = (card.textContent || '').trim().toLowerCase();
+              if (cardText.includes(searchText) || searchText.includes(cardText.substring(0, 30))) {
+                const computedStyle = window.getComputedStyle(card);
+                if (computedStyle.cursor === 'pointer' || card.getAttribute('tabindex') === '0' || card.tagName === 'BUTTON' || card.getAttribute('role') === 'button') {
+                  element = card;
+                  matchMethod = 'dialog-choice-card-fallback';
+                  break;
+                }
+              }
+            }
+            if (element) break;
+          } catch(e) {}
+        }
+      }
+    }
+    
+    // =========================================================================
     // Notification Banner Buttons
     // =========================================================================
     if (info.isNotificationButton && !element) {
@@ -393,172 +616,6 @@ function buildClickScript(clickInfo) {
         if (expandArrow && isVisible(expandArrow)) {
           element = expandArrow;
           matchMethod = 'snackbar-expand';
-        }
-      }
-    }
-    
-    // =========================================================================
-    // Dialog Choice Buttons (spec workflow options, modal choices, welcome screens)
-    // =========================================================================
-    if (info.isDialogChoice && !element) {
-      const searchText = (info.text || '').trim().toLowerCase();
-      
-      // Strategy 1: Find clickable divs/buttons in snackbar body or welcome screens with matching text
-      const dialogSelectors = [
-        '.kiro-snackbar-body > div',
-        '.kiro-snackbar-body [class*="choice"]',
-        '.kiro-snackbar-body [class*="option"]',
-        '.kiro-snackbar [class*="choice"]',
-        '.kiro-snackbar [class*="option"]',
-        '[class*="dialog"] [class*="choice"]',
-        '[class*="dialog"] [class*="option"]',
-        '[class*="modal"] [class*="choice"]',
-        '[class*="modal"] [class*="option"]',
-        '[role="dialog"] button',
-        '[role="dialog"] [role="button"]',
-        '[role="alertdialog"] button',
-        '[role="alertdialog"] [role="button"]',
-        // Welcome/onboarding screen selectors
-        '[class*="welcome"] [class*="choice"]',
-        '[class*="welcome"] [class*="option"]',
-        '[class*="Welcome"] [class*="Choice"]',
-        '[class*="Welcome"] [class*="Option"]',
-        '[class*="onboarding"] [class*="choice"]',
-        '[class*="onboarding"] [class*="option"]',
-        '[class*="Onboarding"] [class*="Choice"]',
-        '[class*="build"] [class*="choice"]',
-        '[class*="build"] [class*="option"]',
-        '[class*="Build"] [class*="Choice"]',
-        // Direct choice/option cards
-        '[class*="choice-card"]',
-        '[class*="choiceCard"]',
-        '[class*="ChoiceCard"]',
-        '[class*="option-card"]',
-        '[class*="optionCard"]',
-        '[class*="OptionCard"]',
-        // Vibe/Spec specific (common Kiro patterns)
-        '[class*="vibe"]',
-        '[class*="Vibe"]',
-        '[class*="spec"]',
-        '[class*="Spec"]'
-      ];
-      
-      for (const sel of dialogSelectors) {
-        try {
-          const items = targetDoc.querySelectorAll(sel);
-          for (const item of items) {
-            if (!isVisible(item)) continue;
-            const itemText = (item.textContent || '').trim().toLowerCase();
-            // Match if text contains search text or vice versa (partial match)
-            if (searchText && (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30)))) {
-              element = item;
-              matchMethod = 'dialog-choice-selector';
-              break;
-            }
-          }
-          if (element) break;
-        } catch(e) {}
-      }
-      
-      // Strategy 2: Find any clickable element in snackbar body or welcome screens with matching text
-      if (!element && searchText) {
-        // Try snackbar body first
-        const snackbarBody = targetDoc.querySelector('.kiro-snackbar-body');
-        if (snackbarBody) {
-          const allClickables = snackbarBody.querySelectorAll('div, button, [role="button"], [tabindex="0"], [class*="cursor-pointer"]');
-          for (const item of allClickables) {
-            if (!isVisible(item)) continue;
-            // Skip if it has too many children (container element)
-            if (item.children.length > 10) continue;
-            const itemText = (item.textContent || '').trim().toLowerCase();
-            if (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30))) {
-              element = item;
-              matchMethod = 'dialog-choice-snackbar-body';
-              break;
-            }
-          }
-        }
-        
-        // Try welcome/onboarding screens
-        if (!element) {
-          const welcomeContainers = targetDoc.querySelectorAll('[class*="welcome"], [class*="Welcome"], [class*="onboarding"], [class*="Onboarding"], [class*="build"], [class*="Build"]');
-          for (const container of welcomeContainers) {
-            if (!isVisible(container)) continue;
-            const allClickables = container.querySelectorAll('div, button, [role="button"], [tabindex="0"], [class*="cursor-pointer"], [class*="choice"], [class*="option"], [class*="card"]');
-            for (const item of allClickables) {
-              if (!isVisible(item)) continue;
-              if (item.children.length > 10) continue;
-              const itemText = (item.textContent || '').trim().toLowerCase();
-              if (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30))) {
-                element = item;
-                matchMethod = 'dialog-choice-welcome-screen';
-                break;
-              }
-            }
-            if (element) break;
-          }
-        }
-      }
-      
-      // Strategy 3: Find by cursor pointer style in dialog/snackbar/welcome areas
-      if (!element && searchText) {
-        const dialogContainers = targetDoc.querySelectorAll('.kiro-snackbar, [role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"], [class*="welcome"], [class*="Welcome"], [class*="onboarding"], [class*="Onboarding"], [class*="build"], [class*="Build"]');
-        for (const container of dialogContainers) {
-          if (!isVisible(container)) continue;
-          const allElements = container.querySelectorAll('*');
-          for (const item of allElements) {
-            if (!isVisible(item)) continue;
-            if (item.children.length > 10) continue;
-            const computedStyle = window.getComputedStyle(item);
-            const isClickable = computedStyle.cursor === 'pointer' || item.getAttribute('tabindex') === '0';
-            if (!isClickable) continue;
-            const itemText = (item.textContent || '').trim().toLowerCase();
-            if (itemText.includes(searchText) || searchText.includes(itemText.substring(0, 30))) {
-              element = item;
-              matchMethod = 'dialog-choice-cursor-pointer';
-              break;
-            }
-          }
-          if (element) break;
-        }
-      }
-      
-      // Strategy 4: Search entire document for clickable cards with matching text (last resort for welcome screens)
-      if (!element && searchText) {
-        // Look for card-like elements anywhere in the document
-        const cardSelectors = [
-          '[class*="card"]',
-          '[class*="Card"]',
-          '[class*="choice"]',
-          '[class*="Choice"]',
-          '[class*="option"]',
-          '[class*="Option"]',
-          '[class*="vibe"]',
-          '[class*="Vibe"]',
-          '[class*="spec"]',
-          '[class*="Spec"]'
-        ];
-        
-        for (const sel of cardSelectors) {
-          try {
-            const cards = targetDoc.querySelectorAll(sel);
-            for (const card of cards) {
-              if (!isVisible(card)) continue;
-              if (card.children.length > 15) continue;
-              const cardText = (card.textContent || '').trim().toLowerCase();
-              if (cardText.includes(searchText) || searchText.includes(cardText.substring(0, 30))) {
-                // Verify it's clickable
-                const computedStyle = window.getComputedStyle(card);
-                if (computedStyle.cursor === 'pointer' || card.getAttribute('tabindex') === '0' ||
-                    card.tagName === 'BUTTON' || card.getAttribute('role') === 'button') {
-                  element = card;
-                  matchMethod = 'dialog-choice-card-fallback';
-                  break;
-                }
-              }
-            }
-            if (element) break;
-          } catch(e) {}
         }
       }
     }
@@ -1146,45 +1203,138 @@ function buildClickScript(clickInfo) {
     // =========================================================================
     if (!element) return { found: false, error: 'Element not found' };
     
+    // CRITICAL: Find the element with actual React onClick handler
+    // The element we found by text might be a container, not the actual clickable
+    let clickTarget = element;
+    let reactClickableFound = false;
+    
+    // First check if current element has React onClick
+    if (hasReactOnClick(element)) {
+      console.log('[Click] Current element has React onClick');
+      reactClickableFound = true;
+    } else {
+      // Try to find clickable ancestor (handler might be on parent)
+      const clickableAncestor = findClickableAncestor(element);
+      if (clickableAncestor) {
+        clickTarget = clickableAncestor;
+        matchMethod = matchMethod + '-react-ancestor';
+        reactClickableFound = true;
+        console.log('[Click] Using ancestor with React onClick:', clickableAncestor.tagName);
+      } else {
+        // Try to find clickable child
+        const clickableChild = findClickableChild(element);
+        if (clickableChild) {
+          clickTarget = clickableChild;
+          matchMethod = matchMethod + '-react-child';
+          reactClickableFound = true;
+          console.log('[Click] Using child with React onClick:', clickableChild.tagName);
+        }
+      }
+    }
+    
+    if (!reactClickableFound) {
+      console.log('[Click] WARNING: No React onClick found on element or ancestors/children');
+    }
+    
+    // Use the click target (might be different from original element)
+    element = clickTarget;
+    
+    // Get bounding rect for position info
+    const rect = element.getBoundingClientRect();
+    
     const elementInfo = {
       tag: element.tagName,
-      className: element.className?.substring?.(0, 100) || '',
+      className: element.className?.substring?.(0, 150) || '',
       role: element.getAttribute('role'),
       ariaHaspopup: element.getAttribute('aria-haspopup'),
       ariaExpanded: element.getAttribute('aria-expanded'),
       dataState: element.getAttribute('data-state'),
-      textContent: (element.textContent || '').substring(0, 50),
+      tabindex: element.getAttribute('tabindex'),
+      textContent: (element.textContent || '').substring(0, 80),
       cursor: window.getComputedStyle(element).cursor,
+      pointerEvents: window.getComputedStyle(element).pointerEvents,
       childCount: element.children.length,
       parentTag: element.parentElement?.tagName,
-      parentClass: (element.parentElement?.className || '').substring(0, 80)
+      parentClass: (element.parentElement?.className || '').substring(0, 100),
+      grandparentTag: element.parentElement?.parentElement?.tagName,
+      grandparentClass: (element.parentElement?.parentElement?.className || '').substring(0, 100),
+      boundingRect: { 
+        top: Math.round(rect.top), 
+        left: Math.round(rect.left), 
+        width: Math.round(rect.width), 
+        height: Math.round(rect.height) 
+      },
+      isInViewport: rect.top >= 0 && rect.left >= 0 && rect.bottom <= window.innerHeight && rect.right <= window.innerWidth,
+      hasOnclick: !!element.onclick,
+      hasClickListeners: element._listeners ? Object.keys(element._listeners).includes('click') : 'unknown'
     };
     
-    // Log detailed element info for debugging
-    console.log('[Click] Found element:', elementInfo.tag, 'class:', elementInfo.className.substring(0, 50), 'cursor:', elementInfo.cursor, 'children:', elementInfo.childCount);
+    // DETAILED DEBUG LOG - Print full element hierarchy
+    console.log('[Click] === DETAILED ELEMENT INFO ===');
+    console.log('[Click] Tag:', elementInfo.tag);
+    console.log('[Click] Class:', elementInfo.className);
+    console.log('[Click] Role:', elementInfo.role, '| Tabindex:', elementInfo.tabindex);
+    console.log('[Click] Text:', elementInfo.textContent);
+    console.log('[Click] Cursor:', elementInfo.cursor, '| PointerEvents:', elementInfo.pointerEvents);
+    console.log('[Click] Rect:', JSON.stringify(elementInfo.boundingRect), '| InViewport:', elementInfo.isInViewport);
+    console.log('[Click] Parent:', elementInfo.parentTag, '-', elementInfo.parentClass?.substring(0, 60));
+    console.log('[Click] Grandparent:', elementInfo.grandparentTag, '-', elementInfo.grandparentClass?.substring(0, 60));
+    console.log('[Click] Children:', elementInfo.childCount, '| HasOnclick:', elementInfo.hasOnclick);
+    console.log('[Click] =============================');
+
     
     try {
-      element.click();
+      // Always use full event sequence for React/modern framework compatibility
+      // Modern frameworks often use PointerEvents instead of MouseEvents
+      const rect = element.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      const eventOpts = { 
+        bubbles: true, 
+        cancelable: true, 
+        view: window,
+        clientX: centerX,
+        clientY: centerY,
+        button: 0,
+        buttons: 1,
+        pointerId: 1,
+        pointerType: 'mouse',
+        isPrimary: true,
+        width: 1,
+        height: 1,
+        pressure: 0.5
+      };
+      
+      // Focus element first for accessibility and some components that require focus
+      if (element.focus && typeof element.focus === 'function') {
+        try { element.focus(); } catch(e) {}
+      }
+      
+      // CRITICAL: Dispatch PointerEvents FIRST - modern React/UI libs use these
+      // Many snackbar/dialog components use onPointerDown instead of onClick
+      try {
+        element.dispatchEvent(new PointerEvent('pointerenter', { ...eventOpts, bubbles: false }));
+        element.dispatchEvent(new PointerEvent('pointerover', eventOpts));
+        element.dispatchEvent(new PointerEvent('pointerdown', eventOpts));
+        element.dispatchEvent(new PointerEvent('pointerup', eventOpts));
+      } catch(pe) {
+        console.log('[Click] PointerEvent dispatch failed, continuing with MouseEvents');
+      }
+      
+      // Then dispatch MouseEvents for legacy compatibility
+      element.dispatchEvent(new MouseEvent('mouseenter', { ...eventOpts, bubbles: false }));
+      element.dispatchEvent(new MouseEvent('mouseover', eventOpts));
+      element.dispatchEvent(new MouseEvent('mousedown', eventOpts));
+      element.dispatchEvent(new MouseEvent('mouseup', eventOpts));
+      element.dispatchEvent(new MouseEvent('click', eventOpts));
+      
       return { found: true, clicked: true, matchMethod, elementInfo };
     } catch (e) {
+      // Fallback to simple click if event dispatch fails
       try {
-        const rect = element.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        const mouseOpts = { 
-          bubbles: true, 
-          cancelable: true, 
-          view: window,
-          clientX: centerX,
-          clientY: centerY
-        };
-        
-        element.dispatchEvent(new MouseEvent('mousedown', mouseOpts));
-        element.dispatchEvent(new MouseEvent('mouseup', mouseOpts));
-        element.dispatchEvent(new MouseEvent('click', mouseOpts));
-        
-        return { found: true, clicked: true, matchMethod: matchMethod + '-dispatch', elementInfo };
+        element.click();
+        return { found: true, clicked: true, matchMethod: matchMethod + '-fallback', elementInfo };
       } catch (e2) {
         return { found: true, clicked: false, error: 'Click failed: ' + e2.message };
       }
@@ -1209,38 +1359,114 @@ export async function clickElement(cdp, clickInfo) {
   if (clickInfo.isMessageActionButton) flags.push('MessageAction');
   if (clickInfo.parentMessageContext) flags.push('Context:' + clickInfo.parentMessageContext.substring(0, 20) + '...');
   if (typeof clickInfo.elementIndex === 'number') flags.push(`Index:${clickInfo.elementIndex}/${clickInfo.totalMatches || '?'}`);
-  
+
   console.log(`[Click] Attempting: "${(clickInfo.text || clickInfo.ariaLabel || 'unknown').substring(0, 40)}" [${flags.join(', ') || 'generic'}]`);
-  
+
   const script = buildClickScript(clickInfo);
-  
-  try {
-    const result = await cdp.call('Runtime.evaluate', {
-      expression: script,
-      contextId: cdp.rootContextId,
-      returnByValue: true
-    });
-    
-    const elementInfo = result.result?.value;
-    
-    if (!elementInfo?.found) {
-      console.log('[Click] Element not found:', clickInfo.text?.substring(0, 30) || clickInfo.ariaLabel || 'unknown');
-      return { success: false, error: 'Element not found' };
+
+  // Get all available contexts to try
+  const contextsToTry = [cdp.rootContextId];
+
+  // Add other contexts if available (for snackbar/dialog in different context)
+  if (cdp.contexts && cdp.contexts.length > 1) {
+    for (const ctx of cdp.contexts) {
+      if (ctx.id !== cdp.rootContextId) {
+        contextsToTry.push(ctx.id);
+      }
     }
-    
-    if (elementInfo.clicked) {
-      console.log(`[Click] Success via: ${elementInfo.matchMethod}`);
-      return { 
-        success: true, 
-        matchMethod: elementInfo.matchMethod,
-        needsRetry: elementInfo.needsRetry,
-        elementInfo: elementInfo.elementInfo
-      };
-    }
-    console.log('[Click] Found but click failed:', elementInfo.error);
-    return { success: false, error: elementInfo.error || 'Click failed' };
-  } catch (err) {
-    console.error('[Click] CDP error:', err.message);
-    return { success: false, error: err.message };
+    console.log(`[Click] Will try ${contextsToTry.length} context(s): ${contextsToTry.join(', ')}`);
   }
+
+  let lastError = null;
+  let lastElementInfo = null;
+
+  // Try each context until we find and click the element
+  for (const contextId of contextsToTry) {
+    try {
+      console.log(`[Click] Trying context ${contextId}...`);
+
+      const result = await cdp.call('Runtime.evaluate', {
+        expression: script,
+        contextId: contextId,
+        returnByValue: true
+      });
+
+      const elementInfo = result.result?.value;
+
+      if (!elementInfo?.found) {
+        console.log(`[Click] Element not found in context ${contextId}`);
+        continue; // Try next context
+      }
+
+      lastElementInfo = elementInfo;
+
+      // If JS click worked, we're done
+      if (elementInfo.clicked) {
+        console.log(`[Click] Success via: ${elementInfo.matchMethod} (context ${contextId})`);
+        return {
+          success: true,
+          matchMethod: elementInfo.matchMethod,
+          needsRetry: elementInfo.needsRetry,
+          elementInfo: elementInfo.elementInfo,
+          contextId: contextId
+        };
+      }
+
+      // If element was found but JS click didn't work, try CDP Input.dispatchMouseEvent
+      if (elementInfo.elementInfo?.boundingRect) {
+        const rect = elementInfo.elementInfo.boundingRect;
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+
+        console.log(`[Click] JS click failed in context ${contextId}, trying CDP Input at (${x}, ${y})`);
+
+        try {
+          await cdp.call('Input.dispatchMouseEvent', {
+            type: 'mousePressed',
+            x: x,
+            y: y,
+            button: 'left',
+            clickCount: 1
+          });
+
+          await new Promise(resolve => setTimeout(resolve, 50));
+
+          await cdp.call('Input.dispatchMouseEvent', {
+            type: 'mouseReleased',
+            x: x,
+            y: y,
+            button: 'left',
+            clickCount: 1
+          });
+
+          console.log(`[Click] CDP Input.dispatchMouseEvent success (context ${contextId})`);
+          return {
+            success: true,
+            matchMethod: elementInfo.matchMethod + '-cdp-input',
+            elementInfo: elementInfo.elementInfo,
+            contextId: contextId
+          };
+        } catch (inputErr) {
+          console.log('[Click] CDP Input failed:', inputErr.message);
+          lastError = inputErr.message;
+        }
+      }
+
+      lastError = elementInfo.error || 'Click failed';
+
+    } catch (err) {
+      console.error(`[Click] CDP error in context ${contextId}:`, err.message);
+      lastError = err.message;
+      // Continue to try other contexts
+    }
+  }
+
+  // All contexts failed
+  if (lastElementInfo?.found) {
+    console.log('[Click] Found but click failed in all contexts:', lastError);
+    return { success: false, error: lastError || 'Click failed in all contexts' };
+  }
+
+  console.log('[Click] Element not found in any context:', clickInfo.text?.substring(0, 30) || clickInfo.ariaLabel || 'unknown');
+  return { success: false, error: 'Element not found in any context' };
 }

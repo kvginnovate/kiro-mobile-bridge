@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -12,217 +13,856 @@
     /* =============================================================================
        Base Styles
        ============================================================================= */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { 
-      height: 100%; 
-      overflow: hidden; 
-      background: #1e1e1e; 
-      font-family: "Segoe WPC", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, sans-serif; 
-      font-size: 13px; 
-      color: #fff; 
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-    .app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
-    
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: #1e1e1e;
+      font-family: "Segoe WPC", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, sans-serif;
+      font-size: 13px;
+      color: #fff;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      height: 100dvh;
+    }
+
     /* CRITICAL: Protect codicon font from any overrides */
-    .codicon, .codicon::before, [class*="codicon"], [class^="codicon-"] {
+    .codicon,
+    .codicon::before,
+    [class*="codicon"],
+    [class^="codicon-"] {
       font-family: codicon !important;
     }
-    
+
     /* =============================================================================
        Navigation Bar
        ============================================================================= */
-    .nav-bar { 
-      display: flex; 
-      align-items: center; 
-      background: #1e1e1e; 
-      border-bottom: 1px solid #3c3c3c; 
-      padding: 0 8px; 
-      flex-shrink: 0; 
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      background: #1e1e1e;
+      border-bottom: 1px solid #3c3c3c;
+      padding: 0 8px;
+      flex-shrink: 0;
     }
-    .status { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 10px 8px; }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #666; }
-    .status-dot.connected { background: #4caf50; }
-    .status-dot.disconnected { background: #f44336; }
-    .nav-tabs { display: flex; align-items: center; flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .nav-tabs::-webkit-scrollbar { display: none; }
-    .nav-tab { 
-      display: flex; 
-      align-items: center; 
-      gap: 6px; 
-      padding: 10px 16px; 
-      color: #888; 
-      font-size: 12px; 
-      font-weight: 500; 
-      cursor: pointer; 
-      border-bottom: 2px solid transparent; 
-      transition: all 0.2s ease; 
-      white-space: nowrap; 
-      user-select: none; 
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 10px 8px;
     }
-    .nav-tab:hover { color: #ccc; background: rgba(255,255,255,0.05); }
-    .nav-tab.active { color: #fff; border-bottom-color: #7138cc; }
-    .nav-tab .codicon { font-size: 14px; }
-    
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #666;
+    }
+
+    .status-dot.connected {
+      background: #4caf50;
+    }
+
+    .status-dot.disconnected {
+      background: #f44336;
+    }
+
+    .nav-tabs {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      color: #888;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .nav-tab:hover {
+      color: #ccc;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-tab.active {
+      color: #fff;
+      border-bottom-color: #7138cc;
+    }
+
+    .nav-tab .codicon {
+      font-size: 14px;
+    }
+
     /* =============================================================================
        Panel Container
        ============================================================================= */
-    .panel-container { flex: 1; overflow: hidden; position: relative; }
-    .panel { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; display: none; }
-    .panel.active { display: flex; flex-direction: column; }
-    
+    .panel-container {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+      display: none;
+    }
+
+    .panel.active {
+      display: flex;
+      flex-direction: column;
+    }
+
     /* =============================================================================
        Chat Panel
        ============================================================================= */
-    .chat-container { flex: 1; overflow: hidden; position: relative; }
-    .chat-content { width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
-    #chatContent, #chatContent * { font-family: inherit; }
-    #chatContent code, #chatContent pre { font-family: Menlo, Monaco, "Courier New", monospace !important; }
-    #chatContent .codicon { font-family: codicon !important; font-size: 16px; line-height: 1; }
-    
+    .chat-container {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .chat-content {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #chatContent,
+    #chatContent * {
+      font-family: inherit;
+    }
+
+    #chatContent code,
+    #chatContent pre {
+      font-family: Menlo, Monaco, "Courier New", monospace !important;
+    }
+
+    #chatContent .codicon {
+      font-family: codicon !important;
+      font-size: 16px;
+      line-height: 1;
+    }
+
     /* =============================================================================
        Editor Panel
        ============================================================================= */
-    .editor-container { flex: 1; overflow: hidden; background: #1e1e1e; display: flex; flex-direction: column; position: relative; }
-    .editor-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #252526; border-bottom: 1px solid #3c3c3c; flex-shrink: 0; user-select: none; }
-    .editor-filename { font-size: 13px; color: #fff; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
-    .editor-search-btn { color: #888; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
-    .editor-search-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
-    .editor-explorer-btn { display: flex; align-items: center; gap: 6px; color: #a78bfa; font-size: 14px; cursor: pointer; padding: 4px 10px; border-radius: 6px; background: rgba(113, 56, 204, 0.15); border: 1px solid rgba(113, 56, 204, 0.3); }
-    .editor-explorer-btn:hover { background: rgba(113, 56, 204, 0.25); border-color: rgba(113, 56, 204, 0.5); }
-    .editor-explorer-text { font-size: 11px; font-weight: 600; color: #a78bfa; letter-spacing: 0.5px; }
-    .editor-explorer-indicator { font-size: 10px; color: #888; margin-left: 2px; transition: transform 0.2s ease; }
-    .editor-search-bar { display: none; align-items: center; gap: 8px; padding: 6px 12px; background: #252526; border-bottom: 1px solid #3c3c3c; }
-    .editor-search-bar.open { display: flex; }
-    .editor-search-bar input { flex: 1; padding: 6px 10px; background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px; color: #fff; font-size: 13px; outline: none; }
-    .editor-search-bar input:focus { border-color: #007acc; }
-    .editor-search-count { font-size: 12px; color: #888; min-width: 50px; text-align: center; }
-    .editor-search-nav, .editor-search-close { color: #888; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
-    .editor-search-nav:hover, .editor-search-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
-    .editor-content { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: #1e1e1e; }
-    .editor-code { margin: 0; padding: 8px 0; font-family: Consolas, 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #d4d4d4; background: #1e1e1e; min-width: max-content; }
-    .editor-line { display: flex; min-height: 18px; }
-    .editor-line:hover { background: rgba(255,255,255,0.04); }
-    .editor-line-num { width: 50px; min-width: 50px; text-align: right; padding-right: 16px; color: #858585; user-select: none; flex-shrink: 0; font-size: 12px; position: sticky; left: 0; background: #1e1e1e; z-index: 1; }
-    .editor-line-code { flex: 1; padding-right: 12px; white-space: pre; tab-size: 2; }
-    .search-highlight { background: #ffd500; color: #000; border-radius: 2px; padding: 0 1px; }
-    .search-highlight.current { background: #ff6b00; color: #fff; outline: 2px solid #ff6b00; }
-    
+    .editor-container {
+      flex: 1;
+      overflow: hidden;
+      background: #1e1e1e;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .editor-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #252526;
+      border-bottom: 1px solid #3c3c3c;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .editor-filename {
+      font-size: 13px;
+      color: #fff;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 200px;
+    }
+
+    .editor-search-btn {
+      color: #888;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    .editor-search-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .editor-explorer-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #a78bfa;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(113, 56, 204, 0.15);
+      border: 1px solid rgba(113, 56, 204, 0.3);
+    }
+
+    .editor-explorer-btn:hover {
+      background: rgba(113, 56, 204, 0.25);
+      border-color: rgba(113, 56, 204, 0.5);
+    }
+
+    .editor-explorer-text {
+      font-size: 11px;
+      font-weight: 600;
+      color: #a78bfa;
+      letter-spacing: 0.5px;
+    }
+
+    .editor-explorer-indicator {
+      font-size: 10px;
+      color: #888;
+      margin-left: 2px;
+      transition: transform 0.2s ease;
+    }
+
+    .editor-search-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: #252526;
+      border-bottom: 1px solid #3c3c3c;
+    }
+
+    .editor-search-bar.open {
+      display: flex;
+    }
+
+    .editor-search-bar input {
+      flex: 1;
+      padding: 6px 10px;
+      background: #1e1e1e;
+      border: 1px solid #3c3c3c;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .editor-search-bar input:focus {
+      border-color: #007acc;
+    }
+
+    .editor-search-count {
+      font-size: 12px;
+      color: #888;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .editor-search-nav,
+    .editor-search-close {
+      color: #888;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    .editor-search-nav:hover,
+    .editor-search-close:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .editor-content {
+      flex: 1;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      background: #1e1e1e;
+    }
+
+    .editor-code {
+      margin: 0;
+      padding: 8px 0;
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #d4d4d4;
+      background: #1e1e1e;
+      min-width: max-content;
+    }
+
+    .editor-line {
+      display: flex;
+      min-height: 18px;
+    }
+
+    .editor-line:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .editor-line-num {
+      width: 50px;
+      min-width: 50px;
+      text-align: right;
+      padding-right: 16px;
+      color: #858585;
+      user-select: none;
+      flex-shrink: 0;
+      font-size: 12px;
+      position: sticky;
+      left: 0;
+      background: #1e1e1e;
+      z-index: 1;
+    }
+
+    .editor-line-code {
+      flex: 1;
+      padding-right: 12px;
+      white-space: pre;
+      tab-size: 2;
+    }
+
+    .search-highlight {
+      background: #ffd500;
+      color: #000;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+
+    .search-highlight.current {
+      background: #ff6b00;
+      color: #fff;
+      outline: 2px solid #ff6b00;
+    }
+
     /* =============================================================================
        Tasks Panel
        ============================================================================= */
-    .tasks-container { flex: 1; overflow: hidden; background: #0d0d0d; display: flex; flex-direction: column; }
-    .tasks-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #0d0d0d; flex-shrink: 0; }
-    .tasks-dropdown { flex: 1; padding: 10px 14px; background: #1a1a1a; border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 500; cursor: pointer; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
-    .tasks-dropdown option { background: #1a1a1a; color: #fff; }
-    .tasks-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 16px 24px; }
-    .tasks-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #444; text-align: center; padding: 32px; }
-    .tasks-empty .codicon { font-size: 40px; margin-bottom: 16px; }
-    .task-md { font-size: 14px; }
-    
+    .tasks-container {
+      flex: 1;
+      overflow: hidden;
+      background: #0d0d0d;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tasks-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #0d0d0d;
+      flex-shrink: 0;
+    }
+
+    .tasks-dropdown {
+      flex: 1;
+      padding: 10px 14px;
+      background: #1a1a1a;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    .tasks-dropdown option {
+      background: #1a1a1a;
+      color: #fff;
+    }
+
+    .tasks-content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 16px 24px;
+    }
+
+    .tasks-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #444;
+      text-align: center;
+      padding: 32px;
+    }
+
+    .tasks-empty .codicon {
+      font-size: 40px;
+      margin-bottom: 16px;
+    }
+
+    .task-md {
+      font-size: 14px;
+    }
+
     /* Task Groups */
-    .task-group { background: #141414; border-radius: 16px; margin-bottom: 6px; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .task-group.expanded { background: #181818; box-shadow: 0 0 0 1px rgba(60, 60, 60, 0.5), 0 8px 32px rgba(0,0,0,0.4); }
-    .task-group.expanded.completed { box-shadow: 0 0 0 1px rgba(113, 56, 204, 0.4), 0 8px 32px rgba(0,0,0,0.4); }
-    .task-group-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
-    .task-group-indicator { width: 24px; height: 24px; min-width: 24px; border-radius: 50%; background: #2a2a2a; display: flex; align-items: center; justify-content: center; }
-    .task-group-indicator svg { display: none; width: 14px; height: 14px; color: #fff; }
-    .task-group.completed .task-group-indicator { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); }
-    .task-group.completed .task-group-indicator svg { display: block; }
-    .task-group-number { color: #666; font-size: 14px; font-weight: 700; width: 24px; text-align: center; }
-    .task-group.expanded .task-group-number { color: #ccc; }
-    .task-group.completed .task-group-number { color: #a855f7; }
-    .task-group-title { font-size: 14px; font-weight: 500; color: #e5e5e5; flex: 1; line-height: 1.4; }
-    .task-group.completed .task-group-title { color: #888; }
-    .task-group-meta { display: flex; align-items: center; gap: 8px; }
-    .task-group-count { font-size: 12px; font-weight: 600; color: #444; padding: 4px 10px; background: #1f1f1f; border-radius: 16px; }
-    .task-group.completed .task-group-count { color: #a855f7; background: rgba(124, 58, 237, 0.15); }
-    .task-group-arrow { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: #444; transition: transform 0.3s ease; }
-    .task-group-arrow svg { width: 12px; height: 12px; }
-    .task-group.expanded .task-group-arrow { transform: rotate(90deg); color: #888; }
-    .task-group-body { max-height: 0; overflow: hidden; transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .task-group.expanded .task-group-body { max-height: 2000px; }
-    .task-group-body-inner { padding: 0 16px 12px 52px; }
-    
+    .task-group {
+      background: #141414;
+      border-radius: 16px;
+      margin-bottom: 6px;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .task-group.expanded {
+      background: #181818;
+      box-shadow: 0 0 0 1px rgba(60, 60, 60, 0.5), 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .task-group.expanded.completed {
+      box-shadow: 0 0 0 1px rgba(113, 56, 204, 0.4), 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .task-group-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .task-group-indicator {
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      border-radius: 50%;
+      background: #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .task-group-indicator svg {
+      display: none;
+      width: 14px;
+      height: 14px;
+      color: #fff;
+    }
+
+    .task-group.completed .task-group-indicator {
+      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    }
+
+    .task-group.completed .task-group-indicator svg {
+      display: block;
+    }
+
+    .task-group-number {
+      color: #666;
+      font-size: 14px;
+      font-weight: 700;
+      width: 24px;
+      text-align: center;
+    }
+
+    .task-group.expanded .task-group-number {
+      color: #ccc;
+    }
+
+    .task-group.completed .task-group-number {
+      color: #a855f7;
+    }
+
+    .task-group-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #e5e5e5;
+      flex: 1;
+      line-height: 1.4;
+    }
+
+    .task-group.completed .task-group-title {
+      color: #888;
+    }
+
+    .task-group-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .task-group-count {
+      font-size: 12px;
+      font-weight: 600;
+      color: #444;
+      padding: 4px 10px;
+      background: #1f1f1f;
+      border-radius: 16px;
+    }
+
+    .task-group.completed .task-group-count {
+      color: #a855f7;
+      background: rgba(124, 58, 237, 0.15);
+    }
+
+    .task-group-arrow {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #444;
+      transition: transform 0.3s ease;
+    }
+
+    .task-group-arrow svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .task-group.expanded .task-group-arrow {
+      transform: rotate(90deg);
+      color: #888;
+    }
+
+    .task-group-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .task-group.expanded .task-group-body {
+      max-height: 2000px;
+    }
+
+    .task-group-body-inner {
+      padding: 0 16px 12px 52px;
+    }
+
     /* Task Items */
-    .task-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .task-item:last-child { border-bottom: none; }
-    .task-checkbox { width: 18px; height: 18px; min-width: 18px; border: 2px solid #444; border-radius: 5px; display: flex; align-items: center; justify-content: center; background: transparent; }
-    .task-checkbox.checked { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); border-color: transparent; }
-    .task-checkbox.checked svg { display: block; }
-    .task-checkbox svg { display: none; width: 10px; height: 10px; color: #fff; }
-    .task-text { flex: 1; font-size: 13px; line-height: 1.4; color: #999; padding-top: 1px; }
-    .task-text.completed { color: #555; }
-    .task-item.indent-2 { padding-left: 20px; }
-    .task-item.indent-3 { padding-left: 40px; }
-    
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .task-item:last-child {
+      border-bottom: none;
+    }
+
+    .task-checkbox {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      border: 2px solid #444;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    .task-checkbox.checked {
+      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      border-color: transparent;
+    }
+
+    .task-checkbox.checked svg {
+      display: block;
+    }
+
+    .task-checkbox svg {
+      display: none;
+      width: 10px;
+      height: 10px;
+      color: #fff;
+    }
+
+    .task-text {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.4;
+      color: #999;
+      padding-top: 1px;
+    }
+
+    .task-text.completed {
+      color: #555;
+    }
+
+    .task-item.indent-2 {
+      padding-left: 20px;
+    }
+
+    .task-item.indent-3 {
+      padding-left: 40px;
+    }
+
     /* =============================================================================
        File Tree Dropdown (under Explorer button)
        ============================================================================= */
-    .file-tree-dropdown { 
-      position: absolute; 
-      top: 100%; 
-      left: 0; 
-      width: 280px; 
+    .file-tree-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 280px;
       max-height: 400px;
-      background: #1e1e1e; 
+      background: #1e1e1e;
       border: 1px solid #3c3c3c;
       border-radius: 6px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      display: none; 
-      flex-direction: column; 
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      display: none;
+      flex-direction: column;
       z-index: 100;
       margin-top: 4px;
     }
-    .file-tree-dropdown.open { display: flex; }
-    .file-tree { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 0; }
-    .file-tree-folder-header { display: flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer; user-select: none; }
-    .file-tree-folder-header:hover { background: rgba(255,255,255,0.08); }
-    .file-tree-folder-icon { color: #a78bfa; font-size: 14px; transition: transform 0.15s; }
-    .file-tree-folder-icon.expanded { transform: rotate(90deg); }
-    .file-tree-folder-name { font-size: 13px; color: #c5c5c5; }
-    .file-tree-folder-contents { padding-left: 16px; display: none; }
-    .file-tree-folder-contents.expanded { display: block; }
-    .file-tree-file { display: flex; align-items: center; gap: 6px; padding: 6px 10px 6px 26px; cursor: pointer; }
-    .file-tree-file:hover { background: rgba(255,255,255,0.08); }
-    .file-tree-file:active { background: #094771; }
-    .file-tree-file-icon { color: #888; font-size: 14px; }
-    .file-tree-file-name { font-size: 13px; color: #c5c5c5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .file-tree-empty, .file-tree-loading { padding: 20px; text-align: center; color: #666; font-size: 13px; }
-    .file-tree-loading { color: #888; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-    .editor-explorer-wrapper { position: relative; }
-    
+
+    .file-tree-dropdown.open {
+      display: flex;
+    }
+
+    .file-tree {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 4px 0;
+    }
+
+    .file-tree-folder-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .file-tree-folder-header:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .file-tree-folder-icon {
+      color: #a78bfa;
+      font-size: 14px;
+      transition: transform 0.15s;
+    }
+
+    .file-tree-folder-icon.expanded {
+      transform: rotate(90deg);
+    }
+
+    .file-tree-folder-name {
+      font-size: 13px;
+      color: #c5c5c5;
+    }
+
+    .file-tree-folder-contents {
+      padding-left: 16px;
+      display: none;
+    }
+
+    .file-tree-folder-contents.expanded {
+      display: block;
+    }
+
+    .file-tree-file {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px 6px 26px;
+      cursor: pointer;
+    }
+
+    .file-tree-file:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .file-tree-file:active {
+      background: #094771;
+    }
+
+    .file-tree-file-icon {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .file-tree-file-name {
+      font-size: 13px;
+      color: #c5c5c5;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-tree-empty,
+    .file-tree-loading {
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      font-size: 13px;
+    }
+
+    .file-tree-loading {
+      color: #888;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .editor-explorer-wrapper {
+      position: relative;
+    }
+
     /* =============================================================================
        Syntax Highlighting (Kiro Dark Theme)
        ============================================================================= */
-    .tok-kw { color: #c586c0; }
-    .tok-str { color: #ce9178; }
-    .tok-num { color: #b5cea8; }
-    .tok-cmt { color: #6a9955; font-style: italic; }
-    .tok-fn { color: #dcdcaa; }
-    .tok-type { color: #4ec9b0; }
-    
+    .tok-kw {
+      color: #c586c0;
+    }
+
+    .tok-str {
+      color: #ce9178;
+    }
+
+    .tok-num {
+      color: #b5cea8;
+    }
+
+    .tok-cmt {
+      color: #6a9955;
+      font-style: italic;
+    }
+
+    .tok-fn {
+      color: #dcdcaa;
+    }
+
+    .tok-type {
+      color: #4ec9b0;
+    }
+
     /* =============================================================================
        Loading & Toast
        ============================================================================= */
-    .loading { display: flex; align-items: center; justify-content: center; height: 100%; color: #888; font-size: 14px; flex-direction: column; gap: 12px; }
-    .loading-spinner { width: 24px; height: 24px; border: 2px solid #3c3c3c; border-top-color: #7138cc; border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #f44336; color: #fff; padding: 10px 16px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; z-index: 1000; }
-    .toast.visible { opacity: 1; }
-    .toast.success { background: #4caf50; }
-    
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #888;
+      font-size: 14px;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #3c3c3c;
+      border-top-color: #7138cc;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #f44336;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .toast.visible {
+      opacity: 1;
+    }
+
+    .toast.success {
+      background: #4caf50;
+    }
+
     /* =============================================================================
        Empty State
        ============================================================================= */
-    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #888; text-align: center; padding: 20px; }
-    .empty-state .codicon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
-    .empty-state p { font-size: 14px; max-width: 280px; }
-    
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #888;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .empty-state .codicon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      max-width: 280px;
+    }
+
     /* =============================================================================
        Mobile Bridge Customizations - Hide buttons that don't work well on mobile
        ============================================================================= */
     /* Hide the Trust button (shield icon) - clicking it opens a dialog that's hard to use on mobile */
-    button:has(.codicon-shield), 
+    button:has(.codicon-shield),
     button:has(.codicon-verified),
     button:has(.codicon-shield-check),
     [aria-label*="trust" i],
@@ -231,7 +871,7 @@
     [title*="Trust" i] {
       display: none !important;
     }
-    
+
     /* Hide "changes accepted" notification elements */
     /* Hide expand arrow */
     [class*="change"] .codicon-chevron-right,
@@ -242,7 +882,7 @@
     [class*="accepted"] .codicon-chevron-down {
       display: none !important;
     }
-    
+
     /* Hide "View all" link/button */
     a:has-text("View all"),
     button:has-text("View all"),
@@ -250,7 +890,7 @@
     [class*="viewAll"] {
       display: none !important;
     }
-    
+
     /* Hide file chips in changes notification */
     [class*="change"] [class*="file-chip"],
     [class*="change"] [class*="fileChip"],
@@ -260,10 +900,11 @@
     [class*="Accepted"] [class*="file"] {
       display: none !important;
     }
-    
+
     /* Also hide via JS for browsers that don't support :has() */
   </style>
 </head>
+
 <body>
   <div class="app">
     <nav class="nav-bar">
@@ -285,20 +926,24 @@
         <span class="status-dot" id="statusDot"></span>
       </div>
     </nav>
-    
+
     <div class="panel-container">
       <!-- Chat Panel -->
       <div class="panel active" id="chatPanel">
         <div class="chat-container" id="chatContainer">
-          <div class="loading" id="chatLoading"><div class="loading-spinner"></div><span>Waiting for Kiro...</span></div>
+          <div class="loading" id="chatLoading">
+            <div class="loading-spinner"></div><span>Waiting for Kiro...</span>
+          </div>
           <div class="chat-content" id="chatContent" style="display: none;"></div>
         </div>
       </div>
-      
+
       <!-- Editor Panel -->
       <div class="panel" id="editorPanel">
         <div class="editor-container">
-          <div class="loading" id="editorLoading"><div class="loading-spinner"></div><span>Loading code...</span></div>
+          <div class="loading" id="editorLoading">
+            <div class="loading-spinner"></div><span>Loading code...</span>
+          </div>
           <div class="editor-header" id="editorHeader" style="display: none;">
             <div class="editor-explorer-wrapper">
               <div class="editor-explorer-btn" id="editorExplorerBtn" title="Browse and select files">
@@ -308,7 +953,9 @@
               </div>
               <div class="file-tree-dropdown" id="fileTreeDropdown">
                 <div class="file-tree" id="fileTree">
-                  <div class="file-tree-loading"><div class="loading-spinner"></div>Loading files...</div>
+                  <div class="file-tree-loading">
+                    <div class="loading-spinner"></div>Loading files...
+                  </div>
                 </div>
               </div>
             </div>
@@ -327,11 +974,13 @@
           <div class="editor-content" id="editorContent" style="display: none;"></div>
         </div>
       </div>
-      
+
       <!-- Tasks Panel -->
       <div class="panel" id="tasksPanel">
         <div class="tasks-container">
-          <div class="loading" id="tasksLoading"><div class="loading-spinner"></div><span>Loading tasks...</span></div>
+          <div class="loading" id="tasksLoading">
+            <div class="loading-spinner"></div><span>Loading tasks...</span>
+          </div>
           <div class="tasks-header" id="tasksHeader" style="display: none;">
             <span class="codicon codicon-checklist" style="color: #7138cc; font-size: 16px;"></span>
             <select class="tasks-dropdown" id="tasksDropdown">
@@ -342,7 +991,7 @@
         </div>
       </div>
     </div>
-    
+
     <div class="toast" id="toast"></div>
   </div>
 
@@ -358,7 +1007,7 @@
     let updateDebounceTimer = null, isRendering = false;
     let tasksData = [], selectedTaskIndex = -1, tasksPollingTimer = null, lastTasksHash = '';
     let searchMatches = [], currentMatchIndex = -1;
-    
+
     // =============================================================================
     // DOM Elements
     // =============================================================================
@@ -369,88 +1018,88 @@
     const fileTreeDropdown = $('fileTreeDropdown');
     const fileTree = $('fileTree');
     const explorerChevron = $('explorerChevron');
-    
+
     const panels = {
       chat: { panel: $('chatPanel'), loading: $('chatLoading'), content: $('chatContent'), container: $('chatContainer') },
       editor: { panel: $('editorPanel'), loading: $('editorLoading'), content: $('editorContent'), header: $('editorHeader'), filename: $('editorFilename') },
       tasks: { panel: $('tasksPanel'), loading: $('tasksLoading'), content: $('tasksContent'), header: $('tasksHeader'), dropdown: $('tasksDropdown') }
     };
-    
+
     // =============================================================================
     // Utilities
     // =============================================================================
     function setStatus(status) {
       statusDot.className = 'status-dot ' + status;
     }
-    
+
     function showToast(message, duration = 3000, isSuccess = false) {
       toast.textContent = message;
       toast.className = 'toast visible' + (isSuccess ? ' success' : '');
       setTimeout(() => toast.classList.remove('visible'), duration);
     }
-    
+
     function escapeHtml(text) {
       return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
-    
+
     function showLoading(panelName, msg = 'Loading...') {
       const p = panels[panelName];
       if (p.loading) { p.loading.querySelector('span').textContent = msg; p.loading.style.display = 'flex'; }
       if (p.content) p.content.style.display = 'none';
       if (p.header) p.header.style.display = 'none';
     }
-    
+
     function hideLoading(panelName) {
       const p = panels[panelName];
       if (p.loading) p.loading.style.display = 'none';
       if (p.content) p.content.style.display = 'block';
       if (p.header) p.header.style.display = 'flex';
     }
-    
+
     function showEmptyState(panelName, icon, message) {
       const p = panels[panelName];
       p.content.innerHTML = `<div class="empty-state"><span class="codicon ${icon}"></span><p>${message}</p></div>`;
       hideLoading(panelName);
     }
-    
+
     // =============================================================================
     // Navigation
     // =============================================================================
     navTabs.addEventListener('click', (e) => {
       const tab = e.target.closest('.nav-tab');
       if (!tab || tab.dataset.panel === activePanel) return;
-      
+
       if (activePanel === 'tasks') stopTasksPolling();
-      
+
       navTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      
+
       Object.keys(panels).forEach(key => panels[key].panel.classList.toggle('active', key === tab.dataset.panel));
       activePanel = tab.dataset.panel;
-      
+
       if (selectedCascadeId) fetchPanelContent(activePanel, selectedCascadeId);
     });
-    
+
     // =============================================================================
     // WebSocket Connection
     // =============================================================================
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       ws = new WebSocket(`${protocol}//${window.location.host}`);
-      
+
       ws.onopen = () => { setStatus('connected'); reconnectAttempts = 0; };
-      ws.onmessage = (e) => { try { handleMessage(JSON.parse(e.data)); } catch (err) {} };
+      ws.onmessage = (e) => { try { handleMessage(JSON.parse(e.data)); } catch (err) { } };
       ws.onclose = () => { setStatus('disconnected'); scheduleReconnect(); };
-      ws.onerror = () => {};
+      ws.onerror = () => { };
     }
-    
+
     function scheduleReconnect() {
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
       reconnectAttempts++;
       reconnectTimeout = setTimeout(connect, delay);
     }
-    
+
     function handleMessage(data) {
       if (data.type === 'cascade_list') {
         cascades = data.cascades || [];
@@ -459,25 +1108,25 @@
         const panel = data.panel || 'chat';
         if (!isTypingInKiroInput && panel === activePanel && !isRendering) {
           if (updateDebounceTimer) clearTimeout(updateDebounceTimer);
-          updateDebounceTimer = setTimeout(() => fetchPanelContent(panel, data.cascadeId, true), 200);
+          updateDebounceTimer = setTimeout(() => fetchPanelContent(panel, data.cascadeId, true), 50);
         }
       }
     }
-    
+
     function selectCascade(cascadeId) {
       selectedCascadeId = cascadeId;
       currentStyles = null;
       workspaceFiles = [];
       lastTasksHash = '';
       stopTasksPolling();
-      
+
       if (cascadeId) {
         fetchStyles(cascadeId).then(() => fetchPanelContent(activePanel, cascadeId));
       } else {
         showLoading('chat', 'Waiting for Kiro...');
       }
     }
-    
+
     // =============================================================================
     // Data Fetching
     // =============================================================================
@@ -485,9 +1134,9 @@
       try {
         const r = await fetch(`/styles/${cascadeId}`);
         if (r.ok) currentStyles = await r.text();
-      } catch (e) {}
+      } catch (e) { }
     }
-    
+
     async function fetchPanelContent(panelName, cascadeId, isUpdate = false) {
       switch (panelName) {
         case 'chat': await fetchChatSnapshot(cascadeId, isUpdate); break;
@@ -495,12 +1144,12 @@
         case 'tasks': await fetchTasksContent(cascadeId, isUpdate); break;
       }
     }
-    
+
     async function fetchChatSnapshot(cascadeId, isUpdate = false) {
       try {
         const r = await fetch(`/snapshot/${cascadeId}`);
         if (!r.ok) {
-          if (navigationPending) { setTimeout(() => fetchChatSnapshot(cascadeId, isUpdate), 500); return; }
+          if (navigationPending) { setTimeout(() => fetchChatSnapshot(cascadeId, isUpdate), 200); return; }
           if (r.status === 404) showLoading('chat', 'Waiting for snapshot...');
           return;
         }
@@ -510,7 +1159,7 @@
           navigationPending = false;
           renderChatSnapshot(snapshot, isUpdate);
         } else if (lastSuccessfulSnapshot && navigationPending) {
-          setTimeout(() => fetchChatSnapshot(cascadeId, isUpdate), 300);
+          setTimeout(() => fetchChatSnapshot(cascadeId, isUpdate), 150);
         } else {
           renderChatSnapshot(snapshot);
         }
@@ -518,7 +1167,7 @@
         // Silently fail - don't show error toasts
       }
     }
-    
+
     async function fetchEditorSnapshot(cascadeId, isUpdate = false) {
       try {
         const r = await fetch(`/editor/${cascadeId}`);
@@ -531,22 +1180,22 @@
         showEmptyState('editor', 'codicon-file-code', 'Failed to load editor');
       }
     }
-    
+
     async function fetchTasksContent(cascadeId, isUpdate = false) {
       // Only show loading if we don't have cached data
       const hasCachedData = tasksData.length > 0 && lastTasksHash;
       if (!isUpdate && !hasCachedData) showLoading('tasks', 'Loading tasks...');
-      
+
       try {
         const r = await fetch(`/tasks/${cascadeId}`);
         if (!r.ok) { showTasksEmptyState('No tasks found.'); stopTasksPolling(); return; }
-        
+
         const data = await r.json();
         const newTasks = data.tasks || [];
         const newHash = JSON.stringify(newTasks);
-        
+
         if (newTasks.length === 0) { showTasksEmptyState('No task files found.'); stopTasksPolling(); return; }
-        
+
         if (newHash !== lastTasksHash) {
           lastTasksHash = newHash;
           tasksData = newTasks;
@@ -564,7 +1213,7 @@
         stopTasksPolling();
       }
     }
-    
+
     // =============================================================================
     // Tasks Panel
     // =============================================================================
@@ -572,20 +1221,20 @@
       if (tasksPollingTimer) return;
       tasksPollingTimer = setInterval(() => {
         if (activePanel === 'tasks' && selectedCascadeId) fetchTasksContent(selectedCascadeId, true);
-      }, 3000);
+      }, 1000);
     }
-    
+
     function stopTasksPolling() {
       if (tasksPollingTimer) { clearInterval(tasksPollingTimer); tasksPollingTimer = null; }
     }
-    
+
     function showTasksEmptyState(message) {
       panels.tasks.header.style.display = 'none';
       panels.tasks.content.innerHTML = `<div class="tasks-empty"><span class="codicon codicon-checklist"></span><p>${message}</p></div>`;
       panels.tasks.content.style.display = 'flex';
       hideLoading('tasks');
     }
-    
+
     function populateTasksDropdown() {
       const dropdown = panels.tasks.dropdown;
       dropdown.innerHTML = '';
@@ -596,7 +1245,7 @@
         if (index === selectedTaskIndex) option.selected = true;
         dropdown.appendChild(option);
       });
-      
+
       dropdown.onchange = async (e) => {
         selectedTaskIndex = parseInt(e.target.value, 10);
         if (tasksData[selectedTaskIndex]) {
@@ -605,7 +1254,7 @@
         }
       };
     }
-    
+
     async function openSpecInKiro(specName) {
       if (!selectedCascadeId || !specName) return;
       showToast(`Opening ${specName}...`, 1500);
@@ -615,13 +1264,13 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ specName })
         });
-      } catch (e) {}
+      } catch (e) { }
     }
-    
+
     function renderTaskContent(task) {
       if (!task?.content) { panels.tasks.content.innerHTML = '<div class="tasks-empty"><p>No content</p></div>'; return; }
       panels.tasks.content.innerHTML = `<div class="task-md">${parseTaskMarkdown(task.content)}</div>`;
-      
+
       panels.tasks.content.querySelectorAll('.task-group-header').forEach(header => {
         const clickables = header.querySelectorAll('.task-group-title, .task-group-indicator, .task-group-arrow, .task-group-count');
         clickables.forEach(el => {
@@ -632,22 +1281,22 @@
         });
       });
     }
-    
+
     function parseTaskMarkdown(markdown) {
       const lines = markdown.split('\n');
       let html = '';
       let currentGroupNumber = '', currentGroupTitle = '', currentGroupTasks = [];
-      
+
       const arrowIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>`;
       const checkIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>`;
-      
+
       const flushGroup = () => {
         if (currentGroupTitle && currentGroupTasks.length > 0) {
           const completed = currentGroupTasks.filter(t => t.checked).length;
           const total = currentGroupTasks.length;
           const isComplete = completed === total;
           const hasIncomplete = completed < total;
-          
+
           html += `<div class="task-group${hasIncomplete ? ' expanded' : ''}${isComplete ? ' completed' : ''}" data-task-number="${currentGroupNumber}">`;
           html += `<div class="task-group-header"><div class="task-group-indicator">${checkIcon}</div>`;
           html += `<span class="task-group-number">${currentGroupNumber}</span>`;
@@ -655,22 +1304,22 @@
           html += `<div class="task-group-meta"><span class="task-group-count">${completed}/${total}</span>`;
           html += `<span class="task-group-arrow">${arrowIcon}</span></div></div>`;
           html += `<div class="task-group-body"><div class="task-group-body-inner">`;
-          
+
           currentGroupTasks.slice(1).forEach(task => {
             const indent = task.indent > 1 ? ` indent-${Math.min(task.indent, 3)}` : '';
             html += `<div class="task-item${indent}"><span class="task-checkbox${task.checked ? ' checked' : ''}">${checkIcon}</span>`;
             html += `<span class="task-text${task.checked ? ' completed' : ''}">${escapeHtml(task.text)}</span></div>`;
           });
-          
+
           html += `</div></div></div>`;
         }
         currentGroupNumber = ''; currentGroupTitle = ''; currentGroupTasks = [];
       };
-      
+
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('#') || !trimmed.startsWith('- [')) continue;
-        
+
         const mainMatch = trimmed.match(/^- \[([ xX])\] (\d+)\.?\s+(.*)$/);
         if (mainMatch) {
           flushGroup();
@@ -679,19 +1328,19 @@
           currentGroupTasks.push({ text: mainMatch[3], checked: mainMatch[1].toLowerCase() === 'x', indent: 0 });
           continue;
         }
-        
+
         const subMatch = trimmed.match(/^- \[([ xX])\] (\d+\.\d+)\s+(.*)$/);
         if (subMatch && currentGroupTitle) {
           currentGroupTasks.push({ text: subMatch[3], checked: subMatch[1].toLowerCase() === 'x', indent: 1 });
           continue;
         }
-        
+
         const taskMatch = line.match(/^(\s*)- \[([ xX])\] (.*)$/);
         if (taskMatch) {
           const indent = Math.floor(taskMatch[1].length / 2);
           const isChecked = taskMatch[2].toLowerCase() === 'x';
           const text = taskMatch[3];
-          
+
           const numMatch = text.match(/^(\d+)\.?\s+(.*)$/);
           if (numMatch && indent === 0) {
             flushGroup();
@@ -703,12 +1352,12 @@
           }
         }
       }
-      
+
       flushGroup();
       return html;
     }
 
-    
+
     // =============================================================================
     // Chat Rendering
     // =============================================================================
@@ -1177,7 +1826,7 @@
         }
       </style>`;
     }
-    
+
     // Post-override styles - applied AFTER Kiro's CSS to force fixed dark theme
     // IMPORTANT: All selectors are scoped to #chatContent to avoid affecting other panels
     function getPostOverrideStyles() {
@@ -1186,6 +1835,17 @@
            POST-OVERRIDE: Force fixed dark theme AFTER Kiro's CSS
            SCOPED TO #chatContent ONLY - do not affect Tasks/Editor panels
            ============================================================================= */
+
+        /* Render designated non-clickable options as plain text */
+        #chatContent [data-kiro-plain-text="true"] {
+          pointer-events: none !important;
+          cursor: default !important;
+          background: transparent !important;
+          background-color: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+
         
         /* =============================================================================
            SESSION TAB BAR STYLING - "New Session X" tab with action buttons
@@ -1402,66 +2062,86 @@
         }
       </style>`;
     }
-    
+
     function renderChatSnapshot(snapshot, isUpdate = false) {
       if (isRendering) return;
       isRendering = true;
-      
-      let innerScrollable = panels.chat.content.querySelector('.overflow-y-auto, [class*="scroll"]');
-      const hadContent = innerScrollable && innerScrollable.scrollHeight > 100;
-      const scrollTop = innerScrollable ? innerScrollable.scrollTop : 0;
-      const scrollHeight = innerScrollable ? innerScrollable.scrollHeight : 0;
-      const clientHeight = innerScrollable ? innerScrollable.clientHeight : 0;
-      const wasAtBottom = !hadContent || (scrollHeight - scrollTop - clientHeight < 100);
-      
-      let html = getBaseStyles();
-      if (currentStyles) html += `<style>${currentStyles}</style>`;
-      // CRITICAL: Add post-override styles AFTER Kiro's CSS to force fixed theme
-      html += getPostOverrideStyles();
-      html += snapshot.html || '';
-      
-      panels.chat.content.innerHTML = html;
-      panels.chat.container.style.background = '#1e1e1e'; // Force fixed background, ignore snapshot.bodyBg
-      hideLoading('chat');
-      
-      removePlaceholderText();
-      fixContextWindowCircles();
-      hideRevertButton();
-      
-      requestAnimationFrame(() => {
+
+      // Safety timeout: force reset isRendering after 2 seconds
+      const safetyTimeout = setTimeout(() => {
+        if (isRendering) {
+          console.warn('[Render] Force resetting isRendering flag');
+          isRendering = false;
+        }
+      }, 2000);
+
+      try {
+        let innerScrollable = panels.chat.content.querySelector('.overflow-y-auto, [class*="scroll"]');
+        const hadContent = innerScrollable && innerScrollable.scrollHeight > 100;
+        const scrollTop = innerScrollable ? innerScrollable.scrollTop : 0;
+        const scrollHeight = innerScrollable ? innerScrollable.scrollHeight : 0;
+        const clientHeight = innerScrollable ? innerScrollable.clientHeight : 0;
+        const wasAtBottom = !hadContent || (scrollHeight - scrollTop - clientHeight < 100);
+
+        let html = getBaseStyles();
+        if (currentStyles) html += `<style>${currentStyles}</style>`;
+        // CRITICAL: Add post-override styles AFTER Kiro's CSS to force fixed theme
+        html += getPostOverrideStyles();
+        html += snapshot.html || '';
+
+        panels.chat.content.innerHTML = html;
+        panels.chat.container.style.background = '#1e1e1e'; // Force fixed background, ignore snapshot.bodyBg
+        hideLoading('chat');
+
+        removePlaceholderText();
+        fixContextWindowCircles();
+        hideRevertButton();
+
         requestAnimationFrame(() => {
-          // Only detect history panel by class names - NOT by date patterns
-          // Date patterns are too aggressive and match regular chat timestamps
-          const hasHistoryClass = panels.chat.content.querySelector('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"], [class*="conversation-list"], [class*="ConversationList"]');
-          
-          panels.chat.content.querySelectorAll('.overflow-y-auto, [class*="scroll"]').forEach(el => {
-            const isHistoryContainer = el.matches('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"]') ||
-              el.closest('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"]');
-            
-            if (el.scrollHeight > el.clientHeight + 10) {
-              if (isHistoryContainer) {
-                el.scrollTop = 0;
+          requestAnimationFrame(() => {
+            try {
+              // Only detect history panel by class names - NOT by date patterns
+              // Date patterns are too aggressive and match regular chat timestamps
+              const hasHistoryClass = panels.chat.content.querySelector('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"], [class*="conversation-list"], [class*="ConversationList"]');
+
+              panels.chat.content.querySelectorAll('.overflow-y-auto, [class*="scroll"]').forEach(el => {
+                const isHistoryContainer = el.matches('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"]') ||
+                  el.closest('[class*="history"], [class*="History"], [class*="session-list"], [class*="SessionList"]');
+
+                if (el.scrollHeight > el.clientHeight + 10) {
+                  if (isHistoryContainer) {
+                    el.scrollTop = 0;
+                  } else if (!isUpdate || wasAtBottom) {
+                    el.scrollTop = el.scrollHeight;
+                  } else if (hadContent) {
+                    el.scrollTop = scrollTop;
+                  }
+                }
+              });
+
+              // Only scroll main content to top if it's clearly a history panel
+              if (hasHistoryClass) {
+                panels.chat.content.scrollTop = 0;
               } else if (!isUpdate || wasAtBottom) {
-                el.scrollTop = el.scrollHeight;
-              } else if (hadContent) {
-                el.scrollTop = scrollTop;
+                panels.chat.content.scrollTop = panels.chat.content.scrollHeight;
               }
+            } catch (e) {
+              console.error('[Render] Scroll error:', e);
+            } finally {
+              clearTimeout(safetyTimeout);
+              isRendering = false;
             }
           });
-          
-          // Only scroll main content to top if it's clearly a history panel
-          if (hasHistoryClass) {
-            panels.chat.content.scrollTop = 0;
-          } else if (!isUpdate || wasAtBottom) {
-            panels.chat.content.scrollTop = panels.chat.content.scrollHeight;
-          }
-          isRendering = false;
         });
-      });
-      
-      makeInteractive();
+
+        makeInteractive();
+      } catch (e) {
+        console.error('[Render] Error:', e);
+        clearTimeout(safetyTimeout);
+        isRendering = false;
+      }
     }
-    
+
     function hideRevertButton() {
       // Hide Revert and Follow buttons by finding buttons with specific text in snackbar
       // Note: "Looks good to me" and other action buttons should remain visible
@@ -1471,28 +2151,28 @@
           btn.style.display = 'none';
         }
       });
-      
+
       // Hide Trust buttons (shield icon) - these open dialogs that are hard to use on mobile
       panels.chat.content.querySelectorAll('button').forEach(btn => {
         const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
         const title = (btn.getAttribute('title') || '').toLowerCase();
         const hasShieldIcon = btn.querySelector('.codicon-shield, .codicon-verified, .codicon-shield-check, [class*="shield"]');
-        
+
         if (hasShieldIcon || ariaLabel.includes('trust') || title.includes('trust')) {
           btn.style.display = 'none';
         }
       });
-      
+
       // Hide Restore buttons - clicking wrong checkpoint is too risky on mobile
       panels.chat.content.querySelectorAll('button, [role="button"], span, div, a').forEach(el => {
         const text = (el.textContent || '').trim().toLowerCase();
         const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
-        
+
         if (text === 'restore' || ariaLabel === 'restore') {
           el.style.display = 'none';
         }
       });
-      
+
       // Hide hashtag button (context menu) - not useful on mobile
       panels.chat.content.querySelectorAll('button, [role="button"]').forEach(el => {
         const text = (el.textContent || '').trim();
@@ -1503,27 +2183,27 @@
           el.onclick = (e) => { e.preventDefault(); e.stopPropagation(); return false; };
         }
       });
-      
+
       // Hide "changes accepted" expand arrow and "View all" button
       panels.chat.content.querySelectorAll('*').forEach(el => {
         const text = (el.textContent || '').trim().toLowerCase();
-        
+
         // Hide "View all" links/buttons
         if (text === 'view all') {
           el.style.display = 'none';
         }
-        
+
         // Hide expand/collapse arrows (chevrons) near "changes accepted"
-        if (el.classList && (el.classList.contains('codicon-chevron-right') || 
-            el.classList.contains('codicon-chevron-down') ||
-            el.classList.contains('codicon-chevron-up'))) {
+        if (el.classList && (el.classList.contains('codicon-chevron-right') ||
+          el.classList.contains('codicon-chevron-down') ||
+          el.classList.contains('codicon-chevron-up'))) {
           const parent = el.closest('[class*="change"], [class*="Change"], [class*="accepted"], [class*="Accepted"]');
           if (parent || (el.parentElement && el.parentElement.textContent.toLowerCase().includes('change'))) {
             el.style.display = 'none';
           }
         }
       });
-      
+
       // Hide the entire "changes accepted" notification bar with file list
       panels.chat.content.querySelectorAll('[class*="snackbar"], [class*="Snackbar"], [class*="notification"], [class*="Notification"]').forEach(el => {
         const text = (el.textContent || '').toLowerCase();
@@ -1531,7 +2211,7 @@
           el.style.display = 'none';
         }
       });
-      
+
       // Also hide file chips/badges that show changed files (like "snapshot.js")
       panels.chat.content.querySelectorAll('[class*="file-chip"], [class*="fileChip"], [class*="file-badge"], [class*="fileBadge"]').forEach(el => {
         const parent = el.closest('[class*="change"], [class*="Change"], [class*="accepted"], [class*="Accepted"]');
@@ -1539,29 +2219,29 @@
           el.style.display = 'none';
         }
       });
-      
+
       // Hide message action buttons (copy, undo, redo icons on right side of messages)
       panels.chat.content.querySelectorAll('[class*="action"], [class*="Action"]').forEach(el => {
         const hasCopyIcon = el.querySelector('.codicon-copy, .codicon-clippy, [class*="copy"]');
         const hasUndoIcon = el.querySelector('.codicon-discard, .codicon-undo, [class*="undo"]');
         const hasRedoIcon = el.querySelector('.codicon-redo, [class*="redo"]');
         const hasMoreIcon = el.querySelector('.codicon-ellipsis, .codicon-more, [class*="more"]');
-        
+
         if (hasCopyIcon || hasUndoIcon || hasRedoIcon || hasMoreIcon) {
           el.style.display = 'none';
         }
       });
-      
+
       // Also hide standalone copy/undo buttons
       panels.chat.content.querySelectorAll('button, [role="button"]').forEach(btn => {
         const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
         const title = (btn.getAttribute('title') || '').toLowerCase();
         const hasCopyIcon = btn.querySelector('.codicon-copy, .codicon-clippy');
         const hasUndoIcon = btn.querySelector('.codicon-discard, .codicon-undo');
-        
+
         if (ariaLabel === 'copy' || ariaLabel === 'undo' || ariaLabel === 'redo' ||
-            title === 'copy' || title === 'undo' || title === 'redo' ||
-            hasCopyIcon || hasUndoIcon) {
+          title === 'copy' || title === 'undo' || title === 'redo' ||
+          hasCopyIcon || hasUndoIcon) {
           const inToolbar = btn.closest('[class*="toolbar"], [class*="Toolbar"]');
           if (!inToolbar) {
             btn.style.display = 'none';
@@ -1569,17 +2249,17 @@
         }
       });
     }
-    
+
     function removePlaceholderText() {
       const content = panels.chat.content;
       content.querySelectorAll('[class*="placeholder"], [class*="Placeholder"]').forEach(el => {
-        if (!el.matches('[contenteditable], textarea, input, [data-lexical-editor]') && 
-            !el.querySelector('[contenteditable], textarea, input, [data-lexical-editor]')) {
+        if (!el.matches('[contenteditable], textarea, input, [data-lexical-editor]') &&
+          !el.querySelector('[contenteditable], textarea, input, [data-lexical-editor]')) {
           el.style.display = 'none';
         }
       });
     }
-    
+
     function fixContextWindowCircles() {
       panels.chat.content.querySelectorAll('svg').forEach(svg => {
         const circles = svg.querySelectorAll('circle');
@@ -1589,13 +2269,13 @@
             const dashArray = circle.getAttribute('stroke-dasharray') || circle.style.strokeDasharray;
             if (dashArray && dashArray !== 'none') progressCircle = circle;
           });
-          
+
           if (progressCircle && !svg.querySelector('circle[data-track="true"]')) {
             const cx = progressCircle.getAttribute('cx') || '8';
             const cy = progressCircle.getAttribute('cy') || '8';
             const r = progressCircle.getAttribute('r') || '6';
             const strokeWidth = progressCircle.getAttribute('stroke-width') || '2';
-            
+
             const trackCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             trackCircle.setAttribute('cx', cx);
             trackCircle.setAttribute('cy', cy);
@@ -1604,14 +2284,14 @@
             trackCircle.setAttribute('stroke-width', strokeWidth);
             trackCircle.setAttribute('fill', 'none');
             trackCircle.setAttribute('data-track', 'true');
-            
+
             svg.insertBefore(trackCircle, svg.firstChild);
             progressCircle.setAttribute('stroke', '#4ade80');
           }
         }
       });
     }
-    
+
     // =============================================================================
     // Editor Rendering
     // =============================================================================
@@ -1620,11 +2300,11 @@
       panels.editor.filename.textContent = data.fileName || 'Untitled';
       panels.editor.header.style.display = 'flex';
       closeEditorSearch();
-      
+
       if (data.content?.trim().length > 0) {
         const lines = data.content.split('\n');
         let html = '';
-        
+
         // Show info banner for partial content
         if (data.isPartial || data.note) {
           const noteText = data.note || 'Showing visible lines only. Use Explorer to open full file.';
@@ -1633,59 +2313,59 @@
             <span>${noteText}</span>
           </div>`;
         }
-        
+
         html += '<pre class="editor-code">';
         const startLineNum = data.startLine || 1;
         let startIdx = 0;
         // Skip leading empty lines (max 3)
         while (startIdx < lines.length && lines[startIdx].trim() === '' && startIdx < 3) startIdx++;
-        
+
         lines.slice(startIdx).forEach((line, idx) => {
           const lineNum = startLineNum + startIdx + idx;
           const highlighted = highlightSyntax(line.replace(/\t/g, '  '), data.language);
           html += `<div class="editor-line"><span class="editor-line-num">${lineNum}</span><span class="editor-line-code">${highlighted || ' '}</span></div>`;
         });
         html += '</pre>';
-        
+
         // Footer with line info
         const endLine = startLineNum + startIdx + lines.slice(startIdx).length - 1;
-        const lineInfo = data.lineCount 
-          ? `Lines ${startLineNum}-${endLine} of ${data.lineCount}` 
+        const lineInfo = data.lineCount
+          ? `Lines ${startLineNum}-${endLine} of ${data.lineCount}`
           : `Lines ${startLineNum}-${endLine}`;
-        const fullFileIndicator = !data.isPartial && data.lineCount && endLine >= data.lineCount 
-          ? ' <span style="color: #4caf50;">✓ Complete file</span>' 
+        const fullFileIndicator = !data.isPartial && data.lineCount && endLine >= data.lineCount
+          ? ' <span style="color: #4caf50;">✓ Complete file</span>'
           : '';
-        
+
         html += `<div style="padding: 6px 12px; background: #252526; color: #666; font-size: 11px; border-top: 1px solid #3c3c3c;">
           ${lineInfo}${fullFileIndicator}
         </div>`;
-        
+
         panels.editor.content.innerHTML = html;
         panels.editor.content.style.display = 'block';
       } else {
         showEmptyState('editor', 'codicon-file-code', 'No editor content available.');
         return;
       }
-      
+
       hideLoading('editor');
       if (isUpdate) panels.editor.content.scrollTop = scrollTop;
     }
-    
+
     function highlightSyntax(line, language) {
       const escaped = escapeHtml(line);
       if (escaped.length > 1000 || !language) return escaped;
-      
+
       const isJS = ['javascript', 'typescript', 'jsx', 'tsx', 'js', 'ts'].includes(language);
       const isPython = language === 'python' || language === 'py';
-      
+
       let result = '';
       let i = 0;
-      
+
       while (i < escaped.length) {
         // Comments
         if (isJS && escaped.slice(i, i + 2) === '//') { result += '<span class="tok-cmt">' + escaped.slice(i) + '</span>'; break; }
         if ((isPython) && escaped[i] === '#') { result += '<span class="tok-cmt">' + escaped.slice(i) + '</span>'; break; }
-        
+
         // Strings
         if (escaped.slice(i, i + 6) === '&quot;') {
           const endIdx = escaped.indexOf('&quot;', i + 6);
@@ -1695,37 +2375,37 @@
           const endIdx = escaped.indexOf('&#39;', i + 5);
           if (endIdx !== -1) { result += '<span class="tok-str">' + escaped.slice(i, endIdx + 5) + '</span>'; i = endIdx + 5; continue; }
         }
-        
+
         // Numbers
         if (/[0-9]/.test(escaped[i]) && (i === 0 || /[^a-zA-Z_]/.test(escaped[i - 1]))) {
           let numEnd = i;
           while (numEnd < escaped.length && /[0-9.]/.test(escaped[numEnd])) numEnd++;
           if (numEnd > i) { result += '<span class="tok-num">' + escaped.slice(i, numEnd) + '</span>'; i = numEnd; continue; }
         }
-        
+
         // Keywords
         if (/[a-zA-Z_]/.test(escaped[i]) && (i === 0 || /[^a-zA-Z0-9_]/.test(escaped[i - 1]))) {
           let wordEnd = i;
           while (wordEnd < escaped.length && /[a-zA-Z0-9_]/.test(escaped[wordEnd])) wordEnd++;
           const word = escaped.slice(i, wordEnd);
-          
+
           let keywords = [];
           if (isJS) keywords = ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'import', 'export', 'from', 'async', 'await', 'try', 'catch', 'throw', 'new', 'this', 'class', 'extends', 'true', 'false', 'null', 'undefined'];
           else if (isPython) keywords = ['def', 'class', 'return', 'if', 'elif', 'else', 'for', 'while', 'import', 'from', 'as', 'try', 'except', 'raise', 'with', 'async', 'await', 'None', 'True', 'False', 'self'];
-          
+
           if (keywords.includes(word)) result += '<span class="tok-kw">' + word + '</span>';
           else result += word;
           i = wordEnd;
           continue;
         }
-        
+
         result += escaped[i];
         i++;
       }
-      
+
       return result;
     }
-    
+
     // =============================================================================
     // Editor Search
     // =============================================================================
@@ -1734,7 +2414,7 @@
       $('editorSearchInput').focus();
       $('editorSearchInput').select();
     }
-    
+
     function closeEditorSearch() {
       $('editorSearchBar').classList.remove('open');
       $('editorSearchInput').value = '';
@@ -1746,7 +2426,7 @@
         delete el.dataset.originalHtml;
       });
     }
-    
+
     function performSearch(query) {
       panels.editor.content.querySelectorAll('.editor-line-code[data-original-html]').forEach(el => {
         el.innerHTML = el.dataset.originalHtml;
@@ -1754,21 +2434,21 @@
       });
       searchMatches = [];
       currentMatchIndex = -1;
-      
+
       if (!query || query.length < 1) { $('editorSearchCount').textContent = ''; return; }
-      
+
       const queryLower = query.toLowerCase();
       panels.editor.content.querySelectorAll('.editor-line-code').forEach((lineEl, lineIndex) => {
         const text = lineEl.textContent;
         const textLower = text.toLowerCase();
         let startIndex = 0, matchIndex;
-        
+
         while ((matchIndex = textLower.indexOf(queryLower, startIndex)) !== -1) {
           searchMatches.push({ lineIndex, lineEl, startIndex: matchIndex, endIndex: matchIndex + query.length });
           startIndex = matchIndex + 1;
         }
       });
-      
+
       if (searchMatches.length > 0) {
         highlightSearchMatches(query);
         currentMatchIndex = 0;
@@ -1778,21 +2458,21 @@
         $('editorSearchCount').textContent = 'No results';
       }
     }
-    
+
     function highlightSearchMatches(query) {
       const queryLower = query.toLowerCase();
       panels.editor.content.querySelectorAll('.editor-line-code').forEach(lineEl => {
         const text = lineEl.textContent;
         if (text.toLowerCase().includes(queryLower)) {
           if (!lineEl.dataset.originalHtml) lineEl.dataset.originalHtml = lineEl.innerHTML;
-          
+
           const matches = [];
           let idx = 0;
           while ((idx = text.toLowerCase().indexOf(queryLower, idx)) !== -1) {
             matches.push({ start: idx, end: idx + query.length });
             idx++;
           }
-          
+
           if (matches.length > 0) {
             let result = '', lastEnd = 0;
             matches.forEach(match => {
@@ -1806,11 +2486,11 @@
         }
       });
     }
-    
+
     function scrollToSearchMatch(index) {
       const highlights = panels.editor.content.querySelectorAll('.search-highlight');
       highlights.forEach(el => el.classList.remove('current'));
-      
+
       if (highlights[index]) {
         highlights[index].classList.add('current');
         const lineEl = highlights[index].closest('.editor-line');
@@ -1823,25 +2503,25 @@
         }
       }
     }
-    
+
     function updateSearchCount() {
       $('editorSearchCount').textContent = searchMatches.length > 0 ? `${currentMatchIndex + 1}/${searchMatches.length}` : 'No results';
     }
-    
+
     function goToNextMatch() {
       if (searchMatches.length === 0) return;
       currentMatchIndex = (currentMatchIndex + 1) % searchMatches.length;
       scrollToSearchMatch(currentMatchIndex);
       updateSearchCount();
     }
-    
+
     function goToPrevMatch() {
       if (searchMatches.length === 0) return;
       currentMatchIndex = (currentMatchIndex - 1 + searchMatches.length) % searchMatches.length;
       scrollToSearchMatch(currentMatchIndex);
       updateSearchCount();
     }
-    
+
     // Setup search
     $('editorSearchBtn').onclick = openEditorSearch;
     $('editorSearchClose').onclick = closeEditorSearch;
@@ -1866,17 +2546,17 @@
       if (fileTreeOpen && workspaceFiles.length === 0) fetchWorkspaceFiles();
       else if (fileTreeOpen) renderFileTree(workspaceFiles);
     }
-    
+
     function closeFileTree() {
       fileTreeOpen = false;
       fileTreeDropdown.classList.remove('open');
       explorerChevron.style.transform = '';
     }
-    
+
     async function fetchWorkspaceFiles() {
       if (!selectedCascadeId) return;
       fileTree.innerHTML = '<div class="file-tree-loading"><div class="loading-spinner"></div>Loading files...</div>';
-      
+
       try {
         const r = await fetch(`/files/${selectedCascadeId}`);
         if (!r.ok) throw new Error('Failed to fetch files');
@@ -1887,7 +2567,7 @@
         fileTree.innerHTML = '<div class="file-tree-empty">Failed to load files</div>';
       }
     }
-    
+
     function buildFileTree(files) {
       const root = { folders: {}, files: [] };
       files.forEach(file => {
@@ -1902,7 +2582,7 @@
       });
       return root;
     }
-    
+
     function getFileIcon(name) {
       const ext = name.split('.').pop()?.toLowerCase();
       const iconMap = {
@@ -1913,12 +2593,12 @@
       };
       return iconMap[ext] || 'codicon-file';
     }
-    
+
     function renderTreeNode(node, path = '') {
       let html = '';
       const folderNames = Object.keys(node.folders).sort();
       const sortedFiles = [...node.files].sort((a, b) => a.name.localeCompare(b.name));
-      
+
       folderNames.forEach(folderName => {
         const folderPath = path ? `${path}/${folderName}` : folderName;
         const isExpanded = expandedFolders.has(folderPath);
@@ -1931,23 +2611,23 @@
           <div class="file-tree-folder-contents ${isExpanded ? 'expanded' : ''}">${renderTreeNode(node.folders[folderName], folderPath)}</div>
         </div>`;
       });
-      
+
       sortedFiles.forEach(file => {
         html += `<div class="file-tree-file" data-path="${escapeHtml(file.path)}">
           <span class="file-tree-file-icon codicon ${getFileIcon(file.name)}"></span>
           <span class="file-tree-file-name">${escapeHtml(file.name)}</span>
         </div>`;
       });
-      
+
       return html;
     }
-    
+
     function renderFileTree(files) {
       if (files.length === 0) { fileTree.innerHTML = '<div class="file-tree-empty">No files found</div>'; return; }
-      
+
       const tree = buildFileTree(files);
       fileTree.innerHTML = renderTreeNode(tree);
-      
+
       fileTree.querySelectorAll('.file-tree-folder-header').forEach(header => {
         header.onclick = (e) => {
           e.stopPropagation();
@@ -1956,7 +2636,7 @@
           const contents = folder.querySelector('.file-tree-folder-contents');
           const chevron = header.querySelector('.file-tree-folder-icon');
           const folderIcon = header.querySelector('.codicon-folder, .codicon-folder-opened');
-          
+
           if (expandedFolders.has(folderPath)) {
             expandedFolders.delete(folderPath);
             contents.classList.remove('expanded');
@@ -1972,18 +2652,39 @@
           }
         };
       });
-      
+
       fileTree.querySelectorAll('.file-tree-file').forEach(item => {
         item.onclick = () => { closeFileTree(); openFileInEditor(item.dataset.path); };
       });
     }
-    
+
     // =============================================================================
     // Chat Interactivity
     // =============================================================================
     function makeInteractive() {
       const content = panels.chat.content;
-      
+
+      // Make specific task-option cards plain text (non-clickable)
+      const nonClickablePhrases = [
+        'keep optional tasks',
+        'make all tasks required'
+      ];
+      try {
+        const clickableSelectors = 'button, [role="button"], [tabindex="0"], [class*="option"], [class*="choice"]';
+        content.querySelectorAll(clickableSelectors).forEach(el => {
+          const text = (el.textContent || '').toLowerCase();
+          if (!text || text.length < 10) return;
+          if (nonClickablePhrases.some(p => text.includes(p))) {
+            const clickable = el.closest(clickableSelectors) || el;
+            clickable.dataset.kiroPlainText = 'true';
+            clickable.style.pointerEvents = 'none';
+            clickable.style.cursor = 'default';
+            clickable.onclick = null;
+          }
+        });
+      } catch (e) { }
+
+
       // =======================================================================
       // GLOBAL CLICK HANDLER - Makes entire chat snapshot clickable
       // =======================================================================
@@ -1991,25 +2692,44 @@
       if (content._globalClickHandler) {
         content.removeEventListener('click', content._globalClickHandler);
       }
-      
+
       content._globalClickHandler = async (e) => {
         // Find the actual clicked element
         let target = e.target;
-        
+
+        // Skip if this is a send button (has its own handler)
+        const sendBtn = target.closest('[data-send-handler-attached="true"]');
+        if (sendBtn) {
+          return; // Let the specific send handler deal with it
+        }
+
+        if (target.closest('[data-kiro-plain-text="true"]')) {
+          return;
+        }
+
+        const noticeContainer = target.closest('.kiro-snackbar, [class*="snackbar"]');
+        if (noticeContainer) {
+          const noticeText = (noticeContainer.textContent || '').toLowerCase();
+          if (noticeText.includes('the current task list marks some tasks')) {
+            return;
+          }
+        }
+
+
         // Skip if clicking on input fields
         if (target.matches('[contenteditable="true"], textarea, input, [data-lexical-editor="true"], .ProseMirror, .tiptap')) {
           return;
         }
-        
+
         // Skip if clicking inside input containers
         if (target.closest('[contenteditable="true"], textarea, [data-lexical-editor="true"], .ProseMirror, .tiptap')) {
           return;
         }
-        
+
         // Find the best clickable element (bubble up to find buttons, links, etc.)
         let clickableEl = target;
         const clickableSelectors = 'button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], a, [tabindex="0"], [onclick]';
-        
+
         // Check if target or any parent is clickable
         if (!target.matches(clickableSelectors)) {
           const closestClickable = target.closest(clickableSelectors);
@@ -2017,26 +2737,26 @@
             clickableEl = closestClickable;
           }
         }
-        
+
         // Get element info for the click
         const elementText = (clickableEl.textContent || '').trim().substring(0, 150);
         const ariaLabel = clickableEl.getAttribute('aria-label') || '';
         const role = clickableEl.getAttribute('role') || '';
         const tag = clickableEl.tagName?.toLowerCase() || 'div';
         const className = clickableEl.className || '';
-        
+
         // Check if this is an icon button (has codicon child)
-        const hasIcon = clickableEl.querySelector('[class*="codicon"]') || 
-                        (typeof className === 'string' && className.includes('codicon'));
-        
+        const hasIcon = clickableEl.querySelector('[class*="codicon"]') ||
+          (typeof className === 'string' && className.includes('codicon'));
+
         // Skip if no meaningful content to click (but allow icon buttons and buttons with aria-label)
         if (!elementText && !ariaLabel && !hasIcon && tag === 'div' && !role) {
           return;
         }
-        
+
         // For icon-only buttons, use aria-label as text
         const effectiveText = elementText || ariaLabel;
-        
+
         // Determine click type based on context
         let clickInfo = {
           tag: tag,
@@ -2045,28 +2765,28 @@
           role: role,
           className: typeof className === 'string' ? className.substring(0, 200) : ''
         };
-        
+
         // Add specific flags based on element characteristics
         if (role === 'tab') clickInfo.isTab = true;
         if (role === 'switch' || className.includes('toggle')) clickInfo.isToggle = true;
         if (ariaLabel.toLowerCase() === 'close' || className.includes('close')) clickInfo.isCloseButton = true;
-        
+
         // Check for file links
         const fileExtensions = /\.(ts|tsx|js|jsx|py|java|html|css|json|md|yaml|yml|xml|sql|go|rs|c|cpp|h|cs|rb|php|sh|vue|svelte)$/i;
         if (fileExtensions.test(elementText)) {
           clickInfo.isFileLink = true;
           clickInfo.filePath = elementText;
         }
-        
+
         // Check for command trust options - more comprehensive detection
         const lowerText = elementText.toLowerCase();
-        const isCommandTrust = lowerText.includes('full command') || 
-                               lowerText.includes('partial') || 
-                               lowerText.includes('base npm') || 
-                               lowerText.includes('base ') ||
-                               lowerText.includes('trust') ||
-                               (lowerText.includes('command') && (lowerText.includes('allow') || lowerText.includes('run')));
-        
+        const isCommandTrust = lowerText.includes('full command') ||
+          lowerText.includes('partial') ||
+          lowerText.includes('base npm') ||
+          lowerText.includes('base ') ||
+          lowerText.includes('trust') ||
+          (lowerText.includes('command') && (lowerText.includes('allow') || lowerText.includes('run')));
+
         // Also check if we're in a command trust context (snackbar with trust-related content)
         const inSnackbar = clickableEl.closest('.kiro-snackbar, [class*="snackbar"]');
         const snackbarHasTrustContent = inSnackbar && (
@@ -2074,18 +2794,18 @@
           inSnackbar.textContent.toLowerCase().includes('command') ||
           inSnackbar.textContent.toLowerCase().includes('allow')
         );
-        
+
         if (isCommandTrust || (snackbarHasTrustContent && lowerText.length < 100)) {
           clickInfo.isCommandTrustOption = true;
         }
-        
+
         // Check for action buttons (play, edit, cancel, etc.) - enhanced detection
         const hasPlayIcon = clickableEl.querySelector('.codicon-play, .codicon-run, .codicon-debug-start, .codicon-triangle-right');
         const hasEditIcon = clickableEl.querySelector('.codicon-edit, .codicon-pencil');
         const hasCancelIcon = clickableEl.querySelector('.codicon-x, .codicon-close, .codicon-chrome-close');
         const hasCheckIcon = clickableEl.querySelector('.codicon-check, .codicon-pass, .codicon-check-all');
         const hasStopIcon = clickableEl.querySelector('.codicon-debug-stop, .codicon-stop');
-        
+
         // Also check aria-label for action type (important for icon-only buttons)
         const ariaLabelLower = ariaLabel.toLowerCase();
         const isRunByAria = ariaLabelLower.includes('run') || ariaLabelLower.includes('play') || ariaLabelLower.includes('execute');
@@ -2093,62 +2813,74 @@
         const isCancelByAria = ariaLabelLower.includes('cancel') || ariaLabelLower.includes('reject') || ariaLabelLower.includes('deny');
         const isApproveByAria = ariaLabelLower.includes('approve') || ariaLabelLower.includes('accept') || ariaLabelLower.includes('allow');
         const isStopByAria = ariaLabelLower.includes('stop') || ariaLabelLower.includes('terminate');
-        
+
         // Also check for colored buttons (green play button)
         const btnStyle = window.getComputedStyle(clickableEl);
         const bgColor = btnStyle.backgroundColor || '';
-        const isGreenButton = bgColor.includes('rgb(34, 197') || bgColor.includes('rgb(0, 128') || 
-                              bgColor.includes('rgb(22, 163') || bgColor.includes('green');
-        
+        const isGreenButton = bgColor.includes('rgb(34, 197') || bgColor.includes('rgb(0, 128') ||
+          bgColor.includes('rgb(22, 163') || bgColor.includes('green');
+
         // Detect action type from icons OR aria-label
-        if (hasPlayIcon || isRunByAria || (isGreenButton && tag === 'button')) { 
-          clickInfo.isCommandPanelAction = true; 
-          clickInfo.actionType = 'run'; 
+        if (hasPlayIcon || isRunByAria || (isGreenButton && tag === 'button')) {
+          clickInfo.isCommandPanelAction = true;
+          clickInfo.actionType = 'run';
         }
-        else if (hasEditIcon || isEditByAria) { 
-          clickInfo.isCommandPanelAction = true; 
-          clickInfo.actionType = 'edit'; 
+        else if (hasEditIcon || isEditByAria) {
+          clickInfo.isCommandPanelAction = true;
+          clickInfo.actionType = 'edit';
         }
-        else if ((hasCancelIcon || isCancelByAria) && !clickInfo.isCloseButton) { 
-          clickInfo.isCommandPanelAction = true; 
-          clickInfo.actionType = 'cancel'; 
+        else if ((hasCancelIcon || isCancelByAria) && !clickInfo.isCloseButton) {
+          clickInfo.isCommandPanelAction = true;
+          clickInfo.actionType = 'cancel';
         }
-        else if (hasCheckIcon || isApproveByAria) { 
-          clickInfo.isCommandPanelAction = true; 
-          clickInfo.actionType = 'approve'; 
+        else if (hasCheckIcon || isApproveByAria) {
+          clickInfo.isCommandPanelAction = true;
+          clickInfo.actionType = 'approve';
         }
-        else if (hasStopIcon || isStopByAria) { 
-          clickInfo.isCommandPanelAction = true; 
-          clickInfo.actionType = 'stop'; 
+        else if (hasStopIcon || isStopByAria) {
+          clickInfo.isCommandPanelAction = true;
+          clickInfo.actionType = 'stop';
         }
-        
+
         // Check if in snackbar/notification area
         if (clickableEl.closest('.kiro-snackbar, [class*="snackbar"], [class*="notification"]')) {
           if (!clickInfo.isCommandTrustOption && !clickInfo.isCommandPanelAction) {
             clickInfo.isNotificationButton = true;
           }
         }
-        
+
         // Check if in dialog or welcome/onboarding screen
         if (clickableEl.closest('[role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"], [class*="welcome"], [class*="Welcome"], [class*="onboarding"], [class*="Onboarding"], [class*="build"], [class*="Build"], [class*="choice"], [class*="Choice"]')) {
           clickInfo.isDialogChoice = true;
+          // Dialog choices take priority over notification buttons
+          clickInfo.isNotificationButton = false;
         }
-        
+
         // Also check if the element itself looks like a choice card (has title + description structure)
-        const hasChoiceStructure = clickableEl.children.length >= 1 && 
+        const hasChoiceStructure = clickableEl.children.length >= 1 &&
           clickableEl.children.length <= 5 &&
           (clickableEl.querySelector('h1, h2, h3, h4, h5, h6, [class*="title"], [class*="Title"]') ||
-           clickableEl.querySelector('p, [class*="description"], [class*="Description"]'));
-        
+            clickableEl.querySelector('p, [class*="description"], [class*="Description"]'));
+
         if (hasChoiceStructure && !clickInfo.isDialogChoice) {
           // Check if it looks clickable
           const style = window.getComputedStyle(clickableEl);
-          if (style.cursor === 'pointer' || clickableEl.getAttribute('tabindex') === '0' || 
-              clickableEl.getAttribute('role') === 'button' || tag === 'button') {
+          if (style.cursor === 'pointer' || clickableEl.getAttribute('tabindex') === '0' ||
+            clickableEl.getAttribute('role') === 'button' || tag === 'button') {
             clickInfo.isDialogChoice = true;
+            // Dialog choices take priority over notification buttons
+            clickInfo.isNotificationButton = false;
           }
         }
-        
+
+        // ADDITIONAL CHECK: If element is in snackbar-body and has substantial text, it's likely a dialog choice
+        const inSnackbarBody = clickableEl.closest('.kiro-snackbar-body');
+        if (inSnackbarBody && effectiveText && effectiveText.length > 15) {
+          // This is a choice option in a snackbar, not a simple notification button
+          clickInfo.isDialogChoice = true;
+          clickInfo.isNotificationButton = false;
+        }
+
         // =======================================================================
         // ELEMENT INDEX - For distinguishing between multiple elements with same text
         // This is critical for buttons like "Restore" that appear on each message
@@ -2157,33 +2889,33 @@
           // For "Restore" specifically, search ALL clickable elements, not just buttons
           const searchText = effectiveText.toLowerCase().trim();
           // Use standard selector based on tag
-          const selector = tag === 'button' ? 'button, [role="button"]' : 
-                          tag === 'a' ? 'a, [role="link"]' : 
-                          `${tag}, [role="button"], button`;
-          
+          const selector = tag === 'button' ? 'button, [role="button"]' :
+            tag === 'a' ? 'a, [role="link"]' :
+              `${tag}, [role="button"], button`;
+
           const allSimilar = content.querySelectorAll(selector);
           const matchingElements = [];
-          
+
           for (const el of allSimilar) {
             const elText = (el.textContent || '').trim();
             const elAriaLabel = el.getAttribute('aria-label') || '';
-            
+
             // Match elements with same text OR same aria-label (case-insensitive)
             const textMatches = elText.toLowerCase() === searchText ||
-                (elText.length > 0 && elText.toLowerCase().includes(searchText)) ||
-                (searchText.length > 0 && searchText.includes(elText.toLowerCase()));
-            
-            const ariaMatches = elAriaLabel && 
-                elAriaLabel.toLowerCase() === searchText;
-            
+              (elText.length > 0 && elText.toLowerCase().includes(searchText)) ||
+              (searchText.length > 0 && searchText.includes(elText.toLowerCase()));
+
+            const ariaMatches = elAriaLabel &&
+              elAriaLabel.toLowerCase() === searchText;
+
             if (textMatches || ariaMatches) {
               matchingElements.push(el);
             }
           }
-          
+
           // Find the index of the clicked element among matching elements
           let elementIndex = matchingElements.indexOf(clickableEl);
-          
+
           // If direct reference match fails, try finding by position/attributes
           if (elementIndex < 0 && matchingElements.length > 1) {
             // Try to find by comparing element properties
@@ -2196,14 +2928,14 @@
               // Compare by bounding rect as fallback
               const clickedRect = clickableEl.getBoundingClientRect();
               const elRect = el.getBoundingClientRect();
-              if (Math.abs(clickedRect.top - elRect.top) < 5 && 
-                  Math.abs(clickedRect.left - elRect.left) < 5) {
+              if (Math.abs(clickedRect.top - elRect.top) < 5 &&
+                Math.abs(clickedRect.left - elRect.left) < 5) {
                 elementIndex = i;
                 break;
               }
             }
           }
-          
+
           if (elementIndex >= 0 && matchingElements.length > 1) {
             clickInfo.elementIndex = elementIndex;
             clickInfo.totalMatches = matchingElements.length;
@@ -2214,12 +2946,12 @@
               const rectB = b.getBoundingClientRect();
               return rectA.top - rectB.top;
             });
-            
+
             const clickedRect = clickableEl.getBoundingClientRect();
             for (let i = 0; i < sortedByPosition.length; i++) {
               const elRect = sortedByPosition[i].getBoundingClientRect();
-              if (Math.abs(clickedRect.top - elRect.top) < 10 && 
-                  Math.abs(clickedRect.left - elRect.left) < 10) {
+              if (Math.abs(clickedRect.top - elRect.top) < 10 &&
+                Math.abs(clickedRect.left - elRect.left) < 10) {
                 clickInfo.elementIndex = i;
                 clickInfo.totalMatches = matchingElements.length;
                 break;
@@ -2227,20 +2959,20 @@
             }
           }
         }
-        
+
         console.log('[GlobalClick]', clickInfo.text?.substring(0, 40) || clickInfo.ariaLabel || tag);
-        
+
         e.preventDefault();
         e.stopPropagation();
-        
+
         await sendClickToKiro(clickInfo);
-        
+
         // Refresh snapshot after click
-        setTimeout(() => fetchChatSnapshot(selectedCascadeId), 400);
+        setTimeout(() => fetchChatSnapshot(selectedCascadeId), 150);
       };
-      
+
       content.addEventListener('click', content._globalClickHandler);
-      
+
       // =======================================================================
       // INPUT FIELDS - Special handling for text input
       // =======================================================================
@@ -2250,7 +2982,7 @@
         content.querySelectorAll(selector).forEach(el => {
           el.style.cursor = 'text';
           el.addEventListener('focus', () => { isTypingInKiroInput = true; });
-          el.addEventListener('blur', () => { setTimeout(() => { isTypingInKiroInput = false; }, 500); });
+          el.addEventListener('blur', () => { setTimeout(() => { isTypingInKiroInput = false; }, 200); });
           el.addEventListener('keydown', async (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
@@ -2264,29 +2996,30 @@
           });
         });
       });
-      
+
       // Send button
       const attachSendHandler = (btn) => {
         if (!btn || btn.dataset.sendHandlerAttached) return;
         btn.dataset.sendHandlerAttached = 'true';
+        btn.setAttribute('data-send-handler-attached', 'true'); // For global handler check
         btn.removeAttribute('disabled');
         btn.style.cursor = 'pointer';
-        
+
         btn.onclick = async (e) => {
           e.preventDefault(); e.stopPropagation();
           let inputText = '', inputEl = null;
-          
+
           // Find the ACTUAL chat input (last visible editor, not old messages)
           // Look for input containers first, then fall back to last visible editor
           const inputContainerSelectors = [
             '[class*="chat-input"]',
-            '[class*="message-input"]', 
+            '[class*="message-input"]',
             '[class*="composer"]',
             '[class*="input-area"]',
             '[class*="InputArea"]',
             'form[class*="chat"]'
           ];
-          
+
           // Strategy 1: Find editor inside input container
           for (const containerSel of inputContainerSelectors) {
             const container = content.querySelector(containerSel);
@@ -2299,7 +3032,7 @@
               }
             }
           }
-          
+
           // Strategy 2: Find editor near the submit button itself
           if (!inputEl) {
             const btnParent = btn.closest('form') || btn.parentElement?.parentElement?.parentElement;
@@ -2311,7 +3044,7 @@
               }
             }
           }
-          
+
           // Strategy 3: Get the LAST visible editor (input is typically at bottom)
           if (!inputEl) {
             for (const sel of ['.tiptap', '.ProseMirror', '[data-lexical-editor="true"]', '[contenteditable="true"]', 'textarea']) {
@@ -2323,26 +3056,26 @@
               }
             }
           }
-          
+
           if (inputText.trim()) {
             await sendToKiro(inputText.trim());
-            if (inputEl) { inputEl.textContent = ''; inputEl.innerHTML = ''; }
-            showToast('Sent!', 1500, true);
+            // Don't clear input here - the server-side injection handles everything
+            // Clearing here can cause race conditions with Kiro's UI
           } else {
             showToast('Type a message first', 1500);
           }
           return false;
         };
       };
-      
+
       const submitBtn = content.querySelector('button[data-variant="submit"]');
       if (submitBtn) attachSendHandler(submitBtn);
-      
+
       content.querySelectorAll('button').forEach(btn => {
         if (btn.dataset.sendHandlerAttached) return;
         if (btn.querySelector('.codicon-arrow-up, .codicon-send')) attachSendHandler(btn);
       });
-      
+
       // Toggle switches - send click to Kiro and let snapshot refresh show actual state
       content.querySelectorAll('[role="switch"], input[type="checkbox"][role="switch"]').forEach(toggle => {
         const wrapper = toggle.closest('.kiro-toggle-switch') || toggle;
@@ -2351,21 +3084,21 @@
           e.preventDefault(); e.stopPropagation();
           const label = wrapper.querySelector('label');
           const toggleLabel = label ? label.textContent.trim() : 'toggle';
-          
+
           console.log('[Toggle] Clicked:', toggleLabel);
-          
+
           // Send click to Kiro - don't try to predict the new state
           // Just let the snapshot refresh show the actual state from Kiro
           await sendClickToKiro({ tag: 'div', text: toggleLabel, role: 'switch', isToggle: true });
-          
+
           // Refresh snapshot after toggle to get actual Kiro state
-          // Use 600ms delay to allow Kiro to process the toggle
-          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 600);
-          
+          // Use 250ms delay to allow Kiro to process the toggle
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 250);
+
           return false;
         };
       });
-      
+
       // Notification banner buttons (View all, X) in snackbar and agent-outcome
       // Note: Revert and Follow buttons are hidden
       // IMPORTANT: This handler must detect command panel actions and set appropriate flags
@@ -2384,47 +3117,47 @@
             const btnText = (btn.textContent || '').trim().toLowerCase();
             // Skip Follow and Revert buttons (hidden via CSS/JS)
             if (btnText.includes('follow') || btnText === 'revert') return;
-            
+
             btn.style.cursor = 'pointer';
             btn.onclick = async (e) => {
               e.preventDefault(); e.stopPropagation();
-              
+
               // Identify the button - for icon buttons use aria-label or detect close icon
               let buttonText = (btn.textContent || '').trim().substring(0, 50);
               const ariaLabel = btn.getAttribute('aria-label') || '';
               const ariaLabelLower = ariaLabel.toLowerCase();
               const isIconButton = btn.classList.contains('kiro-icon-button');
               const hasCloseIcon = btn.querySelector('.codicon-close, .codicon-x, [class*="close"]');
-              
+
               // Detect command panel action icons
               const hasPlayIcon = btn.querySelector('.codicon-play, .codicon-run, .codicon-debug-start, .codicon-triangle-right');
               const hasEditIcon = btn.querySelector('.codicon-edit, .codicon-pencil');
               const hasCancelIcon = btn.querySelector('.codicon-x, .codicon-close, .codicon-chrome-close');
               const hasApproveIcon = btn.querySelector('.codicon-check, .codicon-pass, .codicon-check-all');
               const hasStopIcon = btn.querySelector('.codicon-debug-stop, .codicon-stop');
-              
+
               // Detect action type from aria-label
               const isRunByAria = ariaLabelLower.includes('run') || ariaLabelLower.includes('play') || ariaLabelLower.includes('execute');
               const isEditByAria = ariaLabelLower.includes('edit');
               const isCancelByAria = ariaLabelLower.includes('cancel') || ariaLabelLower.includes('reject');
               const isApproveByAria = ariaLabelLower.includes('approve') || ariaLabelLower.includes('accept') || ariaLabelLower.includes('allow');
               const isStopByAria = ariaLabelLower.includes('stop') || ariaLabelLower.includes('terminate');
-              
+
               // Detect action type from button text
               const btnTextLower = buttonText.toLowerCase();
               const isAcceptByText = btnTextLower.includes('accept') || btnTextLower.includes('approve') || btnTextLower.includes('allow');
               const isRunByText = btnTextLower.includes('run') || btnTextLower.includes('execute');
               const isCancelByText = btnTextLower.includes('cancel') || btnTextLower.includes('reject') || btnTextLower.includes('deny');
-              
+
               // For X/close icon buttons with no text
               if (!buttonText && (isIconButton || hasCloseIcon)) {
                 buttonText = ariaLabel || 'dismiss';
               }
-              
+
               // Determine if this is a command panel action
               let actionType = '';
               let isCommandPanelAction = false;
-              
+
               if (hasPlayIcon || isRunByAria || isRunByText) {
                 actionType = 'run';
                 isCommandPanelAction = true;
@@ -2441,7 +3174,7 @@
                 actionType = 'stop';
                 isCommandPanelAction = true;
               }
-              
+
               const clickInfo = {
                 tag: 'button',
                 text: buttonText,
@@ -2450,7 +3183,7 @@
                 className: btn.className || '',
                 isIconButton: isIconButton || !buttonText
               };
-              
+
               // Set appropriate flags based on detection
               if (isCommandPanelAction) {
                 clickInfo.isCommandPanelAction = true;
@@ -2460,30 +3193,30 @@
                 clickInfo.isNotificationButton = true;
                 console.log('[Click] Notification button:', clickInfo.text || clickInfo.ariaLabel || 'icon-button');
               }
-              
+
               await sendClickToKiro(clickInfo);
               // Refresh after clicking notification buttons
-              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 200);
               return false;
             };
           });
-        } catch(e) {}
+        } catch (e) { }
       });
-      
+
       // Command trust dialog options - REMOVED (trust button is now hidden on mobile)
-      
+
       // Command panel action buttons (play/run button in command header)
       // The green play button in command dialogs
       content.querySelectorAll('.kiro-snackbar button, .kiro-snackbar-header button, [class*="command"] button').forEach(btn => {
         if (btn.onclick) return;
-        
+
         const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
         const title = (btn.getAttribute('title') || '').toLowerCase();
         const hasPlayIcon = btn.querySelector('.codicon-play, .codicon-run, .codicon-debug-start, .codicon-triangle-right');
         const hasEditIcon = btn.querySelector('.codicon-edit, .codicon-pencil');
         const hasCancelIcon = btn.querySelector('.codicon-x, .codicon-close, .codicon-chrome-close');
         const hasApproveIcon = btn.querySelector('.codicon-check, .codicon-pass');
-        
+
         // Determine action type
         let actionType = '';
         if (hasPlayIcon || ariaLabel.includes('run') || ariaLabel.includes('play') || title.includes('run')) {
@@ -2495,12 +3228,12 @@
         } else if (hasApproveIcon || ariaLabel.includes('approve') || ariaLabel.includes('accept')) {
           actionType = 'approve';
         }
-        
+
         if (actionType) {
           btn.style.cursor = 'pointer';
           btn.onclick = async (e) => {
             e.preventDefault(); e.stopPropagation();
-            
+
             const clickInfo = {
               tag: 'button',
               text: btn.getAttribute('aria-label') || btn.getAttribute('title') || actionType,
@@ -2513,12 +3246,79 @@
             };
             console.log('[Click] Command panel action:', actionType);
             await sendClickToKiro(clickInfo);
-            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 200);
             return false;
           };
         }
       });
-      
+
+      // =======================================================================
+      // PRIORITY HANDLER: Snackbar body choice cards (spec workflow options)
+      // These need special handling because they're in a scrollable container
+      // Must run BEFORE general dialog choice handlers
+      // =======================================================================
+      const snackbarBody = content.querySelector('.kiro-snackbar-body');
+      if (snackbarBody) {
+        // Get all direct children and nested choice-like elements
+        const snackbarChoices = snackbarBody.querySelectorAll(':scope > div, :scope > [class*="choice"], :scope > [class*="option"], [class*="choice"], [class*="option"]');
+        snackbarChoices.forEach(item => {
+          // Skip if already has our handler
+          if (item.dataset.kiroClickHandler) return;
+          // Skip buttons (handled separately)
+          if (item.tagName === 'BUTTON') return;
+          // Skip containers with too many children
+          if (item.children.length > 8) return;
+
+          const itemText = (item.textContent || '').trim();
+          // Skip if no meaningful text (needs title + description typically)
+          if (itemText.length < 20) return;
+
+          // Mark as handled
+          item.dataset.kiroClickHandler = 'true';
+          item.style.cursor = 'pointer';
+
+          // Use multiple event listeners for maximum compatibility
+          const handleSnackbarChoice = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            // Extract the main title (first line or bold text)
+            let choiceText = itemText.substring(0, 100);
+            const titleEl = item.querySelector('div:first-child, span:first-child, strong, b, [class*="title"], [class*="Title"]');
+            if (titleEl) {
+              const titleText = (titleEl.textContent || '').trim();
+              if (titleText.length > 5 && titleText.length < 100) {
+                choiceText = titleText;
+              }
+            }
+
+            const clickInfo = {
+              tag: item.tagName?.toLowerCase() || 'div',
+              text: choiceText,
+              ariaLabel: item.getAttribute('aria-label') || '',
+              role: item.getAttribute('role') || '',
+              className: item.className || '',
+              isDialogChoice: true,
+              isSnackbarChoice: true  // Extra flag for debugging
+            };
+
+            console.log('[Click] Snackbar choice (priority):', clickInfo.text.substring(0, 50));
+            await sendClickToKiro(clickInfo);
+            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 200);
+            return false;
+          };
+
+          // Attach to multiple events for reliability
+          item.onclick = handleSnackbarChoice;
+          item.addEventListener('click', handleSnackbarChoice, { capture: true });
+          item.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handleSnackbarChoice(e);
+          }, { passive: false });
+        });
+      }
+
       // Dialog choice elements (spec workflow options, modal choices, welcome screens)
       // These are clickable divs inside snackbar body or welcome screens that represent user choices
       const dialogChoiceSelectors = [
@@ -2555,8 +3355,8 @@
       dialogChoiceSelectors.forEach(sel => {
         try {
           content.querySelectorAll(sel).forEach(item => {
-            // Skip if already has handler
-            if (item.onclick) return;
+            // Skip if already has handler (including priority handler)
+            if (item.onclick || item.dataset.kiroClickHandler) return;
             // Skip buttons (handled by notification selectors)
             if (item.tagName === 'BUTTON') return;
             // Skip if it's a container with too many children
@@ -2566,7 +3366,7 @@
             if (itemText.length < 5) return;
             // Skip if it looks like a header/title (short text, no description)
             if (itemText.length < 20 && !item.querySelector('*')) return;
-            
+
             // Check if it looks clickable (has cursor pointer or specific classes)
             const computedStyle = window.getComputedStyle(item);
             const hasPointer = computedStyle.cursor === 'pointer';
@@ -2578,13 +3378,13 @@
               item.className.includes('action')
             );
             const hasTabIndex = item.getAttribute('tabindex') === '0';
-            
+
             // Only make clickable if it appears to be interactive
             if (hasPointer || hasClickableClass || hasTabIndex || item.closest('.kiro-snackbar-body')) {
               item.style.cursor = 'pointer';
               item.onclick = async (e) => {
                 e.preventDefault(); e.stopPropagation();
-                
+
                 // Extract the main title/text (first line or first child text)
                 let choiceText = itemText.substring(0, 100);
                 const firstChild = item.querySelector('div, span, p');
@@ -2594,7 +3394,7 @@
                     choiceText = firstText;
                   }
                 }
-                
+
                 const clickInfo = {
                   tag: item.tagName?.toLowerCase() || 'div',
                   text: choiceText,
@@ -2606,14 +3406,14 @@
                 console.log('[Click] Dialog choice:', clickInfo.text.substring(0, 50));
                 await sendClickToKiro(clickInfo);
                 // Refresh after clicking dialog choice
-                setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+                setTimeout(() => fetchChatSnapshot(selectedCascadeId), 200);
                 return false;
               };
             }
           });
-        } catch(e) {}
+        } catch (e) { }
       });
-      
+
       // Tool action buttons (edit, cancel, approve, run in tool/command panels)
       // These are icon buttons with codicons like edit, x, check, play
       const toolActionSelectors = [
@@ -2633,7 +3433,7 @@
         'button .codicon-refresh',
         'button .codicon-stop'
       ];
-      
+
       // Also find icon buttons by their codicon children
       const iconButtonPatterns = [
         { icon: 'codicon-edit', action: 'edit' },
@@ -2652,7 +3452,7 @@
         { icon: 'codicon-refresh', action: 'retry' },
         { icon: 'codicon-sync', action: 'retry' }
       ];
-      
+
       // Find all buttons with these icons
       iconButtonPatterns.forEach(({ icon, action }) => {
         try {
@@ -2660,17 +3460,17 @@
             // Find the parent button
             const btn = iconEl.closest('button, [role="button"]');
             if (!btn || btn.onclick) return;
-            
+
             // Skip if it's in a tab (handled separately)
             if (btn.closest('[role="tab"]')) return;
-            
+
             btn.style.cursor = 'pointer';
             btn.onclick = async (e) => {
               e.preventDefault(); e.stopPropagation();
-              
+
               const ariaLabel = btn.getAttribute('aria-label') || '';
               const title = btn.getAttribute('title') || '';
-              
+
               const clickInfo = {
                 tag: 'button',
                 text: ariaLabel || title || action,
@@ -2684,27 +3484,27 @@
               console.log('[Click] Tool action button:', action, ariaLabel || title);
               await sendClickToKiro(clickInfo);
               // Refresh after clicking tool action
-              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 200);
               return false;
             };
           });
-        } catch(e) {}
+        } catch (e) { }
       });
-      
+
       // Also handle buttons with aria-labels that indicate actions
       const actionAriaLabels = ['edit', 'cancel', 'approve', 'run', 'stop', 'retry', 'trust', 'accept', 'reject', 'allow', 'deny'];
       content.querySelectorAll('button[aria-label], [role="button"][aria-label]').forEach(btn => {
         if (btn.onclick) return;
         if (btn.closest('[role="tab"]')) return;
-        
+
         const ariaLabel = (btn.getAttribute('aria-label') || '').toLowerCase();
         const matchedAction = actionAriaLabels.find(action => ariaLabel.includes(action));
-        
+
         if (matchedAction) {
           btn.style.cursor = 'pointer';
           btn.onclick = async (e) => {
             e.preventDefault(); e.stopPropagation();
-            
+
             const clickInfo = {
               tag: 'button',
               text: btn.getAttribute('aria-label') || matchedAction,
@@ -2717,12 +3517,12 @@
             };
             console.log('[Click] Tool action (aria):', matchedAction);
             await sendClickToKiro(clickInfo);
-            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 200);
             return false;
           };
         }
       });
-      
+
       // Tabs
       content.querySelectorAll('[role="tab"]').forEach(tab => {
         const closeBtn = tab.querySelector('[aria-label="close"], [class*="close"]');
@@ -2736,7 +3536,7 @@
             return false;
           };
         }
-        
+
         tab.style.cursor = 'pointer';
         tab.onclick = async (e) => {
           if (e.target.closest('[aria-label="close"], [class*="close"], button')) return;
@@ -2747,7 +3547,7 @@
           return false;
         };
       });
-      
+
       // Model selector buttons and dropdown options
       const modelNames = ['claude', 'sonnet', 'opus', 'haiku', 'auto', 'gpt', 'model', 'gemini', 'llama'];
       const modelSelectorSelectors = [
@@ -2757,7 +3557,7 @@
         '[class*="select-model"]', '[class*="selectModel"]',
         '[role="combobox"]'
       ];
-      
+
       // Handle model selector buttons
       modelSelectorSelectors.forEach(sel => {
         try {
@@ -2776,13 +3576,13 @@
               };
               await sendClickToKiro(clickInfo);
               // Refresh snapshot after clicking to show dropdown
-              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
+              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 150);
               return false;
             };
           });
-        } catch(e) {}
+        } catch (e) { }
       });
-      
+
       // Handle dropdown menu items (model options) - including Kiro-specific classes
       const dropdownItemSelectors = [
         '.kiro-dropdown-item',
@@ -2791,24 +3591,24 @@
         '[class*="dropdown-item"]', '[class*="dropdownItem"]', '[class*="DropdownItem"]',
         '[class*="menu-item"]', '[class*="menuItem"]', '[class*="MenuItem"]'
       ];
-      
+
       dropdownItemSelectors.forEach(sel => {
         try {
           content.querySelectorAll(sel).forEach(el => {
             if (el.onclick) return;
             // Skip if it's inside a tab
             if (el.closest('[role="tab"]')) return;
-            
+
             const elText = (el.textContent || '').toLowerCase();
             const isModelOption = modelNames.some(m => elText.includes(m));
-            
+
             // Only attach handler if it looks like a model option
             if (!isModelOption) return;
-            
+
             el.style.cursor = 'pointer';
             el.onclick = async (e) => {
               e.preventDefault(); e.stopPropagation();
-              
+
               // Extract just the model name for cleaner matching
               let modelText = (el.textContent || '').trim();
               // Try to get just the first line (model name)
@@ -2816,7 +3616,7 @@
               if (firstLine.length > 5 && firstLine.length < 50) {
                 modelText = firstLine;
               }
-              
+
               const clickInfo = {
                 tag: el.tagName?.toLowerCase() || 'div',
                 text: modelText.substring(0, 50),
@@ -2828,19 +3628,19 @@
               };
               await sendClickToKiro(clickInfo);
               // Refresh snapshot after selecting option
-              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+              setTimeout(() => fetchChatSnapshot(selectedCascadeId), 200);
               return false;
             };
           });
-        } catch(e) {}
+        } catch (e) { }
       });
-      
+
       // Also detect model-related buttons by text content
       content.querySelectorAll('button, [role="button"]').forEach(btn => {
         if (btn.onclick) return;
         const btnText = (btn.textContent || '').toLowerCase();
         const isModelRelated = modelNames.some(m => btnText.includes(m));
-        
+
         if (isModelRelated) {
           btn.style.cursor = 'pointer';
           btn.onclick = async (e) => {
@@ -2854,12 +3654,12 @@
               isModelSelector: true
             };
             await sendClickToKiro(clickInfo);
-            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
+            setTimeout(() => fetchChatSnapshot(selectedCascadeId), 150);
             return false;
           };
         }
       });
-      
+
       // File links
       const fileExtensions = /\.(ts|tsx|js|jsx|py|java|html|css|json|md|yaml|yml|xml|sql|go|rs|c|cpp|h|cs|rb|php|sh|vue|svelte)$/i;
       content.querySelectorAll('a, code, span, [class*="file"], [class*="path"], [data-path]').forEach(el => {
@@ -2867,7 +3667,7 @@
         const text = (el.textContent || '').trim();
         const dataPath = el.getAttribute('data-path') || '';
         const href = el.getAttribute('href') || '';
-        
+
         if (fileExtensions.test(text) || fileExtensions.test(dataPath) || fileExtensions.test(href)) {
           const filePath = dataPath || text || href;
           el.style.cursor = 'pointer';
@@ -2876,16 +3676,16 @@
           el.onclick = async (e) => { e.preventDefault(); e.stopPropagation(); await openFileInEditor(filePath); return false; };
         }
       });
-      
+
       // Buttons and clickable elements
       const clickableSelectors = ['button', '[role="button"]', '[role="menuitem"]', '[role="option"]', '[role="checkbox"]', 'a[href]', '[tabindex="0"]'];
       const allClickables = new Set();
-      clickableSelectors.forEach(sel => { try { content.querySelectorAll(sel).forEach(el => allClickables.add(el)); } catch(e) {} });
-      
+      clickableSelectors.forEach(sel => { try { content.querySelectorAll(sel).forEach(el => allClickables.add(el)); } catch (e) { } });
+
       allClickables.forEach(el => {
         if (el.matches && el.matches('[contenteditable], textarea, input:not([type="checkbox"])')) return;
         if (el.closest('[role="tab"]') || el.closest('.kiro-toggle-switch') || el.onclick) return;
-        
+
         el.style.cursor = 'pointer';
         el.onclick = async (e) => {
           e.preventDefault(); e.stopPropagation();
@@ -2900,17 +3700,17 @@
           return false;
         };
       });
-      
+
       // Chat history items - detect and make clickable
       // Kiro history items typically have: icon, title text, and date
       // We need to find these items even if they don't have semantic roles
-      
+
       // First, find all potential history item containers
       const potentialHistoryItems = [];
-      
+
       // Look for elements that contain date patterns (history items have dates)
       const datePattern = /\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}:\d{2}:\d{2}\s*(AM|PM)?/i;
-      
+
       content.querySelectorAll('div, li, article, section').forEach(el => {
         // Skip if already has handler
         if (el.onclick) return;
@@ -2920,37 +3720,37 @@
         if (el.children.length > 15) return;
         // Skip if inside tab or toggle
         if (el.closest('[role="tab"]') || el.closest('.kiro-toggle-switch')) return;
-        
+
         const text = el.textContent || '';
         const hasDate = datePattern.test(text);
         const hasIcon = el.querySelector('svg, [class*="icon"], [class*="Icon"], .codicon');
         const textLength = text.trim().length;
-        
+
         // History items typically have: date + some text (20-500 chars) + possibly an icon
         if (hasDate && textLength > 20 && textLength < 500) {
           // Check if this looks like a list item (has siblings with similar structure)
           const parent = el.parentElement;
           const siblings = parent ? [...parent.children].filter(c => c.tagName === el.tagName) : [];
           const isInList = siblings.length > 1;
-          
+
           // Also check for cursor pointer style or clickable class
           const computedStyle = window.getComputedStyle(el);
           const hasPointer = computedStyle.cursor === 'pointer';
           const hasClickableClass = el.className && (
-            el.className.includes('item') || 
+            el.className.includes('item') ||
             el.className.includes('Item') ||
             el.className.includes('row') ||
             el.className.includes('Row') ||
             el.className.includes('entry') ||
             el.className.includes('Entry')
           );
-          
+
           if (isInList || hasPointer || hasClickableClass || hasIcon) {
             potentialHistoryItems.push(el);
           }
         }
       });
-      
+
       // Also add standard selectors
       const historySelectors = [
         '[role="listitem"]',
@@ -2962,7 +3762,7 @@
         '[class*="chat-item"]',
         '[class*="chatItem"]'
       ];
-      
+
       historySelectors.forEach(selector => {
         try {
           content.querySelectorAll(selector).forEach(el => {
@@ -2970,16 +3770,16 @@
               potentialHistoryItems.push(el);
             }
           });
-        } catch(e) {}
+        } catch (e) { }
       });
-      
+
       // Attach click handlers to all potential history items
       potentialHistoryItems.forEach(el => {
         el.style.cursor = 'pointer';
         el.onclick = async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          
+
           // Extract the title (first meaningful text, not the date)
           let itemText = '';
           const textNodes = [];
@@ -2991,7 +3791,7 @@
           });
           itemText = textNodes[0] || el.textContent?.trim().split('\n')[0] || '';
           itemText = itemText.substring(0, 100);
-          
+
           const clickInfo = {
             tag: el.tagName?.toLowerCase() || 'div',
             text: itemText,
@@ -3000,28 +3800,28 @@
             className: el.className || '',
             isHistoryItem: true
           };
-          
+
           await sendClickToKiro(clickInfo);
-          
+
           // Refresh snapshot after clicking history item
-          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 500);
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 200);
           return false;
         };
       });
     }
-    
+
     // =============================================================================
     // Kiro Communication
     // =============================================================================
-    
+
     // Rate limiting for message sending
     let lastMessageTime = 0;
-    const MESSAGE_RATE_LIMIT_MS = 1000; // Minimum 1 second between messages
+    const MESSAGE_RATE_LIMIT_MS = 500; // Minimum 500ms between messages
     let pendingMessage = false;
-    
+
     async function sendToKiro(message) {
       if (!message || !selectedCascadeId) return;
-      
+
       // Rate limiting check
       const now = Date.now();
       if (now - lastMessageTime < MESSAGE_RATE_LIMIT_MS) {
@@ -3030,15 +3830,15 @@
         }
         return;
       }
-      
+
       if (pendingMessage) {
         showToast('Message already being sent', 1500);
         return;
       }
-      
+
       pendingMessage = true;
       lastMessageTime = now;
-      
+
       try {
         const r = await fetch(`/send/${selectedCascadeId}`, {
           method: 'POST',
@@ -3046,53 +3846,60 @@
           body: JSON.stringify({ message })
         });
         const result = await r.json();
-        if (result.success) showToast('Sent!', 1500, true);
-        // Silently fail - don't show error toasts for CDP/connection issues
+        if (result.success) {
+          showToast('Sent!', 1500, true);
+          // Immediately start polling for updates after send
+          // Multiple rapid refreshes to catch the response quickly
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 100);
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 600);
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 1000);
+        }
       } catch (e) {
         // Silently fail
       } finally {
         pendingMessage = false;
       }
     }
-    
+
     async function sendClickToKiro(clickInfo, retryCount = 0) {
       if (!selectedCascadeId) return;
-      
+
       const isNavigation = clickInfo.ariaLabel?.toLowerCase().includes('back') ||
         clickInfo.ariaLabel?.toLowerCase().includes('close') ||
         clickInfo.text?.toLowerCase().includes('back') ||
         clickInfo.role === 'tab';
-      
+
       if (isNavigation) navigationPending = true;
-      
+
       try {
         const response = await fetch(`/click/${selectedCascadeId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(clickInfo)
         });
-        
+
         const result = await response.json();
-        
+
         // Handle retry for model option clicks (dropdown was opened, need to click option)
         if (result.needsRetry && clickInfo.isModelOption && retryCount < 2) {
-          console.log('[Click] Dropdown opened, retrying option click in 350ms...');
-          await new Promise(resolve => setTimeout(resolve, 350));
+          console.log('[Click] Dropdown opened, retrying option click in 200ms...');
+          await new Promise(resolve => setTimeout(resolve, 200));
           return sendClickToKiro(clickInfo, retryCount + 1);
         }
-        
-        if (isNavigation) setTimeout(() => fetchChatSnapshot(selectedCascadeId), 300);
-        
+
+        if (isNavigation) setTimeout(() => fetchChatSnapshot(selectedCascadeId), 150);
+
         return result;
       } catch (e) {
         navigationPending = false;
         return { success: false, error: e.message };
       }
     }
-    
+
     async function openFileInEditor(filePath) {
       if (!selectedCascadeId || !filePath) return;
-      
+
       // Clean the file path - remove extra whitespace, quotes, backticks, and common prefixes
       let cleanPath = filePath.trim()
         .replace(/^['"`]+|['"`]+$/g, '')  // Remove surrounding quotes
@@ -3100,15 +3907,15 @@
         .replace(/^\s*[-*]\s*/, '')        // Remove list markers
         .replace(/\s+/g, ' ')              // Normalize whitespace
         .trim();
-      
+
       // Extract just the file path if it contains extra text (e.g., "file.ts - some description")
       const pathMatch = cleanPath.match(/^([^\s]+\.(ts|tsx|js|jsx|py|java|html|css|json|md|yaml|yml|xml|sql|go|rs|c|cpp|h|cs|rb|php|sh|vue|svelte))/i);
       if (pathMatch) {
         cleanPath = pathMatch[1];
       }
-      
+
       showToast(`Opening ${cleanPath}...`, 1500);
-      
+
       // Switch to Editor tab
       const editorTab = document.querySelector('[data-panel="editor"]');
       if (editorTab) {
@@ -3119,7 +3926,7 @@
         activePanel = 'editor';
         showLoading('editor', 'Loading file...');
       }
-      
+
       try {
         // Try direct file read first
         const readResult = await fetch(`/readFile/${selectedCascadeId}`, {
@@ -3127,7 +3934,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filePath: cleanPath })
         });
-        
+
         if (readResult.ok) {
           const data = await readResult.json();
           if (data.content) {
@@ -3140,32 +3947,32 @@
           const errorData = await readResult.json().catch(() => ({}));
           console.log('[OpenFile] Direct read failed:', errorData.error || readResult.status);
         }
-        
+
         // Fallback: Click file link in Kiro to open it there
         await fetch(`/click/${selectedCascadeId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tag: 'a', text: cleanPath, isFileLink: true, filePath: cleanPath })
         });
-        
+
         // Wait for Kiro to open the file
         await new Promise(resolve => setTimeout(resolve, 800));
-        
+
         const fetchEditor = async () => {
           try {
             const r = await fetch(`/editor/${selectedCascadeId}`);
             if (r.ok) {
               const data = await r.json();
-              if (data.content || data.html) { 
-                renderEditorSnapshot(data); 
-                showToast(`Opened ${data.fileName || cleanPath}`, 1500, true); 
-                return true; 
+              if (data.content || data.html) {
+                renderEditorSnapshot(data);
+                showToast(`Opened ${data.fileName || cleanPath}`, 1500, true);
+                return true;
               }
             }
-          } catch (e) {}
+          } catch (e) { }
           return false;
         };
-        
+
         if (!await fetchEditor()) {
           await new Promise(resolve => setTimeout(resolve, 500));
           if (!await fetchEditor()) {
@@ -3178,28 +3985,29 @@
         showEmptyState('editor', 'codicon-file-code', 'Failed to load file.');
       }
     }
-    
+
     // =============================================================================
     // Event Listeners Setup
     // =============================================================================
     $('editorExplorerBtn').onclick = (e) => { e.stopPropagation(); toggleFileTree(); };
     fileTreeDropdown.onclick = (e) => { e.stopPropagation(); };
-    
+
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
       if (fileTreeOpen && !e.target.closest('.editor-explorer-wrapper')) closeFileTree();
     });
-    
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && fileTreeOpen) closeFileTree();
     });
-    
+
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && (!ws || ws.readyState !== WebSocket.OPEN)) connect();
     });
-    
+
     // Initialize
     connect();
   </script>
 </body>
+
 </html>

@@ -99,9 +99,9 @@ export const DISCOVERY_INTERVAL_STABLE = 30000;  // 30 seconds when stable
 /**
  * Snapshot polling intervals
  */
-export const SNAPSHOT_INTERVAL_ACTIVE = 1000;    // 1 second when active
-export const SNAPSHOT_INTERVAL_IDLE = 3000;      // 3 seconds when idle
-export const SNAPSHOT_IDLE_THRESHOLD = 10000;    // 10 seconds before considered idle
+export const SNAPSHOT_INTERVAL_ACTIVE = 200;     // 200ms when active (very fast updates)
+export const SNAPSHOT_INTERVAL_IDLE = 800;       // 800ms when idle
+export const SNAPSHOT_IDLE_THRESHOLD = 3000;     // 3 seconds before considered idle
 
 /**
  * Maximum depth for recursive file search

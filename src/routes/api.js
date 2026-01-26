@@ -7,15 +7,13 @@ import path from 'path';
 import os from 'os';
 import { injectMessage } from '../services/message.js';
 import { clickElement } from '../services/click.js';
-import { 
-  validatePathWithinRoot, 
-  sanitizeClickInfo, 
+import {
+  validatePathWithinRoot,
+  sanitizeClickInfo,
   validateMessage,
-  sanitizeFilePath 
+  sanitizeFilePath
 } from '../utils/security.js';
-import { 
-  CODE_EXTENSIONS, 
-  EXTENSION_TO_LANGUAGE, 
+import {
   getLanguageFromExtension,
   isCodeFile,
   MAX_FILE_SEARCH_DEPTH,
@@ -30,7 +28,7 @@ import {
  */
 export function createApiRouter(cascades, mainWindowCDP) {
   const router = Router();
-  
+
   // GET /snapshot/:id - Get HTML snapshot for a cascade
   router.get('/snapshot/:id', (req, res) => {
     const cascade = cascades.get(req.params.id);
@@ -38,7 +36,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
     if (!cascade.snapshot) return res.status(404).json({ error: 'No snapshot available' });
     res.json(cascade.snapshot);
   });
-  
+
   // GET /styles/:id - Get CSS for a cascade
   router.get('/styles/:id', (req, res) => {
     const cascade = cascades.get(req.params.id);
@@ -46,7 +44,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
     if (!cascade.css) return res.status(404).json({ error: 'No styles available' });
     res.type('text/css').send(cascade.css);
   });
-  
+
   // GET /editor/:id - Get editor snapshot
   router.get('/editor/:id', (req, res) => {
     const cascade = cascades.get(req.params.id);
@@ -54,47 +52,47 @@ export function createApiRouter(cascades, mainWindowCDP) {
     if (!cascade.editor?.hasContent) return res.status(404).json({ error: 'No editor content available' });
     res.json(cascade.editor);
   });
-  
+
   // POST /send/:id - Send message to chat
   router.post('/send/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
-    
+
     const { message } = req.body;
-    
+
     // Validate message input
     const validation = validateMessage(message);
     if (!validation.valid) {
       return res.status(400).json({ error: validation.error });
     }
-    
+
     if (!cascade.cdp) return res.status(503).json({ error: 'CDP connection not available' });
-    
+
     // Log message length only, not content (security)
     console.log(`[Send] Message to ${req.params.id}: ${message.length} chars`);
     const result = await injectMessage(cascade.cdp, message);
-    
+
     if (result.success) {
       res.json({ success: true, method: result.method });
     } else {
       res.status(500).json({ success: false, error: result.error });
     }
   });
-  
+
   // POST /click/:id - Click UI element
   router.post('/click/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
     if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
-    
+
     // Validate and sanitize click info
     const { valid, sanitized, error } = sanitizeClickInfo(req.body);
     if (!valid) {
       return res.status(400).json({ error: error || 'Invalid click info' });
     }
-    
+
     console.log(`[Click] ${sanitized.text?.substring(0, 30) || sanitized.ariaLabel || sanitized.tag || 'element'}`);
-    
+
     try {
       const result = await clickElement(cascade.cdp, sanitized);
       res.json(result);
@@ -103,13 +101,13 @@ export function createApiRouter(cascades, mainWindowCDP) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
-  
+
   // GET /debug-model/:id - Debug model selector structure
   router.get('/debug-model/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
     if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
-    
+
     const script = `(function() {
       let targetDoc = document;
       const activeFrame = document.getElementById('active-frame');
@@ -178,14 +176,14 @@ export function createApiRouter(cascades, mainWindowCDP) {
       
       return results;
     })()`;
-    
+
     try {
       const result = await cascade.cdp.call('Runtime.evaluate', {
         expression: script,
         contextId: cascade.cdp.rootContextId,
         returnByValue: true
       });
-      
+
       const data = result.result?.value;
       console.log('[Debug] UI structure:', JSON.stringify(data, null, 2));
       res.json(data);
@@ -193,13 +191,13 @@ export function createApiRouter(cascades, mainWindowCDP) {
       res.status(500).json({ error: err.message });
     }
   });
-  
+
   // GET /debug-toggle/:id - Debug toggle/switch structure in detail
   router.get('/debug-toggle/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
     if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
-    
+
     const script = `(function() {
       let targetDoc = document;
       const activeFrame = document.getElementById('active-frame');
@@ -267,14 +265,14 @@ export function createApiRouter(cascades, mainWindowCDP) {
       
       return results;
     })()`;
-    
+
     try {
       const result = await cascade.cdp.call('Runtime.evaluate', {
         expression: script,
         contextId: cascade.cdp.rootContextId,
         returnByValue: true
       });
-      
+
       const data = result.result?.value;
       console.log('[Debug Toggle] Structure:', JSON.stringify(data, null, 2));
       res.json(data);
@@ -282,13 +280,13 @@ export function createApiRouter(cascades, mainWindowCDP) {
       res.status(500).json({ error: err.message });
     }
   });
-  
+
   // GET /debug-welcome/:id - Debug welcome/onboarding screen structure
   router.get('/debug-welcome/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
     if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
-    
+
     const script = `(function() {
       let targetDoc = document;
       const activeFrame = document.getElementById('active-frame');
@@ -375,14 +373,14 @@ export function createApiRouter(cascades, mainWindowCDP) {
       
       return results;
     })()`;
-    
+
     try {
       const result = await cascade.cdp.call('Runtime.evaluate', {
         expression: script,
         contextId: cascade.cdp.rootContextId,
         returnByValue: true
       });
-      
+
       const data = result.result?.value;
       console.log('[Debug Welcome] Structure:', JSON.stringify(data, null, 2));
       res.json(data);
@@ -390,13 +388,13 @@ export function createApiRouter(cascades, mainWindowCDP) {
       res.status(500).json({ error: err.message });
     }
   });
-  
+
   // GET /debug-snackbar/:id - Debug snackbar/command trust dialog structure
   router.get('/debug-snackbar/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
     if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
-    
+
     const script = `(function() {
       let targetDoc = document;
       const activeFrame = document.getElementById('active-frame');
@@ -478,14 +476,14 @@ export function createApiRouter(cascades, mainWindowCDP) {
       
       return results;
     })()`;
-    
+
     try {
       const result = await cascade.cdp.call('Runtime.evaluate', {
         expression: script,
         contextId: cascade.cdp.rootContextId,
         returnByValue: true
       });
-      
+
       const data = result.result?.value;
       console.log('[Debug Snackbar] Structure:', JSON.stringify(data, null, 2));
       res.json(data);
@@ -493,36 +491,139 @@ export function createApiRouter(cascades, mainWindowCDP) {
       res.status(500).json({ error: err.message });
     }
   });
-  
+
+  // GET /debug-compare/:id - Compare working vs non-working button structures
+  router.get('/debug-compare/:id', async (req, res) => {
+    const cascade = cascades.get(req.params.id);
+    if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
+    if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
+
+    const searchText = req.query.text || 'keep optional';
+
+    const script = `(function() {
+      let targetDoc = document;
+      const activeFrame = document.getElementById('active-frame');
+      if (activeFrame && activeFrame.contentDocument) targetDoc = activeFrame.contentDocument;
+      
+      const searchText = '${searchText}'.toLowerCase();
+      const results = {
+        searchText: searchText,
+        matchingElements: [],
+        snackbarInfo: null,
+        dialogInfo: null,
+        allContexts: []
+      };
+      
+      // Find ALL elements containing the search text
+      const allElements = targetDoc.querySelectorAll('*');
+      for (const el of allElements) {
+        const elText = (el.textContent || '').trim().toLowerCase();
+        if (!elText.includes(searchText)) continue;
+        if (el.children.length > 15) continue; // Skip containers
+        
+        const rect = el.getBoundingClientRect();
+        const computedStyle = window.getComputedStyle(el);
+        
+        // Get React fiber info if available
+        let reactFiber = null;
+        for (const key of Object.keys(el)) {
+          if (key.startsWith('__reactFiber') || key.startsWith('__reactInternalInstance')) {
+            reactFiber = key;
+            break;
+          }
+        }
+        
+        // Check for event listeners
+        const hasReactOnClick = !!el.onclick || Object.keys(el).some(k => k.includes('onClick') || k.includes('onMouseDown'));
+        
+        results.matchingElements.push({
+          tag: el.tagName,
+          className: (el.className || '').substring(0, 150),
+          text: elText.substring(0, 100),
+          textLength: elText.length,
+          cursor: computedStyle.cursor,
+          pointerEvents: computedStyle.pointerEvents,
+          position: computedStyle.position,
+          zIndex: computedStyle.zIndex,
+          role: el.getAttribute('role'),
+          tabindex: el.getAttribute('tabindex'),
+          ariaLabel: el.getAttribute('aria-label'),
+          dataState: el.getAttribute('data-state'),
+          childCount: el.children.length,
+          rect: { top: Math.round(rect.top), left: Math.round(rect.left), width: Math.round(rect.width), height: Math.round(rect.height) },
+          isVisible: el.offsetParent !== null,
+          hasReactFiber: !!reactFiber,
+          reactFiberKey: reactFiber,
+          hasReactOnClick: hasReactOnClick,
+          parentTag: el.parentElement?.tagName,
+          parentClass: (el.parentElement?.className || '').substring(0, 100),
+          grandparentTag: el.parentElement?.parentElement?.tagName,
+          grandparentClass: (el.parentElement?.parentElement?.className || '').substring(0, 100),
+          inSnackbar: !!el.closest('.kiro-snackbar, [class*="snackbar"]'),
+          inDialog: !!el.closest('[role="dialog"], [class*="dialog"]')
+        });
+      }
+      
+      // Sort by text length (shorter = more specific)
+      results.matchingElements.sort((a, b) => a.textLength - b.textLength);
+      
+      // Get snackbar structure
+      const snackbar = targetDoc.querySelector('.kiro-snackbar');
+      if (snackbar) {
+        results.snackbarInfo = {
+          className: snackbar.className,
+          childCount: snackbar.children.length,
+          innerHTML: snackbar.innerHTML.substring(0, 2000)
+        };
+      }
+      
+      return results;
+    })()`;
+
+    try {
+      const result = await cascade.cdp.call('Runtime.evaluate', {
+        expression: script,
+        contextId: cascade.cdp.rootContextId,
+        returnByValue: true
+      });
+
+      const data = result.result?.value;
+      console.log('[Debug Compare] Results for "' + searchText + '":', JSON.stringify(data, null, 2));
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // POST /readFile/:id - Read file from filesystem
   router.post('/readFile/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
-    
+
     const { filePath } = req.body;
     if (!filePath || typeof filePath !== 'string') {
       return res.status(400).json({ error: 'filePath is required and must be a string' });
     }
-    
+
     // Sanitize the file path
     const sanitizedPath = sanitizeFilePath(filePath);
     if (!sanitizedPath) {
       return res.status(400).json({ error: 'Invalid file path' });
     }
-    
+
     console.log(`[ReadFile] Request for: ${sanitizedPath}`);
-    
+
     try {
       // Get workspace root
       const workspaceRoot = await getWorkspaceRoot(mainWindowCDP) || process.cwd();
       console.log(`[ReadFile] Workspace root: ${workspaceRoot}`);
-      
+
       // SECURITY: Validate path is within workspace root
       const pathValidation = validatePathWithinRoot(sanitizedPath, workspaceRoot);
-      
+
       let content = null;
       let foundPath = null;
-      
+
       // Try 1: Direct path validation
       if (pathValidation.valid) {
         try {
@@ -533,7 +634,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
           // File doesn't exist at validated path, try other methods
         }
       }
-      
+
       // Try 2: Common path variations
       if (!content) {
         const pathVariations = [
@@ -543,7 +644,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
           `src/${sanitizedPath}`,               // Try in src/
           `src/${sanitizedPath.replace(/^src\//, '')}`,
         ];
-        
+
         for (const variation of pathVariations) {
           const varValidation = validatePathWithinRoot(variation, workspaceRoot);
           if (varValidation.valid) {
@@ -558,13 +659,13 @@ export function createApiRouter(cascades, mainWindowCDP) {
           }
         }
       }
-      
+
       // Try 3: Search by filename within workspace
       if (!content) {
         const fileName = path.basename(sanitizedPath);
         console.log(`[ReadFile] Searching for filename: ${fileName}`);
         foundPath = await findFileRecursive(workspaceRoot, fileName, MAX_FILE_SEARCH_DEPTH);
-        
+
         if (foundPath) {
           // Validate the found path is still within workspace
           const foundValidation = validatePathWithinRoot(foundPath, workspaceRoot);
@@ -577,17 +678,17 @@ export function createApiRouter(cascades, mainWindowCDP) {
           }
         }
       }
-      
+
       // Try 4: Search with partial path matching
       if (!content && sanitizedPath.includes('/')) {
         const pathParts = sanitizedPath.split('/');
         const fileName = pathParts[pathParts.length - 1];
         const parentDir = pathParts[pathParts.length - 2];
-        
+
         if (parentDir && fileName) {
           console.log(`[ReadFile] Searching for ${parentDir}/${fileName}`);
           foundPath = await findFileWithParent(workspaceRoot, parentDir, fileName, MAX_FILE_SEARCH_DEPTH);
-          
+
           if (foundPath) {
             const foundValidation = validatePathWithinRoot(foundPath, workspaceRoot);
             if (foundValidation.valid) {
@@ -597,14 +698,14 @@ export function createApiRouter(cascades, mainWindowCDP) {
           }
         }
       }
-      
+
       if (!content) {
         console.log(`[ReadFile] File not found: ${sanitizedPath}`);
         return res.status(404).json({ error: 'File not found within workspace' });
       }
-      
+
       const language = getLanguageFromExtension(sanitizedPath);
-      
+
       res.json({
         content,
         fileName: path.basename(foundPath || sanitizedPath),
@@ -618,16 +719,16 @@ export function createApiRouter(cascades, mainWindowCDP) {
       res.status(500).json({ error: 'Failed to read file' });
     }
   });
-  
+
   // GET /files/:id - List workspace files
   router.get('/files/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
-    
+
     try {
       const workspaceRoot = await getWorkspaceRoot(mainWindowCDP) || process.cwd();
       const files = await collectWorkspaceFiles(workspaceRoot);
-      
+
       console.log(`[Files] Found ${files.length} files in ${workspaceRoot}`);
       res.json({ files, workspaceRoot });
     } catch (err) {
@@ -635,25 +736,25 @@ export function createApiRouter(cascades, mainWindowCDP) {
       res.status(500).json({ error: err.message });
     }
   });
-  
+
   // GET /tasks/:id - List task files from .kiro/specs
   router.get('/tasks/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
-    
+
     try {
       const workspaceRoot = await getWorkspaceRoot(mainWindowCDP) || process.cwd();
       const kiroSpecsPath = path.join(workspaceRoot, '.kiro', 'specs');
-      
+
       try {
         await fs.access(kiroSpecsPath);
       } catch (e) {
         return res.json({ tasks: [], workspaceRoot });
       }
-      
+
       const tasks = [];
       const specDirs = await fs.readdir(kiroSpecsPath, { withFileTypes: true });
-      
+
       for (const dir of specDirs) {
         if (!dir.isDirectory()) continue;
         const tasksFilePath = path.join(kiroSpecsPath, dir.name, 'tasks.md');
@@ -664,7 +765,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
           // Task file doesn't exist, skip
         }
       }
-      
+
       tasks.sort((a, b) => a.name.localeCompare(b.name));
       console.log(`[Tasks] Found ${tasks.length} task files`);
       res.json({ tasks, workspaceRoot });
@@ -673,28 +774,28 @@ export function createApiRouter(cascades, mainWindowCDP) {
       res.status(500).json({ error: err.message });
     }
   });
-  
+
   // POST /open-spec/:id - Open spec in Kiro
   router.post('/open-spec/:id', async (req, res) => {
     const cascade = cascades.get(req.params.id);
     if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
-    
+
     const { specName } = req.body;
     if (!specName || typeof specName !== 'string') {
       return res.status(400).json({ error: 'specName is required and must be a string' });
     }
-    
+
     // Sanitize spec name (alphanumeric, hyphens, underscores only)
     const sanitizedSpecName = specName.replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 100);
     if (!sanitizedSpecName) {
       return res.status(400).json({ error: 'Invalid spec name' });
     }
-    
+
     const cdp = cascade.cdp;
     if (!cdp?.rootContextId) return res.status(503).json({ error: 'CDP not connected' });
-    
+
     console.log(`[OpenSpec] Opening ${sanitizedSpecName}`);
-    
+
     // Try to click on spec in sidebar
     const script = `(function() {
       let targetDoc = document;
@@ -715,7 +816,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
       }
       return { success: false, error: 'Spec not found in UI' };
     })()`;
-    
+
     try {
       const result = await cdp.call('Runtime.evaluate', {
         expression: script,
@@ -727,7 +828,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
       res.status(500).json({ success: false, error: err.message });
     }
   });
-  
+
   return router;
 }
 
@@ -739,20 +840,20 @@ export function createApiRouter(cascades, mainWindowCDP) {
  */
 async function getWorkspaceRoot(mainWindowCDP) {
   if (!mainWindowCDP.connection?.rootContextId) return null;
-  
+
   try {
     const result = await mainWindowCDP.connection.call('Runtime.evaluate', {
       expression: 'document.title',
       contextId: mainWindowCDP.connection.rootContextId,
       returnByValue: true
     });
-    
+
     const title = result.result?.value || '';
     const parts = title.split(' - ');
     if (parts.length >= 2) {
       const folderName = parts[parts.length - 2].trim();
       const homeDir = os.homedir();
-      
+
       // Build possible roots from environment, not hardcoded paths
       const possibleRoots = [
         process.cwd(),
@@ -762,7 +863,7 @@ async function getWorkspaceRoot(mainWindowCDP) {
         path.join(homeDir, 'workspace', folderName),
         path.join(homeDir, 'code', folderName)
       ];
-      
+
       // Add Windows-specific paths if on Windows
       if (process.platform === 'win32') {
         const drives = ['C:', 'D:', 'E:'];
@@ -774,7 +875,7 @@ async function getWorkspaceRoot(mainWindowCDP) {
           );
         }
       }
-      
+
       for (const root of possibleRoots) {
         try {
           const stat = await fs.stat(root);
@@ -805,29 +906,29 @@ async function getWorkspaceRoot(mainWindowCDP) {
  */
 async function findFileRecursive(dir, fileName, maxDepth = MAX_FILE_SEARCH_DEPTH, currentDepth = 0) {
   if (currentDepth > maxDepth) return null;
-  
+
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
-    
+
     // Check files first
     for (const entry of entries) {
       if (entry.isFile() && entry.name === fileName) {
         return path.join(dir, entry.name);
       }
     }
-    
+
     // Then recurse into directories
     for (const entry of entries) {
-      if (entry.isDirectory() && 
-          (!entry.name.startsWith('.') || entry.name === '.kiro') &&
-          entry.name !== 'node_modules' && 
-          entry.name !== 'dist' &&
-          entry.name !== 'build' &&
-          entry.name !== '.git') {
+      if (entry.isDirectory() &&
+        (!entry.name.startsWith('.') || entry.name === '.kiro') &&
+        entry.name !== 'node_modules' &&
+        entry.name !== 'dist' &&
+        entry.name !== 'build' &&
+        entry.name !== '.git') {
         const found = await findFileRecursive(
-          path.join(dir, entry.name), 
-          fileName, 
-          maxDepth, 
+          path.join(dir, entry.name),
+          fileName,
+          maxDepth,
           currentDepth + 1
         );
         if (found) return found;
@@ -851,10 +952,10 @@ async function findFileRecursive(dir, fileName, maxDepth = MAX_FILE_SEARCH_DEPTH
  */
 async function findFileWithParent(dir, parentDirName, fileName, maxDepth = MAX_FILE_SEARCH_DEPTH, currentDepth = 0) {
   if (currentDepth > maxDepth) return null;
-  
+
   try {
     const entries = await fs.readdir(dir, { withFileTypes: true });
-    
+
     // Check if current directory matches parent name and contains the file
     const currentDirName = path.basename(dir);
     if (currentDirName === parentDirName) {
@@ -864,20 +965,20 @@ async function findFileWithParent(dir, parentDirName, fileName, maxDepth = MAX_F
         }
       }
     }
-    
+
     // Recurse into directories
     for (const entry of entries) {
-      if (entry.isDirectory() && 
-          (!entry.name.startsWith('.') || entry.name === '.kiro') &&
-          entry.name !== 'node_modules' && 
-          entry.name !== 'dist' &&
-          entry.name !== 'build' &&
-          entry.name !== '.git') {
+      if (entry.isDirectory() &&
+        (!entry.name.startsWith('.') || entry.name === '.kiro') &&
+        entry.name !== 'node_modules' &&
+        entry.name !== 'dist' &&
+        entry.name !== 'build' &&
+        entry.name !== '.git') {
         const found = await findFileWithParent(
-          path.join(dir, entry.name), 
+          path.join(dir, entry.name),
           parentDirName,
-          fileName, 
-          maxDepth, 
+          fileName,
+          maxDepth,
           currentDepth + 1
         );
         if (found) return found;
@@ -896,32 +997,32 @@ async function findFileWithParent(dir, parentDirName, fileName, maxDepth = MAX_F
  */
 async function collectWorkspaceFiles(workspaceRoot) {
   const files = [];
-  
+
   async function collect(dir, relativePath = '', depth = 0) {
     if (depth > MAX_WORKSPACE_DEPTH) return;
-    
+
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         // Skip hidden files (except .kiro and .github), node_modules, and build directories
         if ((entry.name.startsWith('.') && entry.name !== '.kiro' && entry.name !== '.github') ||
-            entry.name === 'node_modules' || 
-            entry.name === 'dist' || 
-            entry.name === 'build' ||
-            entry.name === '__pycache__') {
+          entry.name === 'node_modules' ||
+          entry.name === 'dist' ||
+          entry.name === 'build' ||
+          entry.name === '__pycache__') {
           continue;
         }
-        
+
         const entryPath = path.join(dir, entry.name);
         const entryRelative = relativePath ? `${relativePath}/${entry.name}` : entry.name;
-        
+
         if (entry.isFile()) {
           if (isCodeFile(entry.name)) {
-            files.push({ 
-              name: entry.name, 
-              path: entryRelative, 
-              language: getLanguageFromExtension(entry.name) 
+            files.push({
+              name: entry.name,
+              path: entryRelative,
+              language: getLanguageFromExtension(entry.name)
             });
           }
         } else if (entry.isDirectory()) {
@@ -932,7 +1033,7 @@ async function collectWorkspaceFiles(workspaceRoot) {
       // Directory not accessible, skip
     }
   }
-  
+
   await collect(workspaceRoot);
   files.sort((a, b) => a.path.localeCompare(b.path));
   return files;

@@ -16,31 +16,31 @@ export function validatePathWithinRoot(filePath, rootDir) {
   if (!filePath || typeof filePath !== 'string') {
     return { valid: false, resolvedPath: null, error: 'Invalid file path' };
   }
-  
+
   if (!rootDir || typeof rootDir !== 'string') {
     return { valid: false, resolvedPath: null, error: 'Invalid root directory' };
   }
-  
+
   try {
     // Normalize and resolve both paths to absolute paths
     const normalizedRoot = path.resolve(rootDir);
     const resolvedPath = path.resolve(rootDir, filePath);
-    
+
     // Ensure the resolved path starts with the root directory
     // Add path.sep to prevent matching partial directory names
     // e.g., /home/user vs /home/username
-    const rootWithSep = normalizedRoot.endsWith(path.sep) 
-      ? normalizedRoot 
+    const rootWithSep = normalizedRoot.endsWith(path.sep)
+      ? normalizedRoot
       : normalizedRoot + path.sep;
-    
+
     if (!resolvedPath.startsWith(rootWithSep) && resolvedPath !== normalizedRoot) {
-      return { 
-        valid: false, 
-        resolvedPath: null, 
-        error: 'Path traversal detected: path resolves outside allowed directory' 
+      return {
+        valid: false,
+        resolvedPath: null,
+        error: 'Path traversal detected: path resolves outside allowed directory'
       };
     }
-    
+
     return { valid: true, resolvedPath, error: null };
   } catch (err) {
     return { valid: false, resolvedPath: null, error: `Path validation error: ${err.message}` };
@@ -58,7 +58,7 @@ export function escapeForJavaScript(str) {
   if (typeof str !== 'string') {
     return '';
   }
-  
+
   return str
     .replace(/\\/g, '\\\\')     // Backslashes first (must be first!)
     .replace(/'/g, "\\'")        // Single quotes
@@ -84,9 +84,9 @@ export function sanitizeClickInfo(clickInfo) {
   if (!clickInfo || typeof clickInfo !== 'object') {
     return { valid: false, sanitized: null, error: 'Click info must be an object' };
   }
-  
+
   const sanitized = {};
-  
+
   // String properties with max length
   const stringProps = [
     { name: 'tag', maxLength: 50 },
@@ -101,7 +101,7 @@ export function sanitizeClickInfo(clickInfo) {
     { name: 'actionType', maxLength: 50 },
     { name: 'parentMessageContext', maxLength: 150 }
   ];
-  
+
   for (const { name, maxLength } of stringProps) {
     if (clickInfo[name] !== undefined) {
       if (typeof clickInfo[name] !== 'string') {
@@ -111,7 +111,7 @@ export function sanitizeClickInfo(clickInfo) {
       }
     }
   }
-  
+
   // Boolean properties
   const boolProps = [
     'isTab', 'isCloseButton', 'isToggle', 'isModelSelector', 'isModelOption',
@@ -119,16 +119,16 @@ export function sanitizeClickInfo(clickInfo) {
     'isDialogChoice', 'isToolActionButton', 'isCommandPanelAction', 'isCommandTrustOption',
     'isMessageActionButton'
   ];
-  
+
   for (const name of boolProps) {
     if (clickInfo[name] !== undefined) {
       sanitized[name] = Boolean(clickInfo[name]);
     }
   }
-  
+
   // Number properties (for element indexing)
   const numberProps = ['elementIndex', 'totalMatches'];
-  
+
   for (const name of numberProps) {
     if (clickInfo[name] !== undefined) {
       const num = parseInt(clickInfo[name], 10);
@@ -137,7 +137,7 @@ export function sanitizeClickInfo(clickInfo) {
       }
     }
   }
-  
+
   return { valid: true, sanitized, error: null };
 }
 
@@ -151,11 +151,11 @@ export function validateMessage(message) {
   if (!message || typeof message !== 'string') {
     return { valid: false, error: 'Message must be a non-empty string' };
   }
-  
+
   if (message.length > 50000) {
     return { valid: false, error: 'Message exceeds maximum length (50000 characters)' };
   }
-  
+
   return { valid: true, error: null };
 }
 
@@ -170,7 +170,7 @@ export function sanitizeFilePath(filePath) {
   if (typeof filePath !== 'string') {
     return '';
   }
-  
+
   // Remove null bytes which can be used to bypass security checks
   return filePath.replace(/\0/g, '');
 }

@@ -47,7 +47,7 @@ function isVirtualInterface(name) {
     'ham',          // Hamachi VPN
     'zt',           // ZeroTier
   ];
-  
+
   return virtualPatterns.some(pattern => lowerName.includes(pattern));
 }
 
@@ -65,7 +65,7 @@ function isVirtualInterface(name) {
  */
 export function getLocalIP() {
   const interfaces = networkInterfaces();
-  
+
   // Priority 1: Common physical interface names across platforms
   // Order matters - check most common first
   const priorityInterfaces = [
@@ -79,7 +79,7 @@ export function getLocalIP() {
     'enp0s3', 'enp0s25', 'enp0s31f6', 'ens33', 'ens160', 'ens192',
     'wlp2s0', 'wlp3s0', 'wlp0s20f3',
   ];
-  
+
   // First pass: try priority interfaces
   for (const name of priorityInterfaces) {
     const ifaces = interfaces[name];
@@ -91,18 +91,18 @@ export function getLocalIP() {
       }
     }
   }
-  
+
   // Second pass: any non-virtual interface
   for (const name of Object.keys(interfaces)) {
     if (isVirtualInterface(name)) continue;
-    
+
     for (const iface of interfaces[name]) {
       if (isIPv4(iface) && !iface.internal) {
         return iface.address;
       }
     }
   }
-  
+
   // Last resort: any non-internal IPv4 (including virtual)
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
@@ -111,27 +111,6 @@ export function getLocalIP() {
       }
     }
   }
-  
-  return 'localhost';
-}
 
-/**
- * Get all available local IP addresses
- * Useful for debugging or when user needs to choose interface
- * 
- * @returns {Array<{name: string, address: string}>} - Array of interface names and addresses
- */
-export function getAllLocalIPs() {
-  const interfaces = networkInterfaces();
-  const results = [];
-  
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      if (isIPv4(iface) && !iface.internal) {
-        results.push({ name, address: iface.address });
-      }
-    }
-  }
-  
-  return results;
+  return 'localhost';
 }

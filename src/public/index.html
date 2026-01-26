@@ -1536,6 +1536,34 @@
           color: #cccccc !important;
         }
         
+        /* Remove dark highlight/background from model name text inside dropdown items */
+        #chatContent [role="option"] span,
+        #chatContent [role="option"] div,
+        #chatContent [role="option"] p,
+        #chatContent [role="option"] strong,
+        #chatContent [role="option"] b,
+        #chatContent [role="menuitem"] span,
+        #chatContent [role="menuitem"] div,
+        #chatContent [role="menuitem"] p,
+        #chatContent [class*="dropdown-item"] span,
+        #chatContent [class*="dropdown-item"] div,
+        #chatContent [class*="dropdownItem"] span,
+        #chatContent [class*="dropdownItem"] div,
+        #chatContent [class*="model-option"] span,
+        #chatContent [class*="model-option"] div,
+        #chatContent [class*="modelOption"] span,
+        #chatContent [class*="modelOption"] div,
+        #chatContent .kiro-dropdown-item span,
+        #chatContent .kiro-dropdown-item div,
+        #chatContent [class*="model-name"],
+        #chatContent [class*="modelName"],
+        #chatContent [class*="ModelName"] {
+          background: transparent !important;
+          background-color: transparent !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
+        }
+        
         #chatContent [class*="dropdown-item"]:hover, #chatContent [class*="dropdownItem"]:hover,
         #chatContent .kiro-dropdown-item:hover,
         #chatContent [role="option"]:hover, #chatContent [role="menuitem"]:hover {
@@ -1697,7 +1725,7 @@
           flex-wrap: wrap !important;
         }
         
-        /* Context button (# symbol) - FIXED THEME - SCOPED */
+        /* Context button (# symbol) - FIXED THEME - SCOPED - NON-CLICKABLE */
         #chatContent [class*="context-button"], #chatContent [class*="contextButton"], #chatContent [class*="ContextButton"],
         #chatContent button[aria-label*="context"], #chatContent button[aria-label*="Context"],
         #chatContent [class*="hash-button"], #chatContent [class*="hashButton"] {
@@ -1714,12 +1742,14 @@
           color: #c1bec6 !important;
           font-size: 16px !important;
           font-weight: 600 !important;
-          cursor: pointer !important;
+          cursor: default !important;
+          pointer-events: none !important;
+          opacity: 0.5 !important;
         }
         
         #chatContent [class*="context-button"]:hover, #chatContent [class*="contextButton"]:hover,
         #chatContent button[aria-label*="context"]:hover {
-          background: rgba(255, 255, 255, 0.1) !important;
+          background: transparent !important;
         }
         
         /* Message text flow - inline elements - SCOPED */
@@ -1770,7 +1800,7 @@
           flex-shrink: 0 !important;
         }
         
-        /* Toggle switch styling - FIXED THEME - SCOPED */
+        /* Toggle switch styling - FIXED THEME - SCOPED - NON-CLICKABLE */
         #chatContent .kiro-toggle-switch {
           display: flex !important;
           align-items: center !important;
@@ -1778,6 +1808,8 @@
           padding: 4px !important;
           border-radius: 6px !important;
           border: none !important;
+          pointer-events: none !important;
+          opacity: 0.5 !important;
         }
         #chatContent .kiro-toggle-switch > input[type="checkbox"] {
           appearance: none !important;
@@ -1786,8 +1818,9 @@
           border-radius: 9px !important;
           background-color: #28242e !important;
           border: 1px solid #3c3c3c !important;
-          cursor: pointer !important;
+          cursor: default !important;
           position: relative !important;
+          pointer-events: none !important;
         }
         #chatContent .kiro-toggle-switch > input[type="checkbox"]::after {
           content: "" !important;
@@ -1814,7 +1847,8 @@
         }
         /* Also support role="switch" elements - SCOPED */
         #chatContent [role="switch"] {
-          cursor: pointer !important;
+          cursor: default !important;
+          pointer-events: none !important;
         }
         #chatContent [role="switch"][aria-checked="true"],
         #chatContent [role="switch"][data-state="checked"] {

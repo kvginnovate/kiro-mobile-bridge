@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-01-26
+
+- chore: bump version to 1.0.19 [skip ci]
+
 ## 2026-01-25
 
 - chore: bump version to 1.0.18 [skip ci]

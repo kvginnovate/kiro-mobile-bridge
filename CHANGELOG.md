@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-01-25
 
+- chore: bump version to 1.0.18 [skip ci]
 - chore: bump version to 1.0.17 [skip ci]
 - Update CHANGELOG.md
 - chore: bump version to 1.0.15 [skip ci]

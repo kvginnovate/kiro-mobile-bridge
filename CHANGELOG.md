@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-01-26
 
+- Update CHANGELOG with recent improvements and fixes
 - Improve mobile bridge UI responsiveness and fix update blocking
 - Reduce snapshot polling intervals (300ms -> 200ms active, 1000ms -> 800ms idle)
 - Add multiple rapid refreshes after sending messages (100ms, 300ms, 600ms, 1000ms)

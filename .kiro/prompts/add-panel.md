@@ -6,9 +6,9 @@ description: Add new panel capture (sidebar, editor patterns)
 
 ## Context
 Kiro Mobile Bridge captures multiple panels from Kiro IDE via CDP:
-- **Chat**: Kiro Agent webview (works well)
-- **Sidebar**: File explorer (partial)
-- **Editor**: Monaco editor (uses view-lines, limited by virtual scrolling)
+- **Chat**: Kiro Agent webview (real-time updates)
+- **Sidebar**: File explorer with navigation
+- **Editor**: Monaco editor with full file reading via filesystem API
 
 ## Panel: $ARGUMENTS
 
@@ -89,9 +89,9 @@ In `public/index.html`:
 ## Known Challenges
 
 **Monaco (Editor):**
-- Virtual scrolling - only visible lines in DOM
-- Use `/readFile` endpoint to read directly from filesystem
-- Line numbers from `.margin-view-overlays`
+- Full file content available via `/readFile` endpoint (reads directly from filesystem)
+- Syntax highlighting with language detection
+- Line numbers and search functionality
 
 **VS Code Panels:**
 - Main window vs webview have different CDP targets

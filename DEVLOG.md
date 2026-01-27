@@ -1,8 +1,8 @@
 # Development Log - Kiro Mobile Bridge
 
 **Project**: Kiro Mobile Bridge - Real-time mobile monitoring for Kiro IDE via Chrome DevTools Protocol  
-**Duration**: January 21-24, 2026  
-**Total Time**: ~62 hours
+**Duration**: January 21-26, 2026  
+**Total Time**: ~74 hours
 
 ## Overview
 
@@ -12,7 +12,21 @@ Building a mobile web interface to monitor and interact with Kiro IDE agent sess
 
 ## Day 1 (Jan 21) - Foundation & CDP Discovery [18h]
 
-- **Morning**: Project planning and CDP research
+### Morning: Research & Spec-Driven Planning [4h]
+After researching CDP capabilities and Kiro's architecture, we started with Kiro's spec system using Kiro IDE to formalize the design before writing any code.
+
+**Created specs at `.kiro/specs/kiro-mobile-bridge/`:**
+- **requirements.md** - 6 user stories with acceptance criteria covering server startup, CDP discovery, snapshot capture, real-time updates, message sending, and mobile UI
+- **design.md** - Architecture diagram, state management interfaces, API endpoints, WebSocket message formats, and CDP script descriptions
+- **tasks.md** - 9 major task groups broken into 30+ subtasks with checkboxes for systematic implementation
+
+This spec-first approach helped us:
+- Think through the full architecture before coding
+- Define clear acceptance criteria to know when features were "done"
+- Break down the work into manageable, trackable chunks
+- Avoid scope creep by having documented requirements
+
+- **Afternoon**: Project planning and CDP research
 - **Afternoon**: Built target discovery system (port scanning 9000-9003)
 - **Evening**: Implemented CDP WebSocket connection with auto-reconnect
 
@@ -126,6 +140,40 @@ src/
 
 ---
 
+## Day 5 (Jan 25) - File Handling & Editor Enhancements [6h]
+
+### Morning: File Path Handling [2h]
+- **Enhanced**: `openFileInEditor()` to handle quotes, markdown headers, and list markers
+- **Improved**: File path cleaning for more robust file link detection in chat
+- **Added**: Error logging for failed file read operations
+
+### Afternoon: Editor Snapshot Improvements [4h]
+- **Feature**: File completion indicator showing "✓ Complete file" when full file is displayed
+- **Enhanced**: Line number display with better formatting and line count information
+- **Improved**: Editor info banner styling with gradient background and warning icon
+- **Cleanup**: Code comments and formatting for better maintainability
+
+---
+
+## Day 6 (Jan 26) - UI Responsiveness & Bug Fixes [6h]
+
+### Morning: Polling Optimization [2h]
+- **Reduced**: Snapshot polling intervals (300ms → 200ms active, 1000ms → 800ms idle)
+- **Added**: Multiple rapid refreshes after sending messages (100ms, 300ms, 600ms, 1000ms)
+- **Reduced**: Message rate limit from 1000ms to 500ms for snappier UX
+
+### Afternoon: Critical Bug Fixes [4h]
+- **Fixed**: `isRendering` flag getting stuck and blocking all UI updates
+  - Added try-catch blocks with finally to ensure flag always resets
+  - Added 2-second safety timeout to force-reset if stuck
+- **Fixed**: Double message issue by skipping send buttons in global click handler
+- **Removed**: Manual input clearing to prevent race conditions with server-side injection
+
+**Root Cause Analysis:**
+The `isRendering` flag was designed to prevent concurrent DOM updates, but exceptions during rendering would leave it stuck as `true`, blocking all future updates. The fix ensures the flag always resets via `finally` blocks and adds a safety timeout as a fallback.
+
+---
+
 ## Technical Decisions & Rationale
 
 ### Architecture Choices
@@ -144,13 +192,11 @@ src/
 
 ### Polling Intervals
 - **Discovery**: 10s initially → 30s when stable (adaptive)
-- **Snapshots**: 1s when active → 3s when idle (adaptive)
+- **Snapshots**: 200ms when active → 800ms when idle (adaptive, updated Jan 26)
 
-### Security Trade-offs
-- **No Auth**: Intentional for LAN simplicity
-- **Mitigation**: Clear console warnings on startup
-- **Scope**: Local network only, not production-ready
-
+### Intentional Security Model
+- **No Auth by Design**: We explicitly chose zero-config access over optional authentication. Auth would add friction (passwords, tokens, sessions) that contradicts the "just works" philosophy. This matches the security model of every local dev server (webpack-dev-server, Vite, etc.).
+- **Trusted Network Only**: Built for home/office WiFi where you control the devices. 
 ---
 
 ## Challenges & Solutions
@@ -162,6 +208,8 @@ src/
 | Template literal injection | Escape backslash, backtick, dollar, newline |
 | Stale cascade connections | Cleanup on discovery cycle |
 | Mobile touch targets | Minimum 44x44px buttons |
+| isRendering flag stuck | try-catch-finally + 2s safety timeout |
+| Double message sending | Skip send buttons in global click handler |
 
 ---
 
@@ -169,14 +217,15 @@ src/
 
 | Category | Hours | Percentage |
 |----------|-------|------------|
-| CDP Integration | 20h | 32% |
-| Mobile UI | 14h | 23% |
-| WebSocket/Real-time | 10h | 16% |
-| Modular Refactoring | 6h | 10% |
-| Error Handling | 6h | 10% |
-| Documentation | 4h | 6% |
+| CDP Integration | 20h | 27% |
+| Mobile UI | 16h | 22% |
+| WebSocket/Real-time | 10h | 14% |
+| Bug Fixes & Stability | 10h | 14% |
+| Modular Refactoring | 6h | 8% |
+| Documentation | 6h | 8% |
+| File Handling | 4h | 5% |
 | Performance Optimization | 2h | 3% |
-| **Total** | **62h** | **100%** |
+| **Total** | **74h** | **101%** |
 
 ---
 
@@ -194,9 +243,10 @@ src/
 - **structure.md** - Established single-file architecture, naming conventions
 
 ### Specs (Kiro IDE)
-- **requirements.md** - 6 user stories with acceptance criteria
-- **design.md** - Architecture diagram, API endpoints, data structures
-- **tasks.md** - Implementation checklist for systematic development
+Located at `.kiro/specs/kiro-mobile-bridge/`:
+- **requirements.md** - 6 user stories (server startup, CDP discovery, snapshot capture, real-time updates, message sending, mobile UI) with detailed acceptance criteria
+- **design.md** - Architecture diagram, CDPConnection/Cascade interfaces, API endpoints table, WebSocket message formats, polling intervals
+- **tasks.md** - 9 major task groups with 30+ subtasks, all checked off as completed
 
 ### Custom Configuration
 - **MCP Servers**: Configured context7, playwriter, sequential-thinking
@@ -208,8 +258,6 @@ src/
 - **Planning**: @plan-feature helped break down CDP integration into manageable tasks
 - **Quality**: @code-review caught edge cases in message injection escaping
 - **Documentation**: Kiro assisted with README, DEVLOG, and steering documents
-
----
 
 ## Final Reflections
 
@@ -223,11 +271,13 @@ src/
 ### What Could Be Improved
 - Add optional authentication for security
 - Implement incremental DOM updates instead of full replacement
-- Add offline support / PWA capabilities
-- Add unit tests for service modules
 
 ### Key Learnings
 - CDP execution contexts are per-frame, must track carefully
 - Mobile scroll behavior needs explicit handling
 - Template literal escaping is critical for injection safety
 - Modular architecture pays off even for small projects
+- Always use try-catch-finally for flags that control flow
+- Race conditions between client and server need careful handling
+- Steering documents work best when they're prescriptive (guiding decisions) rather than just descriptive (documenting what exists).
+

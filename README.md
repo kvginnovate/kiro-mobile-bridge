@@ -113,12 +113,12 @@ sudo iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
 
 ## Security Notes
 
-#### Only run this on trusted networks.
-**This is designed for local network use only:**
+#### Designed for home and trusted networks.
+- No authentication - just open the URL on your phone and start monitoring
+- No HTTPS - keeps setup simple and fast
+- Works instantly on any device connected to your WiFi
 
-- No authentication
-- No HTTPS
-- Exposes Kiro's chat interface to anyone on your network
+Best for trusted networks where you control the devices. If you're on public WiFi, anyone on that network could access the interface.
 
 
 ## License

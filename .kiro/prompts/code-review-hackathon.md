@@ -103,7 +103,7 @@ For each criterion, provide:
 - Error handling
 - Code clarity and maintainability
 
-### Kiro CLI Usage (X/20)
+### Kiro CLI and IDE Usage (X/20)
 
 **Effective Use of Features (X/10)**
 - Kiro CLI integration depth

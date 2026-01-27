@@ -15,8 +15,10 @@ kiro-mobile-bridge/
 │   │   ├── click.js        # UI element click handling
 │   │   └── message.js      # Chat message injection
 │   └── utils/
+│       ├── constants.js    # Configuration constants (ports, intervals, limits)
 │       ├── hash.js         # MD5 hashing for change detection
-│       └── network.js      # Local IP detection
+│       ├── network.js      # Local IP detection
+│       └── security.js     # Input validation, path traversal prevention, XSS protection
 ├── package.json            # Dependencies and scripts
 ├── package-lock.json       # Locked dependency versions
 ├── .gitignore              # Git ignore rules
@@ -36,7 +38,7 @@ kiro-mobile-bridge/
 - **Modular architecture**: Separation of concerns across services
 - **Services layer**: CDP, snapshot, click, message services
 - **Routes layer**: Express API endpoints
-- **Utils layer**: Shared utilities (hash, network)
+- **Utils layer**: Shared utilities (constants, hash, network, security)
 - **No build step**: Direct execution with Node.js
 
 ## Service Responsibilities
@@ -45,6 +47,12 @@ kiro-mobile-bridge/
 - `click.js` - Element finding and click simulation via CDP
 - `message.js` - Chat input injection and submit handling
 - `api.js` - REST endpoints for mobile client communication
+
+## Utility Responsibilities
+- `constants.js` - CDP ports, polling intervals, timeouts, file limits, language mappings
+- `hash.js` - MD5 hashing for change detection, cascade ID generation
+- `network.js` - Local IP detection for network URL display
+- `security.js` - Path traversal validation, JavaScript escaping, input sanitization
 
 ## Configuration Files
 - `package.json` - Project metadata and dependencies

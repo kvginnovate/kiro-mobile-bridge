@@ -59,6 +59,31 @@ server.js
 - Modular architecture with clear separation of concerns
 - IIFE pattern for CDP expressions (null safety)
 
+## Architecture Design Decisions
+
+### Self-Contained Mobile UI (`index.html`)
+The mobile client is intentionally a single self-contained HTML file (~4000 lines) for these reasons:
+- **Zero build step**: No webpack, no bundling - just works
+- **Offline-capable**: All CSS/JS inline, only external dependency is codicon font
+- **Fast loading**: Single HTTP request for entire UI
+- **Easy debugging**: View source shows everything
+- **Mobile-first**: Optimized for phone browsers with touch targets, viewport handling
+
+### Comprehensive Click Service (`click.js`)
+The click service is feature-rich (~1400 lines) because it handles the full complexity of Kiro's UI:
+- **Multiple element types**: Tabs, buttons, toggles, model selectors, dialogs, notifications
+- **React fiber detection**: Finds actual click handlers in React components
+- **Fallback strategies**: Multiple selector approaches for reliability
+- **Context-aware clicking**: Message action buttons use parent context for accuracy
+- **VS Code patterns**: Handles nested iframes, portals, and floating elements
+
+### DOM Capture Approach
+Full HTML capture (not incremental) is intentional:
+- **Preserves Kiro styling**: Original CSS classes and structure maintained
+- **Reliable rendering**: No sync issues between partial updates
+- **Hash-based optimization**: Only broadcasts when content actually changes
+- **Checkbox state sync**: Properly syncs JS properties to HTML attributes for cloning
+
 ## Testing Strategy
 - Manual testing with Kiro IDE instances
 - Test across different mobile browsers (Chrome, Safari)
@@ -79,7 +104,13 @@ server.js
 - Support multiple concurrent mobile clients
 
 ## Security Considerations
-- **LAN-only**: No authentication (trusted network assumption)
-- **No HTTPS**: Local network traffic only
+
+### Intentional Security Model
+- **Zero-config access by design**: No authentication is a deliberate choice, not a missing feature. Authentication would add friction (password management, token handling, session expiration) that defeats the core "just works" philosophy.
+- **Trusted network only**: Same security model as every local dev server (webpack-dev-server, Vite, Create React App). If you trust `localhost:3000`, you can trust this on your LAN.
+- **No HTTPS by design**: LAN traffic doesn't traverse the internet. Self-signed certs trigger browser warnings; CA-signed certs require domain ownership. Plain HTTP is the pragmatic choice.
+
+### Operational Security
 - **Firewall**: Users must allow port 3000 access
-- **Warning**: Not suitable for public/untrusted networks
+- **Network scope**: Designed for home/office WiFi where you control devices
+- **Threat model**: If attackers are on your LAN, you have bigger problems

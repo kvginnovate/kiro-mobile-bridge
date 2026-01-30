@@ -29,6 +29,8 @@ Start Kiro with the remote debugging port enabled:
 kiro --remote-debugging-port=9000
 ```
 
+**Important:** Your project must be open in Kiro before you close it - the bridge needs an active session to detect and connect to. After that, start Kiro from the terminal with the remote debugging port enabled.
+
 ### 2. Run with npx (Recommended)
 
 Start Server
@@ -98,6 +100,23 @@ Open the Network URL on your phone to monitor Kiro.
 - Ensure phone and computer are on the **same network**
 - Check your firewall allows connections on port 3000
 - Try the IP address shown in the server output (not `localhost`)
+
+#### Windows: Works on your computer but not on mobile, even on same WiFi.
+
+**Root Cause:** Node.js firewall rule only allows **Public** networks by default. If your network is set to **Private**, mobile devices can't connect.
+
+**Quick Fix - Option 1: Change Network to Public (Easiest)**
+1. Open **Settings** → **Network & Internet**
+2. Click your connection (WiFi or Ethernet)
+3. Under "Network profile type", select **Public network (Recommended)**
+4. Try accessing from mobile again
+
+**Quick Fix - Option 2: Update Firewall Rule (Better for home networks)**
+
+Run this command **as Administrator** (Win + X → Terminal Admin):
+```cmd
+netsh advfirewall firewall set rule name="Node.js JavaScript Runtime" new profile=private,public
+```
 
 #### Linux: Firewall blocking connections
 

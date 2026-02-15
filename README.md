@@ -8,8 +8,8 @@ A lightweight mobile interface that lets you monitor and control Kiro IDE agent 
 ## Features
 
 - 📱 Mobile-optimized web interface with tab navigation
-- � **OTP Authentication** - 6-digit access code generated on server startup
-- �💬 **Chat** - View and send messages to Kiro's agent
+- 🔑 **OTP Authentication** - 6-digit access code generated on server startup
+- 💬 **Chat** - View and send messages to Kiro's agent
 - 📝 **Code** - Browse file explorer and view files with syntax highlighting
 - 📋 **Tasks** - View and navigate Kiro spec task files
 - 🔄 Real-time updates via WebSocket with adaptive polling
@@ -145,16 +145,14 @@ sudo ufw allow 3000/tcp
 sudo iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
 ```
 
-## Notes
+## Security Notes
 
 #### OTP Authentication
 - A **6-digit access code** is generated on each server startup and displayed in the terminal
-- The code is **single-use** — once a device authenticates, the code is consumed
-- **Rate limiting** — 5 failed attempts triggers a 60-second lockout to prevent brute-force
+- The code is **single-use** — once a device authenticates, the code is consumed and all other devices are immediately locked out
+- New devices opening the login page during lockout or after the code is consumed will see a locked UI immediately
 - Sessions use **HttpOnly cookies** — tokens are not exposed to client-side JavaScript
 - Use `--no-auth` to disable authentication for fully trusted environments
-
-
 
 ## License
 

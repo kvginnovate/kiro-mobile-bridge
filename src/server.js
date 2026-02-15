@@ -37,7 +37,8 @@ import {
   validateWSAuth,
   validateSession,
   getLoginPageHTML,
-  verifyOTP
+  verifyOTP,
+  getRateLimitStatus
 } from './middleware/auth.js';
 
 // Routes
@@ -390,7 +391,14 @@ app.get('/auth/status', (req, res) => {
   const cookie = req.headers.cookie || '';
   const match = cookie.match(/(?:^|;\s*)kmb_session=([a-f0-9]{64})(?:;|$)/);
   const token = match ? match[1] : null;
-  res.json({ authenticated: token ? validateSession(token) : false, authEnabled: isAuthEnabled() });
+  const rateLimit = getRateLimitStatus();
+  res.json({
+    authenticated: token ? validateSession(token) : false,
+    authEnabled: isAuthEnabled(),
+    locked: rateLimit.locked,
+    consumed: rateLimit.consumed,
+    retryAfter: rateLimit.retryAfter
+  });
 });
 
 // Authentication gate — all routes below require valid session

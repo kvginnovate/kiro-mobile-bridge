@@ -131,11 +131,11 @@ jobs:
 
       - name: Commit version bump
         run: |
-          git add package.json CHANGELOG.md
+          git add package.json package-lock.json CHANGELOG.md
           git commit -m "chore: bump version to ${{ steps.bump.outputs.version }} [skip ci]"
 
       - name: Pull latest remote changes
-        run: git pull --rebase origin main
+        run: git pull --rebase --autostash origin main
 
       - name: Push changes
         run: git push origin main

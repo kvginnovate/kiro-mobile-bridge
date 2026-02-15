@@ -95,10 +95,28 @@ export function verifyOTP(code) {
     };
   }
 
+  // Reset attempt counter once lockout period has expired
+  if (rateLimitState.lockedUntil > 0 && rateLimitState.lockedUntil <= now) {
+    rateLimitState.attempts = 0;
+    rateLimitState.lockedUntil = 0;
+  }
+
   // OTP already consumed — no new sessions allowed
+  // Still enforce rate limiting to prevent brute-force probing
   if (authState.consumed) {
+    rateLimitState.attempts++;
+    if (rateLimitState.attempts >= OTP_MAX_ATTEMPTS) {
+      rateLimitState.lockedUntil = now + OTP_LOCKOUT_MS;
+      return {
+        success: false,
+        consumed: true,
+        error: `Too many attempts. Try again in ${OTP_LOCKOUT_MS / 1000}s.`,
+        retryAfter: OTP_LOCKOUT_MS / 1000
+      };
+    }
     return {
       success: false,
+      consumed: true,
       error: 'Access code already used. Restart the server for a new code.'
     };
   }
@@ -142,6 +160,18 @@ export function verifyOTP(code) {
   rateLimitState.attempts = 0;
 
   return { success: true, token: authState.sessionToken };
+}
+
+/**
+ * Get current rate limit status (for exposing via API)
+ * @returns {{ locked: boolean, retryAfter: number }}
+ */
+export function getRateLimitStatus() {
+  const now = Date.now();
+  if (rateLimitState.lockedUntil > now) {
+    return { locked: true, consumed: authState.consumed, retryAfter: Math.ceil((rateLimitState.lockedUntil - now) / 1000) };
+  }
+  return { locked: false, consumed: authState.consumed, retryAfter: 0 };
 }
 
 /**
@@ -329,8 +359,24 @@ export function getLoginPageHTML() {
     const errorMsg = document.getElementById('errorMsg');
     let submitting = false;
 
-    // Focus first input on load
-    inputs[0].focus();
+    // Check lockout status on page load (covers new devices opening during lockout)
+    (async () => {
+      try {
+        const res = await fetch('/auth/status');
+        const data = await res.json();
+        if (data.consumed) {
+          // OTP already used by another device
+          showError('Access code already used. Restart the server for a new code.');
+          inputs.forEach(i => { i.disabled = true; });
+        } else if (data.locked && data.retryAfter > 0) {
+          startLockoutCountdown(data.retryAfter);
+        } else {
+          inputs[0].focus();
+        }
+      } catch {
+        inputs[0].focus();
+      }
+    })();
 
     inputs.forEach((input, index) => {
       input.addEventListener('input', (e) => {
@@ -403,8 +449,31 @@ export function getLoginPageHTML() {
       });
     }
 
+    let lockoutTimer = null;
+
+    function startLockoutCountdown(seconds) {
+      // Disable all inputs during lockout
+      inputs.forEach(i => { i.disabled = true; i.value = ''; });
+      let remaining = seconds;
+      showError('Too many attempts. Try again in ' + remaining + 's.');
+
+      if (lockoutTimer) clearInterval(lockoutTimer);
+      lockoutTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(lockoutTimer);
+          lockoutTimer = null;
+          clearErrors();
+          inputs.forEach(i => { i.disabled = false; });
+          inputs[0].focus();
+        } else {
+          showError('Too many attempts. Try again in ' + remaining + 's.');
+        }
+      }, 1000);
+    }
+
     async function submitOTP() {
-      if (submitting) return;
+      if (submitting || lockoutTimer) return;
       submitting = true;
 
       const code = getCode();
@@ -420,13 +489,19 @@ export function getLoginPageHTML() {
           showSuccess();
           // Redirect to main app after brief success indication
           setTimeout(() => { window.location.href = '/'; }, 600);
+        } else if (data.consumed) {
+          // OTP already used by another device — permanently lock
+          showError(data.error || 'Access code already used. Restart the server for a new code.');
+          inputs.forEach(i => { i.disabled = true; i.value = ''; });
+          if (data.retryAfter) startLockoutCountdown(data.retryAfter);
+        } else if (data.retryAfter) {
+          // Rate limited — start countdown
+          startLockoutCountdown(data.retryAfter);
         } else {
           showError(data.error || 'Invalid code.');
           // Clear inputs on failure for retry
-          if (!data.retryAfter) {
-            inputs.forEach(i => i.value = '');
-            inputs[0].focus();
-          }
+          inputs.forEach(i => i.value = '');
+          inputs[0].focus();
         }
       } catch (err) {
         showError('Connection error. Please try again.');

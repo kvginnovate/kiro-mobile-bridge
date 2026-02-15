@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2026-02-15
+
+- feat: implement OTP authentication for secure access
+- - Added OTP authentication middleware to generate and verify a single-use 6-digit code on server startup.
+- - Updated README to include authentication instructions and access code display.
+- - Modified server to handle authentication routes and session management.
+- - Enhanced client-side error handling for unauthorized access.
+- - Introduced rate limiting for failed OTP attempts to improve security.
+- - Updated constants for OTP settings.
+
 ## 2026-01-26
 
 - Update CHANGELOG with recent improvements and fixes

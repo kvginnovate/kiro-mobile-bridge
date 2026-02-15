@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-02-15
 
+- feat: enhance OTP authentication with rate limiting and lockout mechanism
 - feat: implement OTP authentication for secure access
 - - Added OTP authentication middleware to generate and verify a single-use 6-digit code on server startup.
 - - Updated README to include authentication instructions and access code display.

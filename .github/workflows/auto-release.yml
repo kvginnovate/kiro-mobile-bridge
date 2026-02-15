@@ -67,7 +67,7 @@ jobs:
           
           # Check if this is a merge commit (starts with "Merge")
           if [[ "$HEAD_MSG" == Merge* ]]; then
-            MEANINGFUL_MSG=$(git log --format=%s --no-merges -1 HEAD^2 2>/dev/null || echo "$HEAD_MSG")
+            MEANINGFUL_MSG=$(git log --format=%B --no-merges -1 HEAD^2 2>/dev/null || echo "$HEAD_MSG")
           else
             MEANINGFUL_MSG="$HEAD_MSG"
           fi
@@ -133,12 +133,37 @@ jobs:
         run: |
           git add package.json CHANGELOG.md
           git commit -m "chore: bump version to ${{ steps.bump.outputs.version }} [skip ci]"
-          git push
+
+      - name: Pull latest remote changes
+        run: git pull --rebase origin main
+
+      - name: Push changes
+        run: git push origin main
 
       - name: Publish to npm
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Build release notes
+        run: |
+          cat > RELEASE_NOTES.md <<'EOF'
+          ## kiro-mobile-bridge v${{ steps.bump.outputs.version }}
+
+          ${{ steps.commit_info.outputs.message }}
+
+          ### Install
+          ```bash
+          npx kiro-mobile-bridge
+          ```
+
+          Or install globally:
+          ```bash
+          npm install -g kiro-mobile-bridge
+          ```
+
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.bump.outputs.prev_version }}...v${{ steps.bump.outputs.version }}
+          EOF
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -146,21 +171,6 @@ jobs:
           tag_name: v${{ steps.bump.outputs.version }}
           name: kiro-mobile-bridge v${{ steps.bump.outputs.version }}
           generate_release_notes: false
-          body: |
-            ## kiro-mobile-bridge v${{ steps.bump.outputs.version }}
-            
-            ${{ steps.commit_info.outputs.message }}
-            
-            ### Install
-            ```bash
-            npx kiro-mobile-bridge
-            ```
-            
-            Or install globally:
-            ```bash
-            npm install -g kiro-mobile-bridge
-            ```
-            
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.bump.outputs.prev_version }}...v${{ steps.bump.outputs.version }}
+          body_path: RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1000,6 +1000,25 @@
     // State
     // =============================================================================
     let ws = null, reconnectAttempts = 0, reconnectTimeout = null;
+
+    // Handle 401 responses — redirect to login page
+    function handleAuthError(response) {
+      if (response && response.status === 401) {
+        window.location.href = '/auth/login';
+        return true;
+      }
+      return false;
+    }
+
+    // Wrap native fetch to auto-handle 401 auth errors
+    const _originalFetch = window.fetch;
+    window.fetch = async function (...args) {
+      const response = await _originalFetch.apply(this, args);
+      if (response.status === 401) {
+        window.location.href = '/auth/login';
+      }
+      return response;
+    };
     let cascades = [], selectedCascadeId = null, currentStyles = null;
     let isTypingInKiroInput = false, activePanel = 'chat';
     let lastSuccessfulSnapshot = null, navigationPending = false;
@@ -1085,6 +1104,7 @@
     // =============================================================================
     function connect() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      // Session cookie is automatically sent with the WebSocket upgrade request
       ws = new WebSocket(`${protocol}//${window.location.host}`);
 
       ws.onopen = () => { setStatus('connected'); reconnectAttempts = 0; };

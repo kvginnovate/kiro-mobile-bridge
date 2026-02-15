@@ -27,6 +27,19 @@ import {
   SNAPSHOT_IDLE_THRESHOLD
 } from './utils/constants.js';
 
+// Auth
+import {
+  generateOTP,
+  getOTP,
+  setAuthEnabled,
+  isAuthEnabled,
+  authMiddleware,
+  validateWSAuth,
+  validateSession,
+  getLoginPageHTML,
+  verifyOTP
+} from './middleware/auth.js';
+
 // Routes
 import { createApiRouter } from './routes/api.js';
 
@@ -38,6 +51,13 @@ const __dirname = dirname(__filename);
 // =============================================================================
 
 const PORT = process.env.PORT || 3000;
+const NO_AUTH = process.argv.includes('--no-auth');
+
+// Configure authentication
+setAuthEnabled(!NO_AUTH);
+if (!NO_AUTH) {
+  generateOTP();
+}
 
 // =============================================================================
 // State Management
@@ -66,24 +86,24 @@ async function discoverTargets() {
   const foundCascadeIds = new Set();
   let foundMainWindow = false;
   let stateChanged = false;
-  
+
   const portResults = await Promise.allSettled(
     CDP_PORTS.map(port => fetchCDPTargets(port).then(targets => ({ port, targets })))
   );
-  
+
   for (const result of portResults) {
     if (result.status !== 'fulfilled') continue;
     const { port, targets } = result.value;
-    
+
     try {
       // Find main VS Code window
       const mainWindowTarget = targets.find(target => {
         const url = (target.url || '').toLowerCase();
-        return target.type === 'page' && 
-               (url.startsWith('vscode-file://') || url.includes('workbench')) &&
-               target.webSocketDebuggerUrl;
+        return target.type === 'page' &&
+          (url.startsWith('vscode-file://') || url.includes('workbench')) &&
+          target.webSocketDebuggerUrl;
       });
-      
+
       if (mainWindowTarget && !mainWindowCDP.connection) {
         console.log(`[Discovery] Found main VS Code window: ${mainWindowTarget.title}`);
         try {
@@ -92,7 +112,7 @@ async function discoverTargets() {
           mainWindowCDP.id = generateId(mainWindowTarget.webSocketDebuggerUrl);
           foundMainWindow = true;
           stateChanged = true;
-          
+
           cdp.ws.on('close', () => {
             console.log(`[Discovery] Main window disconnected`);
             mainWindowCDP.connection = null;
@@ -105,25 +125,25 @@ async function discoverTargets() {
       } else if (mainWindowTarget) {
         foundMainWindow = true;
       }
-      
+
       // Find Kiro Agent webviews
       const kiroAgentTargets = targets.filter(target => {
         const url = (target.url || '').toLowerCase();
-        return (url.includes('kiroagent') || url.includes('vscode-webview')) && 
-               target.webSocketDebuggerUrl && target.type !== 'page';
+        return (url.includes('kiroagent') || url.includes('vscode-webview')) &&
+          target.webSocketDebuggerUrl && target.type !== 'page';
       });
-      
+
       for (const target of kiroAgentTargets) {
         const wsUrl = target.webSocketDebuggerUrl;
         const cascadeId = generateId(wsUrl);
         foundCascadeIds.add(cascadeId);
-        
+
         if (!cascades.has(cascadeId)) {
           stateChanged = true;
-          
+
           try {
             const cdp = await connectToCDP(wsUrl);
-            
+
             cascades.set(cascadeId, {
               id: cascadeId,
               cdp,
@@ -134,14 +154,14 @@ async function discoverTargets() {
               editor: null,
               editorHash: null
             });
-            
+
             cdp.ws.on('close', () => {
               console.log(`[Discovery] Cascade disconnected: ${cascadeId}`);
               cascades.delete(cascadeId);
               broadcastCascadeList();
               adjustDiscoveryInterval(true);
             });
-            
+
             broadcastCascadeList();
           } catch (err) {
             console.error(`[Discovery] Failed to connect to ${cascadeId}: ${err.message}`);
@@ -155,14 +175,14 @@ async function discoverTargets() {
       console.debug(`[Discovery] Error scanning port ${port}: ${err.message}`);
     }
   }
-  
+
   // Clean up disconnected targets
   for (const [cascadeId, cascade] of cascades) {
     if (!foundCascadeIds.has(cascadeId)) {
       console.log(`[Discovery] Target no longer available: ${cascadeId}`);
       stateChanged = true;
-      try { 
-        cascade.cdp.close(); 
+      try {
+        cascade.cdp.close();
       } catch (e) {
         console.debug(`[Discovery] Error closing cascade ${cascadeId}: ${e.message}`);
       }
@@ -170,10 +190,10 @@ async function discoverTargets() {
       broadcastCascadeList();
     }
   }
-  
+
   const mainWindowChanged = foundMainWindow !== pollingState.lastMainWindowConnected;
   const cascadeCountChanged = cascades.size !== pollingState.lastCascadeCount;
-  
+
   if (stateChanged || mainWindowChanged || cascadeCountChanged) {
     console.log(`[Discovery] Active cascades: ${cascades.size}${foundMainWindow ? ' (main window connected)' : ''}`);
     pollingState.lastCascadeCount = cascades.size;
@@ -190,21 +210,21 @@ async function discoverTargets() {
 
 async function pollSnapshots() {
   let anyChanges = false;
-  
+
   for (const [cascadeId, cascade] of cascades) {
     try {
       const cdp = cascade.cdp;
-      
+
       // Capture CSS once
       if (cascade.css === null) {
         cascade.css = await captureCSS(cdp);
       }
-      
+
       // Capture metadata
       const metadata = await captureMetadata(cdp);
       cascade.metadata.chatTitle = metadata.chatTitle || cascade.metadata.chatTitle;
       cascade.metadata.isActive = metadata.isActive;
-      
+
       // Capture chat snapshot
       const snapshot = await captureSnapshot(cdp);
       if (snapshot) {
@@ -216,7 +236,7 @@ async function pollSnapshots() {
           anyChanges = true;
         }
       }
-      
+
       // Capture editor from main window
       // Store rootContextId locally to avoid race conditions during async operations
       const mainCDP = mainWindowCDP.connection;
@@ -242,7 +262,7 @@ async function pollSnapshots() {
       console.error(`[Snapshot] Error polling cascade ${cascadeId}:`, err.message);
     }
   }
-  
+
   adjustSnapshotInterval(anyChanges);
 }
 
@@ -316,7 +336,7 @@ function broadcastCascadeList() {
     window: c.metadata?.windowTitle || 'Unknown',
     active: c.metadata?.isActive || false
   }));
-  
+
   const message = JSON.stringify({ type: 'cascade_list', cascades: cascadeList });
   for (const client of wss.clients) {
     if (client.readyState === WebSocket.OPEN) client.send(message);
@@ -338,6 +358,44 @@ app.use((req, res, next) => {
   next();
 });
 
+// Auth routes — must be before authMiddleware
+app.get('/auth/login', (req, res) => {
+  res.type('html').send(getLoginPageHTML());
+});
+
+app.post('/auth/verify', (req, res) => {
+  const { otp } = req.body;
+  const result = verifyOTP(otp);
+
+  if (result.success) {
+    // Set HttpOnly session cookie (no Secure flag — this is HTTP-only LAN tool)
+    res.cookie('kmb_session', result.token, {
+      httpOnly: true,
+      sameSite: 'strict',
+      path: '/'
+    });
+    console.log(`[Auth] Device authenticated successfully`);
+    res.json({ success: true });
+  } else {
+    console.log(`[Auth] Failed attempt: ${result.error}`);
+    res.status(401).json({
+      success: false,
+      error: result.error,
+      retryAfter: result.retryAfter || null
+    });
+  }
+});
+
+app.get('/auth/status', (req, res) => {
+  const cookie = req.headers.cookie || '';
+  const match = cookie.match(/(?:^|;\s*)kmb_session=([a-f0-9]{64})(?:;|$)/);
+  const token = match ? match[1] : null;
+  res.json({ authenticated: token ? validateSession(token) : false, authEnabled: isAuthEnabled() });
+});
+
+// Authentication gate — all routes below require valid session
+app.use(authMiddleware);
+
 app.use(express.static(join(__dirname, 'public')));
 
 // Mount API routes
@@ -353,8 +411,16 @@ wss = new WebSocketServer({ server: httpServer });
 
 wss.on('connection', (ws, req) => {
   const clientIP = req.socket.remoteAddress || 'unknown';
+
+  // Validate WebSocket authentication
+  if (!validateWSAuth(req)) {
+    console.log(`[WebSocket] Unauthorized connection from ${clientIP}`);
+    ws.close(4401, 'Unauthorized');
+    return;
+  }
+
   console.log(`[WebSocket] Client connected from ${clientIP}`);
-  
+
   // Send cascade list on connect
   const cascadeList = Array.from(cascades.values()).map(c => ({
     id: c.id,
@@ -362,9 +428,9 @@ wss.on('connection', (ws, req) => {
     window: c.metadata?.windowTitle || 'Unknown',
     active: c.metadata?.isActive || false
   }));
-  
+
   ws.send(JSON.stringify({ type: 'cascade_list', cascades: cascadeList }));
-  
+
   ws.on('close', () => console.log(`[WebSocket] Client disconnected from ${clientIP}`));
   ws.on('error', (err) => console.error(`[WebSocket] Error from ${clientIP}:`, err.message));
 });
@@ -377,9 +443,15 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Local:   http://localhost:${PORT}`);
   console.log(`Network: http://${localIP}:${PORT}`);
   console.log('');
-  console.log('Open the Network URL on your phone to monitor Kiro.');
+  if (isAuthEnabled()) {
+    console.log(`\x1b[33m\x1b[1m🔑 Access Code: ${getOTP()}\x1b[0m`);
+    console.log('');
+    console.log('Enter this code on your device to connect.');
+  } else {
+    console.log('Auth disabled (--no-auth). Open the Network URL on your phone.');
+  }
   console.log('');
-  
+
   // Start discovery and polling
   discoverTargets();
   pollingState.discoveryInterval = setInterval(discoverTargets, pollingState.discoveryIntervalMs);

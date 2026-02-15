@@ -104,6 +104,12 @@ export const SNAPSHOT_INTERVAL_IDLE = 800;       // 800ms when idle
 export const SNAPSHOT_IDLE_THRESHOLD = 3000;     // 3 seconds before considered idle
 
 /**
+ * OTP authentication settings
+ */
+export const OTP_MAX_ATTEMPTS = 5;       // Max failed attempts before lockout
+export const OTP_LOCKOUT_MS = 60000;      // 60 second lockout after max attempts
+
+/**
  * Maximum depth for recursive file search
  * @type {number}
  */

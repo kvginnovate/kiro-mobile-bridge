@@ -8,7 +8,8 @@ A lightweight mobile interface that lets you monitor and control Kiro IDE agent 
 ## Features
 
 - 📱 Mobile-optimized web interface with tab navigation
-- 💬 **Chat** - View and send messages to Kiro's agent
+- � **OTP Authentication** - 6-digit access code generated on server startup
+- �💬 **Chat** - View and send messages to Kiro's agent
 - 📝 **Code** - Browse file explorer and view files with syntax highlighting
 - 📋 **Tasks** - View and navigate Kiro spec task files
 - 🔄 Real-time updates via WebSocket with adaptive polling
@@ -55,15 +56,29 @@ Kiro Mobile Bridge
 ─────────────────────
 Local:   http://localhost:3000
 Network: http://192.168.16.106:3000
-Open the Network URL on your phone to monitor Kiro.
+
+🔑 Access Code: 847291
+
+Enter this code on your device to connect.
 ```
 
 ### 3. Open on Your Phone
 
 1. Make sure your phone is on the **same WiFi network** as your computer
 2. Open the **Network URL** (e.g., `http://192.168.1.100:3000`) in your phone's browser
-3. The interface will automatically connect and show your Kiro session
-4. Use the tabs to switch between Chat, Code, and Tasks panels
+3. Enter the **6-digit access code** shown in the terminal
+4. The interface will connect and show your Kiro session
+5. Use the tabs to switch between Chat, Code, and Tasks panels
+
+> **Note:** The access code is single-use — only one device can authenticate per server session. Restart the server to generate a new code.
+
+#### Disable Authentication
+
+For trusted environments where you want the original no-auth experience:
+
+```bash
+npx kiro-mobile-bridge --no-auth
+```
 
 
 #### How It Works
@@ -130,14 +145,15 @@ sudo ufw allow 3000/tcp
 sudo iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
 ```
 
-## Security Notes
+## Notes
 
-#### Designed for home and trusted networks.
-- No authentication - just open the URL on your phone and start monitoring
-- No HTTPS - keeps setup simple and fast
-- Works instantly on any device connected to your WiFi
+#### OTP Authentication
+- A **6-digit access code** is generated on each server startup and displayed in the terminal
+- The code is **single-use** — once a device authenticates, the code is consumed
+- **Rate limiting** — 5 failed attempts triggers a 60-second lockout to prevent brute-force
+- Sessions use **HttpOnly cookies** — tokens are not exposed to client-side JavaScript
+- Use `--no-auth` to disable authentication for fully trusted environments
 
-Best for trusted networks where you control the devices. If you're on public WiFi, anyone on that network could access the interface.
 
 
 ## License

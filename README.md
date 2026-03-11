@@ -21,16 +21,16 @@ A lightweight mobile interface that lets you monitor and control Kiro IDE agent 
 
 ## Quick Start
 
-### 1. Enable CDP in Kiro
+**Important:** Your project must be open in Kiro before you close it - the bridge needs an active session to detect and connect to.
 
-Start Kiro with the remote debugging port enabled:
+### 1. Start Kiro from the terminal to enable CDP
+
+Open Kiro with the remote debugging port enabled:
 
 **Run Kiro with debugging port on CMD/Terminal:**
 ```bash
 kiro --remote-debugging-port=9000
 ```
-
-**Important:** Your project must be open in Kiro before you close it - the bridge needs an active session to detect and connect to. After that, start Kiro from the terminal with the remote debugging port enabled.
 
 ### 2. Run with npx (Recommended)
 

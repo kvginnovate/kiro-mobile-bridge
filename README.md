@@ -21,9 +21,10 @@ A lightweight mobile interface that lets you monitor and control Kiro IDE agent 
 
 ## Quick Start
 
-**Important:** Your project must be open in Kiro before you close it - the bridge needs an active session to detect and connect to.
+### 1. Open your target project on Kiro and then close Kiro.
+The bridge needs an workspace session to detect and connect to.
 
-### 1. Start Kiro from the terminal to enable CDP
+### 2. Start Kiro from the terminal to enable CDP
 
 Open Kiro with the remote debugging port enabled:
 
@@ -32,7 +33,7 @@ Open Kiro with the remote debugging port enabled:
 kiro --remote-debugging-port=9000
 ```
 
-### 2. Run with npx (Recommended)
+### 3. Run with npx (Recommended)
 
 Start Server
 
@@ -62,7 +63,7 @@ Network: http://192.168.16.106:3000
 Enter this code on your device to connect.
 ```
 
-### 3. Open on Your Phone
+### 4. Open on Your Phone
 
 1. Make sure your phone is on the **same WiFi network** as your computer
 2. Open the **Network URL** (e.g., `http://192.168.1.100:3000`) in your phone's browser

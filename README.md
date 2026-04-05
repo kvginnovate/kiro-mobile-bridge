@@ -35,7 +35,7 @@ kiro --remote-debugging-port=9000
 
 ### 3. Run with npx (Recommended)
 
-Start Server
+Start the bridge server inside the Kiro terminal 
 
 ```bash
 npx kiro-mobile-bridge

@@ -5,6 +5,13 @@
  * Captures snapshots of the chat interface via CDP and lets you send messages remotely.
  */
 
+process.on('uncaughtException', (err) => {
+  console.error('[Server] Uncaught exception (kept alive):', err.message);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('[Server] Unhandled rejection (kept alive):', err?.message || err);
+});
+
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';

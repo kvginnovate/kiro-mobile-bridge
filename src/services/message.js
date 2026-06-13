@@ -99,54 +99,54 @@ function createInjectScript(messageText) {
       editor.value = text;
       editor.dispatchEvent(new Event('input', { bubbles: true }));
     } else if (isProseMirror) {
-      // ProseMirror/TipTap: Clear and insert via DOM manipulation
-      // This works because TipTap syncs DOM changes to its state
-      editor.innerHTML = '';
-      const p = targetDoc.createElement('p');
-      p.textContent = text;
-      editor.appendChild(p);
-      editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
-    } else if (isLexical) {
-      // Lexical: Must use execCommand to properly update internal state
-      // Lexical listens to beforeinput/input events from execCommand
-      
-      // First, select all content
+      // ProseMirror/TipTap: Insert text at end (preserves existing attachments)
+      // Move cursor to end
       const selection = targetDoc.getSelection();
       const range = targetDoc.createRange();
       range.selectNodeContents(editor);
+      range.collapse(false); // collapse to end
       selection.removeAllRanges();
       selection.addRange(range);
-      
-      // Delete existing content
-      targetDoc.execCommand('delete', false, null);
-      
-      // Wait for Lexical to process the deletion
-      await new Promise(r => setTimeout(r, 30));
+      // Insert text via execCommand to properly trigger state sync
+      let inserted = false;
+      try { inserted = !!targetDoc.execCommand('insertText', false, text); } catch(e) {}
+      if (!inserted) {
+        const p = targetDoc.createElement('p');
+        p.textContent = text;
+        editor.appendChild(p);
+        editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+      }
+    } else if (isLexical) {
+      // Lexical: Move cursor to end and insert (preserves existing attachments)
+      const selection = targetDoc.getSelection();
+      const range = targetDoc.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false); // collapse to end
+      selection.removeAllRanges();
+      selection.addRange(range);
       
       // Insert new text using execCommand (Lexical intercepts this)
       const inserted = targetDoc.execCommand('insertText', false, text);
       
       if (!inserted) {
-        // Fallback: Try setting textContent and dispatching events
-        editor.textContent = text;
+        editor.textContent += text;
         editor.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text }));
         editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
       }
     } else {
-      // Generic contenteditable
+      // Generic contenteditable - insert at end
       const selection = targetDoc.getSelection();
       const range = targetDoc.createRange();
       range.selectNodeContents(editor);
+      range.collapse(false);
       selection.removeAllRanges();
       selection.addRange(range);
-      
-      targetDoc.execCommand('delete', false, null);
       
       let inserted = false;
       try { inserted = !!targetDoc.execCommand('insertText', false, text); } catch (e) {}
       
       if (!inserted) {
-        editor.textContent = text;
+        editor.textContent += text;
         editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
       }
     }

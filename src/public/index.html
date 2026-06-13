@@ -911,7 +911,7 @@
       <div class="nav-tabs" id="navTabs">
         <div class="nav-tab active" data-panel="chat">
           <span class="codicon codicon-comment-discussion"></span>
-          <span>Chat</span>
+          <span>Chat (v2)</span>
         </div>
         <div class="nav-tab" data-panel="editor">
           <span class="codicon codicon-code"></span>
@@ -1055,6 +1055,166 @@
       toast.textContent = message;
       toast.className = 'toast visible' + (isSuccess ? ' success' : '');
       setTimeout(() => toast.classList.remove('visible'), duration);
+    }
+
+    // =============================================================================
+    // Attachment (paperclip) handling
+    // =============================================================================
+    // The bridge is a remote-control view: by default, clicking the paperclip
+    // forwards the click to Kiro, which then opens the *desktop's* native file
+    // picker (invisible to the phone). Instead, we intercept the click and:
+    //   1) Open the phone's native file picker via a hidden <input type="file">
+    //   2) Read the file, base64-encode it
+    //   3) POST to /upload-base64/:cascadeId (saves to a server-side temp dir)
+    //   4) POST to /inject-file/:cascadeId (uses CDP DOM.setFileInputFiles
+    //      to inject the file into Kiro's hidden file input + dispatch change)
+    // After a short delay the snapshot refresh will show the attached file chip
+    // in Kiro's chat input.
+
+    // Heuristic: detect clicks on Kiro's attachment / paperclip button.
+    // Kiro's button is usually identifiable by:
+    //   - aria-label containing "attach", "paperclip", "upload", "file"
+    //   - an inner <svg> with a paperclip path, or a .codicon-attach / .codicon-paperclip icon
+    //   - a button placed in the chat input toolbar (just above/beside the text editor)
+    function logToServer(msg) {
+      fetch('/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg })
+      }).catch(() => {});
+    }
+
+    function isAttachmentClick(target) {
+      if (!target) return false;
+      const boundary = (typeof content !== 'undefined' && content) ? content : document.body;
+
+      let el = target;
+      let depth = 0;
+      while (el && el !== document.body && depth < 30) {
+        if (el === boundary) break;
+        const aria = (el.getAttribute?.('aria-label') || '');
+        const title = (el.getAttribute?.('title') || '');
+        const matchStr = (aria + ' ' + title).toLowerCase();
+        if (/(attach|paper\s*clip|upload|add\s*file|file\s*upload|clip)/i.test(matchStr)) {
+          logToServer('[Attachment-Early] Detected via ancestor: ' + el.tagName + ' | aria: ' + aria + ' | title: ' + title);
+          return true;
+        }
+        const cls = (el.className?.baseVal ?? el.className) || '';
+        if (typeof cls === 'string' && /\bcodicon(-|\s)?(attach|paperclip|clip)\b/i.test(cls)) {
+          logToServer('[Attachment-Early] Detected via codicon class on: ' + el.tagName);
+          return true;
+        }
+        el = el.parentElement;
+        depth++;
+      }
+      logToServer('[Attachment-Early] NOT detected. Target was: ' + target.tagName + ' class: ' + (target.className?.baseVal ?? target.className));
+      return false;
+    }
+
+    // One persistent hidden <input type="file"> reused for every attachment tap.
+    let __kmbFileInput = null;
+    function ensureMobileFileInput() {
+      if (__kmbFileInput && document.body.contains(__kmbFileInput)) return __kmbFileInput;
+      __kmbFileInput = document.createElement('input');
+      __kmbFileInput.type = 'file';
+      __kmbFileInput.style.position = 'fixed';
+      __kmbFileInput.style.left = '-9999px';
+      __kmbFileInput.style.top = '0';
+      __kmbFileInput.style.opacity = '0';
+      __kmbFileInput.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(__kmbFileInput);
+      return __kmbFileInput;
+    }
+
+    // Convert a File to a base64 string (no data: prefix).
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // result is "data:<mime>;base64,<data>"
+          const result = reader.result || '';
+          const idx = result.indexOf(',');
+          resolve(idx >= 0 ? result.slice(idx + 1) : result);
+        };
+        reader.onerror = () => reject(reader.error || new Error('FileReader failed'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Handle a tap on the paperclip button.
+    async function handleAttachmentClick() {
+      if (!selectedCascadeId) {
+        showToast('No active Kiro session');
+        return;
+      }
+
+      const input = ensureMobileFileInput();
+      // Reset value so picking the same file twice still fires `change`
+      input.value = '';
+
+      // Open the phone's file manager
+      input.click();
+
+      // Wait for the user to pick a file
+      const file = await new Promise((resolve, reject) => {
+        const onChange = () => {
+          input.removeEventListener('change', onChange);
+          resolve(input.files && input.files[0] ? input.files[0] : null);
+        };
+        input.addEventListener('change', onChange, { once: true });
+        // Safety timeout: some mobile browsers silently cancel the picker
+        // (e.g. user pressed back). The change event never fires; we let the
+        // user tap the paperclip again if needed.
+      });
+
+      if (!file) {
+        showToast('No file selected', 1500);
+        return;
+      }
+
+      showToast(`Uploading ${file.name} (${formatBytes(file.size)})...`, 0);
+
+      try {
+        // 1) Upload to bridge server (saves to temp dir)
+        const data = await fileToBase64(file);
+        const uploadRes = await fetch(`/upload-base64/${selectedCascadeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: file.name, data })
+        });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}));
+          throw new Error(err.error || `Upload failed (${uploadRes.status})`);
+        }
+        const uploaded = await uploadRes.json();
+
+        // 2) Inject into Kiro's file input via CDP
+        showToast(`Injecting ${file.name} into Kiro...`, 0);
+        const injectRes = await fetch(`/inject-file/${selectedCascadeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filePath: uploaded.path })
+        });
+        if (!injectRes.ok) {
+          const err = await injectRes.json().catch(() => ({}));
+          throw new Error(err.error || `Inject failed (${injectRes.status})`);
+        }
+        const injected = await injectRes.json();
+
+        showToast(`Attached: ${file.name}`, 2500, true);
+
+        // 3) Refresh the chat snapshot so the attachment chip shows up
+        setTimeout(() => fetchChatSnapshot(selectedCascadeId), 400);
+      } catch (err) {
+        console.error('[Attachment] Error:', err);
+        showToast(`Attachment failed: ${err.message}`, 4000);
+      }
+    }
+
+    function formatBytes(n) {
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+      return `${(n / (1024 * 1024)).toFixed(1)} MB`;
     }
 
     function escapeHtml(text) {
@@ -2747,7 +2907,7 @@
         content.removeEventListener('click', content._globalClickHandler);
       }
 
-      content._globalClickHandler = async (e) => {
+      content._globalClickHandler = (e) => {
         // Find the actual clicked element
         let target = e.target;
 
@@ -2755,6 +2915,20 @@
         const sendBtn = target.closest('[data-send-handler-attached="true"]');
         if (sendBtn) {
           return; // Let the specific send handler deal with it
+        }
+
+        // ===================================================================
+        // ATTACHMENT BUTTON OVERRIDE
+        // If the click is on Kiro's paperclip / attachment button, open the
+        // phone's native file picker and inject the chosen file into Kiro
+        // via CDP. The default click-to-Kiro path would open the desktop's
+        // native file picker, which is invisible to the phone.
+        // ===================================================================
+        if (isAttachmentClick(target)) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleAttachmentClick(); // Call synchronously to ensure user activation context
+          return;
         }
 
         if (target.closest('[data-kiro-plain-text="true"]')) {
@@ -2768,7 +2942,6 @@
             return;
           }
         }
-
 
         // Skip if clicking on input fields
         if (target.matches('[contenteditable="true"], textarea, input, [data-lexical-editor="true"], .ProseMirror, .tiptap')) {
@@ -2799,230 +2972,254 @@
         const tag = clickableEl.tagName?.toLowerCase() || 'div';
         const className = clickableEl.className || '';
 
-        // Check if this is an icon button (has codicon child)
-        const hasIcon = clickableEl.querySelector('[class*="codicon"]') ||
-          (typeof className === 'string' && className.includes('codicon'));
-
-        // Skip if no meaningful content to click (but allow icon buttons and buttons with aria-label)
-        if (!elementText && !ariaLabel && !hasIcon && tag === 'div' && !role) {
+        // ===================================================================
+        // ATTACHMENT BUTTON OVERRIDE (late check, after clickableEl resolved)
+        // Uses the same ariaLabel the server logs - guaranteed to match what
+        // the user actually tapped. This is more reliable than the early
+        // walker on e.target, which can fail for SVG icon children.
+        // ===================================================================
+        const ariaLabelForAttach = (ariaLabel || '').trim().toLowerCase();
+        const isAttachmentMatch = /^(attach|paper\s*clip|upload|add\s*file|file\s*upload)/i.test(ariaLabelForAttach) ||
+          ariaLabelForAttach.includes('attach') ||
+          ariaLabelForAttach.includes('paperclip') ||
+          ariaLabelForAttach.includes('upload') ||
+          ariaLabelForAttach.includes('file');
+        logToServer('[AttachCheck] ariaLabel="' + ariaLabel + '" text="' + elementText.substring(0, 40) + '" match=' + isAttachmentMatch);
+        if (isAttachmentMatch) {
+          e.preventDefault();
+          e.stopPropagation();
+          handleAttachmentClick(); // Call synchronously to ensure user activation context
           return;
         }
 
-        // For icon-only buttons, use aria-label as text
-        const effectiveText = elementText || ariaLabel;
+        // Prevent default and stop propagation synchronously before starting async execution
+        e.preventDefault();
+        e.stopPropagation();
 
-        // Determine click type based on context
-        let clickInfo = {
-          tag: tag,
-          text: effectiveText,
-          ariaLabel: ariaLabel,
-          role: role,
-          className: typeof className === 'string' ? className.substring(0, 200) : ''
-        };
+        // Perform asynchronous click forwarding in an IIFE
+        (async () => {
+          // Check if this is an icon button (has codicon child)
+          const hasIcon = clickableEl.querySelector('[class*="codicon"]') ||
+            (typeof className === 'string' && className.includes('codicon'));
 
-        // Add specific flags based on element characteristics
-        if (role === 'tab') clickInfo.isTab = true;
-        if (role === 'switch' || className.includes('toggle')) clickInfo.isToggle = true;
-        if (ariaLabel.toLowerCase() === 'close' || className.includes('close')) clickInfo.isCloseButton = true;
-
-        // Check for file links
-        const fileExtensions = /\.(ts|tsx|js|jsx|py|java|html|css|json|md|yaml|yml|xml|sql|go|rs|c|cpp|h|cs|rb|php|sh|vue|svelte)$/i;
-        if (fileExtensions.test(elementText)) {
-          clickInfo.isFileLink = true;
-          clickInfo.filePath = elementText;
-        }
-
-        // Check for command trust options - more comprehensive detection
-        const lowerText = elementText.toLowerCase();
-        const isCommandTrust = lowerText.includes('full command') ||
-          lowerText.includes('partial') ||
-          lowerText.includes('base npm') ||
-          lowerText.includes('base ') ||
-          lowerText.includes('trust') ||
-          (lowerText.includes('command') && (lowerText.includes('allow') || lowerText.includes('run')));
-
-        // Also check if we're in a command trust context (snackbar with trust-related content)
-        const inSnackbar = clickableEl.closest('.kiro-snackbar, [class*="snackbar"]');
-        const snackbarHasTrustContent = inSnackbar && (
-          inSnackbar.textContent.toLowerCase().includes('trust') ||
-          inSnackbar.textContent.toLowerCase().includes('command') ||
-          inSnackbar.textContent.toLowerCase().includes('allow')
-        );
-
-        if (isCommandTrust || (snackbarHasTrustContent && lowerText.length < 100)) {
-          clickInfo.isCommandTrustOption = true;
-        }
-
-        // Check for action buttons (play, edit, cancel, etc.) - enhanced detection
-        const hasPlayIcon = clickableEl.querySelector('.codicon-play, .codicon-run, .codicon-debug-start, .codicon-triangle-right');
-        const hasEditIcon = clickableEl.querySelector('.codicon-edit, .codicon-pencil');
-        const hasCancelIcon = clickableEl.querySelector('.codicon-x, .codicon-close, .codicon-chrome-close');
-        const hasCheckIcon = clickableEl.querySelector('.codicon-check, .codicon-pass, .codicon-check-all');
-        const hasStopIcon = clickableEl.querySelector('.codicon-debug-stop, .codicon-stop');
-
-        // Also check aria-label for action type (important for icon-only buttons)
-        const ariaLabelLower = ariaLabel.toLowerCase();
-        const isRunByAria = ariaLabelLower.includes('run') || ariaLabelLower.includes('play') || ariaLabelLower.includes('execute');
-        const isEditByAria = ariaLabelLower.includes('edit') || ariaLabelLower.includes('modify');
-        const isCancelByAria = ariaLabelLower.includes('cancel') || ariaLabelLower.includes('reject') || ariaLabelLower.includes('deny');
-        const isApproveByAria = ariaLabelLower.includes('approve') || ariaLabelLower.includes('accept') || ariaLabelLower.includes('allow');
-        const isStopByAria = ariaLabelLower.includes('stop') || ariaLabelLower.includes('terminate');
-
-        // Also check for colored buttons (green play button)
-        const btnStyle = window.getComputedStyle(clickableEl);
-        const bgColor = btnStyle.backgroundColor || '';
-        const isGreenButton = bgColor.includes('rgb(34, 197') || bgColor.includes('rgb(0, 128') ||
-          bgColor.includes('rgb(22, 163') || bgColor.includes('green');
-
-        // Detect action type from icons OR aria-label
-        if (hasPlayIcon || isRunByAria || (isGreenButton && tag === 'button')) {
-          clickInfo.isCommandPanelAction = true;
-          clickInfo.actionType = 'run';
-        }
-        else if (hasEditIcon || isEditByAria) {
-          clickInfo.isCommandPanelAction = true;
-          clickInfo.actionType = 'edit';
-        }
-        else if ((hasCancelIcon || isCancelByAria) && !clickInfo.isCloseButton) {
-          clickInfo.isCommandPanelAction = true;
-          clickInfo.actionType = 'cancel';
-        }
-        else if (hasCheckIcon || isApproveByAria) {
-          clickInfo.isCommandPanelAction = true;
-          clickInfo.actionType = 'approve';
-        }
-        else if (hasStopIcon || isStopByAria) {
-          clickInfo.isCommandPanelAction = true;
-          clickInfo.actionType = 'stop';
-        }
-
-        // Check if in snackbar/notification area
-        if (clickableEl.closest('.kiro-snackbar, [class*="snackbar"], [class*="notification"]')) {
-          if (!clickInfo.isCommandTrustOption && !clickInfo.isCommandPanelAction) {
-            clickInfo.isNotificationButton = true;
+          // Skip if no meaningful content to click (but allow icon buttons and buttons with aria-label)
+          if (!elementText && !ariaLabel && !hasIcon && tag === 'div' && !role) {
+            return;
           }
-        }
 
-        // Check if in dialog or welcome/onboarding screen
-        if (clickableEl.closest('[role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"], [class*="welcome"], [class*="Welcome"], [class*="onboarding"], [class*="Onboarding"], [class*="build"], [class*="Build"], [class*="choice"], [class*="Choice"]')) {
-          clickInfo.isDialogChoice = true;
-          // Dialog choices take priority over notification buttons
-          clickInfo.isNotificationButton = false;
-        }
+          // For icon-only buttons, use aria-label as text
+          const effectiveText = elementText || ariaLabel;
 
-        // Also check if the element itself looks like a choice card (has title + description structure)
-        const hasChoiceStructure = clickableEl.children.length >= 1 &&
-          clickableEl.children.length <= 5 &&
-          (clickableEl.querySelector('h1, h2, h3, h4, h5, h6, [class*="title"], [class*="Title"]') ||
-            clickableEl.querySelector('p, [class*="description"], [class*="Description"]'));
+          // Determine click type based on context
+          let clickInfo = {
+            tag: tag,
+            text: effectiveText,
+            ariaLabel: ariaLabel,
+            role: role,
+            className: typeof className === 'string' ? className.substring(0, 200) : ''
+          };
 
-        if (hasChoiceStructure && !clickInfo.isDialogChoice) {
-          // Check if it looks clickable
-          const style = window.getComputedStyle(clickableEl);
-          if (style.cursor === 'pointer' || clickableEl.getAttribute('tabindex') === '0' ||
-            clickableEl.getAttribute('role') === 'button' || tag === 'button') {
+          // Add specific flags based on element characteristics
+          if (role === 'tab') clickInfo.isTab = true;
+          if (role === 'switch' || className.includes('toggle')) clickInfo.isToggle = true;
+          if (ariaLabel.toLowerCase() === 'close' || className.includes('close')) clickInfo.isCloseButton = true;
+
+          // Check for file links
+          const fileExtensions = /\.(ts|tsx|js|jsx|py|java|html|css|json|md|yaml|yml|xml|sql|go|rs|c|cpp|h|cs|rb|php|sh|vue|svelte)$/i;
+          if (fileExtensions.test(elementText)) {
+            clickInfo.isFileLink = true;
+            clickInfo.filePath = elementText;
+          }
+
+          // Check for command trust options - more comprehensive detection
+          const lowerText = elementText.toLowerCase();
+          const isCommandTrust = lowerText.includes('full command') ||
+            lowerText.includes('partial') ||
+            lowerText.includes('base npm') ||
+            lowerText.includes('base ') ||
+            lowerText.includes('trust') ||
+            (lowerText.includes('command') && (lowerText.includes('allow') || lowerText.includes('run')));
+
+          // Also check if we're in a command trust context (snackbar with trust-related content)
+          const inSnackbar = clickableEl.closest('.kiro-snackbar, [class*="snackbar"]');
+          const snackbarHasTrustContent = inSnackbar && (
+            inSnackbar.textContent.toLowerCase().includes('trust') ||
+            inSnackbar.textContent.toLowerCase().includes('command') ||
+            inSnackbar.textContent.toLowerCase().includes('allow')
+          );
+
+          if (isCommandTrust || (snackbarHasTrustContent && lowerText.length < 100)) {
+            clickInfo.isCommandTrustOption = true;
+          }
+
+          // Check for action buttons (play, edit, cancel, etc.) - enhanced detection
+          const hasPlayIcon = clickableEl.querySelector('.codicon-play, .codicon-run, .codicon-debug-start, .codicon-triangle-right');
+          const hasEditIcon = clickableEl.querySelector('.codicon-edit, .codicon-pencil');
+          const hasCancelIcon = clickableEl.querySelector('.codicon-x, .codicon-close, .codicon-chrome-close');
+          const hasCheckIcon = clickableEl.querySelector('.codicon-check, .codicon-pass, .codicon-check-all');
+          const hasStopIcon = clickableEl.querySelector('.codicon-debug-stop, .codicon-stop');
+
+          // Also check aria-label for action type (important for icon-only buttons)
+          const ariaLabelLower = ariaLabel.toLowerCase();
+          const isRunByAria = ariaLabelLower.includes('run') || ariaLabelLower.includes('play') || ariaLabelLower.includes('execute');
+          const isEditByAria = ariaLabelLower.includes('edit') || ariaLabelLower.includes('modify');
+          const isCancelByAria = ariaLabelLower.includes('cancel') || ariaLabelLower.includes('reject') || ariaLabelLower.includes('deny');
+          const isApproveByAria = ariaLabelLower.includes('approve') || ariaLabelLower.includes('accept') || ariaLabelLower.includes('allow');
+          const isStopByAria = ariaLabelLower.includes('stop') || ariaLabelLower.includes('terminate');
+
+          // Also check for colored buttons (green play button)
+          const btnStyle = window.getComputedStyle(clickableEl);
+          const bgColor = btnStyle.backgroundColor || '';
+          const isGreenButton = bgColor.includes('rgb(34, 197') || bgColor.includes('rgb(0, 128') ||
+            bgColor.includes('rgb(22, 163') || bgColor.includes('green');
+
+          // Detect action type from icons OR aria-label
+          if (hasPlayIcon || isRunByAria || (isGreenButton && tag === 'button')) {
+            clickInfo.isCommandPanelAction = true;
+            clickInfo.actionType = 'run';
+          }
+          else if (hasEditIcon || isEditByAria) {
+            clickInfo.isCommandPanelAction = true;
+            clickInfo.actionType = 'edit';
+          }
+          else if ((hasCancelIcon || isCancelByAria) && !clickInfo.isCloseButton) {
+            clickInfo.isCommandPanelAction = true;
+            clickInfo.actionType = 'cancel';
+          }
+          else if (hasCheckIcon || isApproveByAria) {
+            clickInfo.isCommandPanelAction = true;
+            clickInfo.actionType = 'approve';
+          }
+          else if (hasStopIcon || isStopByAria) {
+            clickInfo.isCommandPanelAction = true;
+            clickInfo.actionType = 'stop';
+          }
+
+          // Check if in snackbar/notification area
+          if (clickableEl.closest('.kiro-snackbar, [class*="snackbar"], [class*="notification"]')) {
+            if (!clickInfo.isCommandTrustOption && !clickInfo.isCommandPanelAction) {
+              clickInfo.isNotificationButton = true;
+            }
+          }
+
+          // Check if in dialog or welcome/onboarding screen
+          if (clickableEl.closest('[role="dialog"], [role="alertdialog"], [class*="modal"], [class*="dialog"], [class*="welcome"], [class*="Welcome"], [class*="onboarding"], [class*="Onboarding"], [class*="build"], [class*="Build"], [class*="choice"], [class*="Choice"]')) {
             clickInfo.isDialogChoice = true;
             // Dialog choices take priority over notification buttons
             clickInfo.isNotificationButton = false;
           }
-        }
 
-        // ADDITIONAL CHECK: If element is in snackbar-body and has substantial text, it's likely a dialog choice
-        const inSnackbarBody = clickableEl.closest('.kiro-snackbar-body');
-        if (inSnackbarBody && effectiveText && effectiveText.length > 15) {
-          // This is a choice option in a snackbar, not a simple notification button
-          clickInfo.isDialogChoice = true;
-          clickInfo.isNotificationButton = false;
-        }
+          // Also check if the element itself looks like a choice card (has title + description structure)
+          const hasChoiceStructure = clickableEl.children.length >= 1 &&
+            clickableEl.children.length <= 5 &&
+            (clickableEl.querySelector('h1, h2, h3, h4, h5, h6, [class*="title"], [class*="Title"]') ||
+              clickableEl.querySelector('p, [class*="description"], [class*="Description"]'));
 
-        // =======================================================================
-        // ELEMENT INDEX - For distinguishing between multiple elements with same text
-        // This is critical for buttons like "Restore" that appear on each message
-        // =======================================================================
-        if (effectiveText && tag) {
-          // For "Restore" specifically, search ALL clickable elements, not just buttons
-          const searchText = effectiveText.toLowerCase().trim();
-          // Use standard selector based on tag
-          const selector = tag === 'button' ? 'button, [role="button"]' :
-            tag === 'a' ? 'a, [role="link"]' :
-              `${tag}, [role="button"], button`;
-
-          const allSimilar = content.querySelectorAll(selector);
-          const matchingElements = [];
-
-          for (const el of allSimilar) {
-            const elText = (el.textContent || '').trim();
-            const elAriaLabel = el.getAttribute('aria-label') || '';
-
-            // Match elements with same text OR same aria-label (case-insensitive)
-            const textMatches = elText.toLowerCase() === searchText ||
-              (elText.length > 0 && elText.toLowerCase().includes(searchText)) ||
-              (searchText.length > 0 && searchText.includes(elText.toLowerCase()));
-
-            const ariaMatches = elAriaLabel &&
-              elAriaLabel.toLowerCase() === searchText;
-
-            if (textMatches || ariaMatches) {
-              matchingElements.push(el);
+          if (hasChoiceStructure && !clickInfo.isDialogChoice) {
+            // Check if it looks clickable
+            const style = window.getComputedStyle(clickableEl);
+            if (style.cursor === 'pointer' || clickableEl.getAttribute('tabindex') === '0' ||
+              clickableEl.getAttribute('role') === 'button' || tag === 'button') {
+              clickInfo.isDialogChoice = true;
+              // Dialog choices take priority over notification buttons
+              clickInfo.isNotificationButton = false;
             }
           }
 
-          // Find the index of the clicked element among matching elements
-          let elementIndex = matchingElements.indexOf(clickableEl);
+          // ADDITIONAL CHECK: If element is in snackbar-body and has substantial text, it's likely a dialog choice
+          const inSnackbarBody = clickableEl.closest('.kiro-snackbar-body');
+          if (inSnackbarBody && effectiveText && effectiveText.length > 15) {
+            // This is a choice option in a snackbar, not a simple notification button
+            clickInfo.isDialogChoice = true;
+            clickInfo.isNotificationButton = false;
+          }
 
-          // If direct reference match fails, try finding by position/attributes
-          if (elementIndex < 0 && matchingElements.length > 1) {
-            // Try to find by comparing element properties
-            for (let i = 0; i < matchingElements.length; i++) {
-              const el = matchingElements[i];
-              if (el.isSameNode && el.isSameNode(clickableEl)) {
-                elementIndex = i;
-                break;
+          // =======================================================================
+          // ELEMENT INDEX - For distinguishing between multiple elements with same text
+          // This is critical for buttons like "Restore" that appear on each message
+          // =======================================================================
+          if (effectiveText && tag) {
+            // For "Restore" specifically, search ALL clickable elements, not just buttons
+            const searchText = effectiveText.toLowerCase().trim();
+            // Use standard selector based on tag
+            const selector = tag === 'button' ? 'button, [role="button"]' :
+              tag === 'a' ? 'a, [role="link"]' :
+                `${tag}, [role="button"], button`;
+
+            const allSimilar = content.querySelectorAll(selector);
+            const matchingElements = [];
+
+            for (const el of allSimilar) {
+              const elText = (el.textContent || '').trim();
+              const elAriaLabel = el.getAttribute('aria-label') || '';
+
+              // Match elements with same text OR same aria-label (case-insensitive)
+              const textMatches = elText.toLowerCase() === searchText ||
+                (elText.length > 0 && elText.toLowerCase().includes(searchText)) ||
+                (searchText.length > 0 && searchText.includes(elText.toLowerCase()));
+
+              const ariaMatches = elAriaLabel &&
+                elAriaLabel.toLowerCase() === searchText;
+
+              if (textMatches || ariaMatches) {
+                matchingElements.push(el);
               }
-              // Compare by bounding rect as fallback
+            }
+
+            // Find the index of the clicked element among matching elements
+            let elementIndex = matchingElements.indexOf(clickableEl);
+
+            // If direct reference match fails, try finding by position/attributes
+            if (elementIndex < 0 && matchingElements.length > 1) {
+              // Try to find by comparing element properties
+              for (let i = 0; i < matchingElements.length; i++) {
+                const el = matchingElements[i];
+                if (el.isSameNode && el.isSameNode(clickableEl)) {
+                  elementIndex = i;
+                  break;
+                }
+                // Compare by bounding rect as fallback
+                const clickedRect = clickableEl.getBoundingClientRect();
+                const elRect = el.getBoundingClientRect();
+                if (Math.abs(clickedRect.top - elRect.top) < 5 &&
+                  Math.abs(clickedRect.left - elRect.left) < 5) {
+                  elementIndex = i;
+                  break;
+                }
+              }
+            }
+
+            if (elementIndex >= 0 && matchingElements.length > 1) {
+              clickInfo.elementIndex = elementIndex;
+              clickInfo.totalMatches = matchingElements.length;
+            } else if (matchingElements.length > 1) {
+              // FALLBACK: Use visual position (top to bottom order)
+              const sortedByPosition = [...matchingElements].sort((a, b) => {
+                const rectA = a.getBoundingClientRect();
+                const rectB = b.getBoundingClientRect();
+                return rectA.top - rectB.top;
+              });
+
               const clickedRect = clickableEl.getBoundingClientRect();
-              const elRect = el.getBoundingClientRect();
-              if (Math.abs(clickedRect.top - elRect.top) < 5 &&
-                Math.abs(clickedRect.left - elRect.left) < 5) {
-                elementIndex = i;
-                break;
+              for (let i = 0; i < sortedByPosition.length; i++) {
+                const elRect = sortedByPosition[i].getBoundingClientRect();
+                if (Math.abs(clickedRect.top - elRect.top) < 10 &&
+                  Math.abs(clickedRect.left - elRect.left) < 10) {
+                  clickInfo.elementIndex = i;
+                  clickInfo.totalMatches = matchingElements.length;
+                  break;
+                }
               }
             }
           }
 
-          if (elementIndex >= 0 && matchingElements.length > 1) {
-            clickInfo.elementIndex = elementIndex;
-            clickInfo.totalMatches = matchingElements.length;
-          } else if (matchingElements.length > 1) {
-            // FALLBACK: Use visual position (top to bottom order)
-            const sortedByPosition = [...matchingElements].sort((a, b) => {
-              const rectA = a.getBoundingClientRect();
-              const rectB = b.getBoundingClientRect();
-              return rectA.top - rectB.top;
-            });
+          console.log('[GlobalClick]', clickInfo.text?.substring(0, 40) || clickInfo.ariaLabel || tag);
 
-            const clickedRect = clickableEl.getBoundingClientRect();
-            for (let i = 0; i < sortedByPosition.length; i++) {
-              const elRect = sortedByPosition[i].getBoundingClientRect();
-              if (Math.abs(clickedRect.top - elRect.top) < 10 &&
-                Math.abs(clickedRect.left - elRect.left) < 10) {
-                clickInfo.elementIndex = i;
-                clickInfo.totalMatches = matchingElements.length;
-                break;
-              }
-            }
-          }
-        }
+          await sendClickToKiro(clickInfo);
 
-        console.log('[GlobalClick]', clickInfo.text?.substring(0, 40) || clickInfo.ariaLabel || tag);
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        await sendClickToKiro(clickInfo);
-
-        // Refresh snapshot after click
-        setTimeout(() => fetchChatSnapshot(selectedCascadeId), 150);
+          // Refresh snapshot after click
+          setTimeout(() => fetchChatSnapshot(selectedCascadeId), 150);
+        })();
       };
 
       content.addEventListener('click', content._globalClickHandler);
@@ -3739,6 +3936,9 @@
       allClickables.forEach(el => {
         if (el.matches && el.matches('[contenteditable], textarea, input:not([type="checkbox"])')) return;
         if (el.closest('[role="tab"]') || el.closest('.kiro-toggle-switch') || el.onclick) return;
+        // Skip attachment button - handled by global click handler's interception logic
+        const elAria = (el.getAttribute('aria-label') || '').toLowerCase();
+        if (/(attach|paper\s*clip|upload|add\s*file|file\s*upload)/i.test(elAria)) return;
 
         el.style.cursor = 'pointer';
         el.onclick = async (e) => {

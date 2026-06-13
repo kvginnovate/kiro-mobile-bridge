@@ -5,6 +5,7 @@ import { Router } from 'express';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import crypto from 'crypto';
 import { injectMessage } from '../services/message.js';
 import { clickElement } from '../services/click.js';
 import {
@@ -21,6 +22,23 @@ import {
 } from '../utils/constants.js';
 
 /**
+ * Temp directory for files uploaded from the phone, to be injected into Kiro via CDP.
+ * Lives in os.tmpdir() and is best-effort cleaned up by the OS.
+ */
+const UPLOAD_DIR = path.join(os.tmpdir(), 'kiro-mobile-bridge-uploads');
+
+/**
+ * Ensure upload directory exists.
+ */
+async function ensureUploadDir() {
+  try {
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+  } catch (e) {
+    // Directory may already exist; ignore.
+  }
+}
+
+/**
  * Create API router
  * @param {Map} cascades - Cascade connections map
  * @param {object} mainWindowCDP - Main window CDP connection
@@ -28,6 +46,12 @@ import {
  */
 export function createApiRouter(cascades, mainWindowCDP) {
   const router = Router();
+
+  // POST /log - Client debug logging
+  router.post('/log', (req, res) => {
+    console.log(`[Client Log] ${req.body.message || ''}`);
+    res.json({ success: true });
+  });
 
   // GET /snapshot/:id - Get HTML snapshot for a cascade
   router.get('/snapshot/:id', (req, res) => {
@@ -92,6 +116,8 @@ export function createApiRouter(cascades, mainWindowCDP) {
     }
 
     console.log(`[Click] ${sanitized.text?.substring(0, 30) || sanitized.ariaLabel || sanitized.tag || 'element'}`);
+    console.log('[Click Server Debug] Raw body:', JSON.stringify(req.body));
+    console.log('[Click Server Debug] Sanitized:', JSON.stringify(sanitized));
 
     try {
       const result = await clickElement(cascade.cdp, sanitized);
@@ -825,6 +851,163 @@ export function createApiRouter(cascades, mainWindowCDP) {
       });
       res.json(result.result?.value || { success: false });
     } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // POST /upload-base64/:id - Save a file (sent as base64) to a temp dir
+  // Body: { name: string, data: base64 string (no data: prefix) }
+  // Returns: { path, name, size }
+  router.post('/upload-base64/:id', async (req, res) => {
+    const { name, data } = req.body || {};
+
+    if (typeof name !== 'string' || name.length === 0 || name.length > 255) {
+      return res.status(400).json({ error: 'name is required (string, 1-255 chars)' });
+    }
+    if (typeof data !== 'string' || data.length === 0) {
+      return res.status(400).json({ error: 'data is required (base64 string)' });
+    }
+
+    // Sanitize filename: keep extension, strip path separators and control chars
+    const safeName = path.basename(name).replace(/[^\w.\- ]/g, '_').substring(0, 200) || 'upload.bin';
+
+    let buffer;
+    try {
+      buffer = Buffer.from(data, 'base64');
+    } catch (e) {
+      return res.status(400).json({ error: 'data is not valid base64' });
+    }
+    if (buffer.length === 0) {
+      return res.status(400).json({ error: 'decoded file is empty' });
+    }
+    // Hard cap: 15 MB
+    if (buffer.length > 15 * 1024 * 1024) {
+      return res.status(413).json({ error: 'file too large (max 15 MB)' });
+    }
+
+    await ensureUploadDir();
+
+    // Use a random prefix to avoid collisions and to make the path unguessable
+    const id = crypto.randomBytes(8).toString('hex');
+    const finalName = `${id}-${safeName}`;
+    const finalPath = path.join(UPLOAD_DIR, finalName);
+
+    try {
+      await fs.writeFile(finalPath, buffer);
+      console.log(`[Upload] Saved ${buffer.length} bytes to ${finalPath}`);
+      res.json({ path: finalPath, name: safeName, size: buffer.length });
+    } catch (err) {
+      console.error('[Upload] Failed to write file:', err.message);
+      res.status(500).json({ error: 'failed to save file' });
+    }
+  });
+
+  // POST /inject-file/:id - Inject an already-uploaded file into Kiro's
+  // <input type="file"> element via CDP, then dispatch a change event.
+  // Body: { filePath: string }
+  router.post('/inject-file/:id', async (req, res) => {
+    const cascade = cascades.get(req.params.id);
+    if (!cascade) return res.status(404).json({ error: 'Cascade not found' });
+    if (!cascade.cdp?.rootContextId) return res.status(503).json({ error: 'CDP not available' });
+
+    const { filePath } = req.body || {};
+    if (typeof filePath !== 'string' || filePath.length === 0) {
+      return res.status(400).json({ error: 'filePath is required' });
+    }
+
+    // Only allow injecting files from our own upload directory (security)
+    const resolved = path.resolve(filePath);
+    const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+    if (!resolved.startsWith(resolvedUploadDir + path.sep) && resolved !== resolvedUploadDir) {
+      return res.status(403).json({ error: 'filePath is outside the allowed upload directory' });
+    }
+
+    // Verify file exists
+    try {
+      const stat = await fs.stat(resolved);
+      if (!stat.isFile()) {
+        return res.status(400).json({ error: 'filePath is not a file' });
+      }
+    } catch (e) {
+      return res.status(404).json({ error: 'file not found on disk' });
+    }
+
+    console.log(`[InjectFile] Injecting ${resolved} into Kiro`);
+
+    try {
+      // Step 0: Click Kiro's attachment button via CDP to make the file input appear
+      const clickAttachScript = `(function() {
+        let targetDoc = document;
+        const activeFrame = document.getElementById('active-frame');
+        if (activeFrame && activeFrame.contentDocument) targetDoc = activeFrame.contentDocument;
+
+        const btn = targetDoc.querySelector('[aria-label*="ttach"], [aria-label*="paperclip"], [aria-label*="Upload"]');
+        if (btn) { btn.click(); return true; }
+        return false;
+      })()`;
+      await cascade.cdp.call('Runtime.evaluate', {
+        expression: clickAttachScript,
+        contextId: cascade.cdp.rootContextId,
+        returnByValue: true
+      });
+      // Brief wait for the file input to appear in DOM
+      await new Promise(r => setTimeout(r, 300));
+
+      // Step 1: Find the file input via JS reference
+      // We can't use DOM.querySelector from root because the input may be inside an iframe.
+      const findRefScript = `(function() {
+        let targetDoc = document;
+        const activeFrame = document.getElementById('active-frame');
+        if (activeFrame && activeFrame.contentDocument) targetDoc = activeFrame.contentDocument;
+
+        const inputs = targetDoc.querySelectorAll('input[type="file"]');
+        if (inputs.length === 0) return null;
+        return inputs[0];
+      })()`;
+
+      const findResult = await cascade.cdp.call('Runtime.evaluate', {
+        expression: findRefScript,
+        contextId: cascade.cdp.rootContextId,
+        returnByValue: false
+      });
+
+      const objectId = findResult.result?.objectId;
+      if (!objectId) {
+        return res.status(404).json({
+          success: false,
+          error: 'Could not find file input in Kiro'
+        });
+      }
+
+      // Step 2: Set the file using DOM.setFileInputFiles with objectId directly
+      const setResult = await cascade.cdp.call('DOM.setFileInputFiles', {
+        objectId,
+        files: [resolved]
+      });
+
+      // Step 3: Dispatch a change event on the input so React's controlled component picks it up
+      const dispatchResult = await cascade.cdp.call('Runtime.callFunctionOn', {
+        objectId,
+        functionDeclaration: `function() {
+          const changeEvt = new Event('change', { bubbles: true, cancelable: true });
+          const inputEvt = new Event('input', { bubbles: true, cancelable: true });
+          this.dispatchEvent(inputEvt);
+          this.dispatchEvent(changeEvt);
+          return { dispatched: true, files: this.files ? this.files.length : 0 };
+        }`,
+        returnByValue: true
+      });
+
+      console.log(`[InjectFile] Injected successfully. Dispatch result:`, dispatchResult.result?.value);
+
+      res.json({
+        success: true,
+        filePath: resolved,
+        fileSize: (await fs.stat(resolved)).size,
+        dispatched: dispatchResult.result?.value
+      });
+    } catch (err) {
+      console.error('[InjectFile] Error:', err.message);
       res.status(500).json({ success: false, error: err.message });
     }
   });

@@ -51,8 +51,8 @@ const __dirname = dirname(__filename);
 // Configuration
 // =============================================================================
 
-const PORT = process.env.PORT || 3000;
-const NO_AUTH = process.argv.includes('--no-auth');
+const PORT = process.env.PORT || 3050;
+const NO_AUTH = true;
 
 // Configure authentication
 setAuthEnabled(!NO_AUTH);
@@ -130,8 +130,10 @@ async function discoverTargets() {
       // Find Kiro Agent webviews
       const kiroAgentTargets = targets.filter(target => {
         const url = (target.url || '').toLowerCase();
-        return (url.includes('kiroagent') || url.includes('vscode-webview')) &&
-          target.webSocketDebuggerUrl && target.type !== 'page';
+        if (!target.webSocketDebuggerUrl) return false;
+        return url.includes('kiroagent') ||
+          url.includes('vscode-webview') ||
+          (url.startsWith('https://127.0.0.1:') && url.includes('/c/'));
       });
 
       for (const target of kiroAgentTargets) {
@@ -349,7 +351,7 @@ function broadcastCascadeList() {
 // =============================================================================
 
 const app = express();
-app.use(express.json({ limit: '1mb' })); // Limit request body size
+app.use(express.json({ limit: '20mb' })); // 20MB to accommodate base64-encoded file uploads (~15MB binary)
 
 // Disable caching for development - ensures latest code is always served
 app.use((req, res, next) => {

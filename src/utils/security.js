@@ -117,7 +117,7 @@ export function sanitizeClickInfo(clickInfo) {
     'isTab', 'isCloseButton', 'isToggle', 'isModelSelector', 'isModelOption',
     'isSendButton', 'isFileLink', 'isNotificationButton', 'isIconButton', 'isHistoryItem',
     'isDialogChoice', 'isToolActionButton', 'isCommandPanelAction', 'isCommandTrustOption',
-    'isMessageActionButton'
+    'isMessageActionButton', 'isAttachment'
   ];
 
   for (const name of boolProps) {

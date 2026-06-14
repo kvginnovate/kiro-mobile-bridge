@@ -10,9 +10,11 @@ A lightweight mobile interface that lets you monitor and control Kiro IDE agent 
 - 📱 Mobile-optimized web interface with tab navigation
 - 🔑 **OTP Authentication** - 6-digit access code generated on server startup
 - 💬 **Chat** - View and send messages to Kiro's agent
+- 📎 **Image Attachments** - Attach single or multiple images from your phone's camera/gallery directly into Kiro's chat
 - 📝 **Code** - Browse file explorer and view files with syntax highlighting
 - 📋 **Tasks** - View and navigate Kiro spec task files
 - 🔄 Real-time updates via WebSocket with adaptive polling
+- 🛡️ **Crash-resistant** - Server stays alive through CDP disconnects, network drops, and Kiro reloads
 
 ## Prerequisites
 
@@ -154,6 +156,43 @@ sudo iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
 - New devices opening the login page during lockout or after the code is consumed will see a locked UI immediately
 - Sessions use **HttpOnly cookies** — tokens are not exposed to client-side JavaScript
 - Use `--no-auth` to disable authentication for fully trusted environments
+
+## Stability
+
+The server is hardened to stay alive through all common failure scenarios:
+
+- **Unhandled exceptions/rejections** — logged and swallowed, process stays alive
+- **CDP disconnects** — gracefully cleaned up, discovery loop auto-reconnects
+- **WebSocket drops** — ping/pong keepalive (30s) detects dead connections; broadcasts are wrapped in try/catch
+- **Concurrent polling** — reentrancy guards prevent race conditions when async operations overlap
+- **Route errors** — all critical endpoints (`/send`, `/click`, `/inject-file`, `/upload-base64`) have try/catch
+- **HTTP/WebSocket server errors** — handled at the server level
+
+You should never need to restart the bridge unless you restart Kiro itself with a different debugging port.
+
+## Auto-Start on Boot (Windows)
+
+To run the bridge automatically when your machine starts:
+
+**Option 1: Windows Startup Folder**
+
+1. Press `Win + R`, type `shell:startup`, hit Enter
+2. Create a file `kiro-mobile-bridge.bat` there with:
+```bat
+@echo off
+cd /d E:\Experiements\kiro-mobile-bridge
+npm start --no-auth
+```
+
+**Option 2: Task Scheduler (Hidden)**
+
+```cmd
+schtasks /create /tn "KiroMobileBridge" /tr "cmd /c cd /d E:\Experiements\kiro-mobile-bridge && npm start -- --no-auth" /sc onlogon /rl highest
+```
+
+To remove: `schtasks /delete /tn "KiroMobileBridge" /f`
+
+> **Note:** Kiro must also be started with `--remote-debugging-port=9000` for the bridge to connect.
 
 ## License
 

@@ -61,11 +61,8 @@ const __dirname = dirname(__filename);
 const PORT = process.env.PORT || 3050;
 const NO_AUTH = true;
 
-// Configure authentication
-setAuthEnabled(!NO_AUTH);
-if (!NO_AUTH) {
-  generateOTP();
-}
+// Auth permanently disabled
+setAuthEnabled(false);
 
 // =============================================================================
 // State Management
@@ -493,13 +490,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Local:   http://localhost:${PORT}`);
   console.log(`Network: http://${localIP}:${PORT}`);
   console.log('');
-  if (isAuthEnabled()) {
-    console.log(`\x1b[33m\x1b[1m🔑 Access Code: ${getOTP()}\x1b[0m`);
-    console.log('');
-    console.log('Enter this code on your device to connect.');
-  } else {
-    console.log('Auth disabled (--no-auth). Open the Network URL on your phone.');
-  }
+  console.log('Open the Network URL on your phone.');
   console.log('');
 
   // Start discovery and polling

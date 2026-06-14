@@ -7,7 +7,7 @@
  * CDP ports to scan for Kiro instances
  * @type {number[]}
  */
-export const CDP_PORTS = [9006];
+export const CDP_PORTS = [9000, 9001, 9002, 9003, 9004, 9005, 9006, 9222, 9229];
 
 /**
  * Model names for AI model detection and matching

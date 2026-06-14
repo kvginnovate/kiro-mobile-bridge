@@ -418,6 +418,12 @@ app.use(express.static(join(__dirname, 'public')));
 // Mount API routes
 app.use('/', createApiRouter(cascades, mainWindowCDP));
 
+// Global error handler - prevents unhandled route errors from crashing the server
+app.use((err, req, res, next) => {
+  console.error('[Server] Route error (kept alive):', err.message);
+  if (!res.headersSent) res.status(500).json({ error: err.message });
+});
+
 // =============================================================================
 // Server Startup
 // =============================================================================

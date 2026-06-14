@@ -211,8 +211,9 @@ export function connectToCDP(wsUrl) {
     
     ws.on('error', (err) => {
       console.error(`[CDP] WebSocket error: ${err.message}`);
+      const wasConnected = isConnected;
       isConnected = false;
-      reject(err);
+      if (!wasConnected) reject(err); // Only reject if we never connected
     });
     
     ws.on('close', () => {

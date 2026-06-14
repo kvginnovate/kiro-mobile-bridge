@@ -94,12 +94,17 @@ export function createApiRouter(cascades, mainWindowCDP) {
 
     // Log message length only, not content (security)
     console.log(`[Send] Message to ${req.params.id}: ${message.length} chars`);
-    const result = await injectMessage(cascade.cdp, message);
+    try {
+      const result = await injectMessage(cascade.cdp, message);
 
-    if (result.success) {
-      res.json({ success: true, method: result.method });
-    } else {
-      res.status(500).json({ success: false, error: result.error });
+      if (result.success) {
+        res.json({ success: true, method: result.method });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (err) {
+      console.error('[Send] Error:', err.message);
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 

@@ -90,7 +90,11 @@ const pollingState = {
 // Discovery Service
 // =============================================================================
 
+let _discoveryRunning = false;
 async function discoverTargets() {
+  if (_discoveryRunning) return;
+  _discoveryRunning = true;
+  try {
   const foundCascadeIds = new Set();
   let foundMainWindow = false;
   let stateChanged = false;
@@ -212,13 +216,18 @@ async function discoverTargets() {
   } else {
     adjustDiscoveryInterval(false);
   }
+  } finally { _discoveryRunning = false; }
 }
 
 // =============================================================================
 // Snapshot Polling
 // =============================================================================
 
+let _snapshotRunning = false;
 async function pollSnapshots() {
+  if (_snapshotRunning) return;
+  _snapshotRunning = true;
+  try {
   let anyChanges = false;
 
   for (const [cascadeId, cascade] of cascades) {
@@ -275,6 +284,7 @@ async function pollSnapshots() {
   }
 
   adjustSnapshotInterval(anyChanges);
+  } finally { _snapshotRunning = false; }
 }
 
 // =============================================================================

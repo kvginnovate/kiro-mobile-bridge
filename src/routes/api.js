@@ -890,7 +890,7 @@ export function createApiRouter(cascades, mainWindowCDP) {
       return res.status(413).json({ error: 'file too large (max 15 MB)' });
     }
 
-    await ensureUploadDir();
+    await ensureUploadDir().catch(() => {});
 
     // Use a random prefix to avoid collisions and to make the path unguessable
     const id = crypto.randomBytes(8).toString('hex');

@@ -224,6 +224,7 @@ async function pollSnapshots() {
   for (const [cascadeId, cascade] of cascades) {
     try {
       const cdp = cascade.cdp;
+      if (!cdp || !cdp.rootContextId) continue;
 
       // Capture CSS once
       if (cascade.css === null) {
@@ -334,7 +335,7 @@ function broadcastSnapshotUpdate(cascadeId, panel = 'chat') {
   if (!wss) return;
   const message = JSON.stringify({ type: 'snapshot_update', cascadeId, panel });
   for (const client of wss.clients) {
-    if (client.readyState === WebSocket.OPEN) client.send(message);
+    try { if (client.readyState === WebSocket.OPEN) client.send(message); } catch (e) {}
   }
 }
 
@@ -349,7 +350,7 @@ function broadcastCascadeList() {
 
   const message = JSON.stringify({ type: 'cascade_list', cascades: cascadeList });
   for (const client of wss.clients) {
-    if (client.readyState === WebSocket.OPEN) client.send(message);
+    try { if (client.readyState === WebSocket.OPEN) client.send(message); } catch (e) {}
   }
 }
 
@@ -431,6 +432,7 @@ app.use((err, req, res, next) => {
 const httpServer = createServer(app);
 
 wss = new WebSocketServer({ server: httpServer });
+wss.on('error', (err) => console.error('[WebSocket Server] Error:', err.message));
 
 wss.on('connection', (ws, req) => {
   const clientIP = req.socket.remoteAddress || 'unknown';
@@ -444,6 +446,10 @@ wss.on('connection', (ws, req) => {
 
   console.log(`[WebSocket] Client connected from ${clientIP}`);
 
+  // Keepalive
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+
   // Send cascade list on connect
   const cascadeList = Array.from(cascades.values()).map(c => ({
     id: c.id,
@@ -452,12 +458,23 @@ wss.on('connection', (ws, req) => {
     active: c.metadata?.isActive || false
   }));
 
-  ws.send(JSON.stringify({ type: 'cascade_list', cascades: cascadeList }));
+  try { ws.send(JSON.stringify({ type: 'cascade_list', cascades: cascadeList })); } catch (e) {}
 
   ws.on('close', () => console.log(`[WebSocket] Client disconnected from ${clientIP}`));
   ws.on('error', (err) => console.error(`[WebSocket] Error from ${clientIP}:`, err.message));
 });
 
+// Ping clients every 30s, terminate dead ones
+setInterval(() => {
+  if (!wss) return;
+  for (const client of wss.clients) {
+    if (!client.isAlive) { client.terminate(); continue; }
+    client.isAlive = false;
+    try { client.ping(); } catch (e) {}
+  }
+}, 30000);
+
+httpServer.on('error', (err) => console.error('[Server] HTTP server error:', err.message));
 httpServer.listen(PORT, '0.0.0.0', () => {
   const localIP = getLocalIP();
   console.log('');
